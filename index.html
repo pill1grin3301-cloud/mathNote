@@ -286,6 +286,32 @@
     html[data-theme="dark"] .draw-pad {
       background: #fafaf9;
     }
+    .draw-resize {
+      height: 10px;
+      cursor: ns-resize;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        color-mix(in srgb, var(--muted) 35%, transparent)
+      );
+      border-top: 1px solid var(--line);
+      position: relative;
+    }
+    .draw-resize::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 3px;
+      width: 36px;
+      height: 3px;
+      border-radius: 2px;
+      transform: translateX(-50%);
+      background: var(--hover-line);
+    }
+    .draw-resize:hover::after,
+    .draw-resize:active::after {
+      background: var(--accent);
+    }
     .draw-tools {
       display: flex;
       flex-wrap: wrap;
@@ -326,7 +352,7 @@
     .draw-pad canvas {
       display: block;
       width: 100%;
-      height: 280px;
+      height: var(--draw-h, 280px);
       touch-action: none;
       cursor: crosshair;
       background:
@@ -340,6 +366,52 @@
         linear-gradient(90deg, #e7e5e4 1px, transparent 1px) 0 0 / 24px 24px,
         #fafaf9;
     }
+
+    .set-picker {
+      position: fixed;
+      z-index: 50;
+      min-width: 240px;
+      max-width: 300px;
+      max-height: min(70vh, 420px);
+      overflow-y: auto;
+      background: var(--paper);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 12px 40px var(--shadow);
+      padding: 0.5rem 0.35rem;
+      font-size: 0.85rem;
+    }
+    .set-picker .hint {
+      position: sticky;
+      top: 0;
+      background: var(--paper);
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding: 0.15rem 0.65rem 0.4rem;
+      z-index: 1;
+    }
+    .set-picker button {
+      display: flex;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      padding: 0.4rem 0.65rem;
+      gap: 0.55rem;
+      align-items: baseline;
+    }
+    .set-picker button:hover,
+    .set-picker button.active {
+      background: var(--accent-soft);
+    }
+    .set-picker .sym {
+      font-size: 1.15rem;
+      min-width: 1.6rem;
+      font-family: var(--mono);
+    }
+    .set-picker .name { color: var(--ink); }
   </style>
 </head>
 <body>
@@ -383,10 +455,14 @@
         <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠</li>
         <li><kbd>Alt</kbd>+<kbd>A</kbd> — ∀ · <kbd>Alt</kbd>+<kbd>E</kbd> — ∃ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> — ∄</li>
         <li><kbd>Shift</kbd>+<kbd>'</kbd> — ∈ · <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>'</kbd> — ∉</li>
-        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>O</kbd> — ∪</li>
+        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> — индекс Δ (например <code>x_Δ</code>)</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
+        <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
+        <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>&lt;</kbd> / <kbd>&gt;</kbd> — ≤ / ≥</li>
         <li><kbd>\lim</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab</li>
         <li>Пустой текстовый блок + <kbd>Backspace</kbd> — удалить</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> — отменить · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> — вернуть</li>
       </ul>
     </details>
   </div>
@@ -408,6 +484,102 @@
     const DRAW_COLORS = ['#1c1917', '#dc2626', '#2563eb', '#16a34a', '#ea580c'];
     const DRAW_W = 900;
     const DRAW_H = 420;
+
+    /** Множества — Ctrl+Alt+C */
+    const SET_OP_PICKER = [
+      { latex: '\\subseteq', sym: '⊆', name: 'подмножество' },
+      { latex: '\\nsubseteq', sym: '⊈', name: 'не подмножество' },
+      { latex: '\\subset', sym: '⊂', name: 'подмножество (строго)' },
+      { latex: '\\nsubset', sym: '⊄', name: 'не подмножество (строго)' },
+      { latex: '\\triangle', sym: 'Δ', name: 'симм. разность' },
+      { latex: '\\emptyset', sym: '∅', name: 'пустое множество' },
+      { latex: '\\subsetneq', sym: '⊊', name: 'подмножество ≠' },
+      { latex: '\\subseteqq', sym: '⫅', name: '⊆ (жирное)' },
+    ];
+
+    /** Равенства / эквивалентности — Ctrl+Alt+= */
+    const EQ_OP_PICKER = [
+      { latex: '\\equiv', sym: '≡', name: 'тождество' },
+      { latex: '=', sym: '=', name: 'равно' },
+      { latex: '\\approx', sym: '≈', name: 'примерно равно' },
+      { latex: '\\Leftrightarrow', sym: '⇔', name: 'равносильно' },
+      { latex: '\\neq', sym: '≠', name: 'не равно' },
+      { latex: '\\sim', sym: '∼', name: 'подобно / асимптотически' },
+      { latex: '\\simeq', sym: '≃', name: 'приближённо равно' },
+      { latex: '\\cong', sym: '≅', name: 'изоморфно / конгруэнтно' },
+      { latex: '\\propto', sym: '∝', name: 'пропорционально' },
+      { latex: ':=', sym: ':=', name: 'равно по определению' },
+      { latex: '\\doteq', sym: '≐', name: 'равно (точечное)' },
+      { latex: '\\triangleq', sym: '≜', name: 'определяется как' },
+      { latex: '\\approxeq', sym: '≊', name: 'почти равно' },
+      { latex: '\\asymp', sym: '≍', name: 'асимптотически эквивалентно' },
+    ];
+
+    /** @type {null | { el: HTMLElement, idx: number, mf: HTMLElement, blockId: string, items: typeof SET_OP_PICKER }} */
+    let symbolPicker = null;
+
+    function closeSymbolPicker() {
+      if (symbolPicker?.el) symbolPicker.el.remove();
+      symbolPicker = null;
+    }
+
+    function paintSymbolPicker() {
+      if (!symbolPicker) return;
+      symbolPicker.el.querySelectorAll('button[data-i]').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.dataset.i) === symbolPicker.idx);
+      });
+    }
+
+    function openSymbolPicker(mf, blockId, items) {
+      closeSymbolPicker();
+      const el = document.createElement('div');
+      el.className = 'set-picker';
+      const cycleKey = items === EQ_OP_PICKER ? '=' : 'U';
+      el.innerHTML = `<div class="hint">${cycleKey} / ↓ / → — дальше · Shift+${cycleKey} / ↑ / ← — назад · Enter — вставить · Esc</div>`;
+      items.forEach((op, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.i = String(i);
+        btn.innerHTML = `<span class="sym">${op.sym}</span><span class="name">${op.name}</span>`;
+        btn.addEventListener('click', () => {
+          symbolPicker.idx = i;
+          confirmSymbolPicker();
+        });
+        el.appendChild(btn);
+      });
+
+      const rect = mf.getBoundingClientRect();
+      el.style.left = `${Math.min(rect.left, window.innerWidth - 300)}px`;
+      el.style.top = `${Math.min(rect.bottom + 6, window.innerHeight - 320)}px`;
+      document.body.appendChild(el);
+
+      symbolPicker = { el, idx: 0, mf, blockId, items };
+      paintSymbolPicker();
+    }
+
+    function cycleSymbolPicker(dir = 1) {
+      if (!symbolPicker) return;
+      const n = symbolPicker.items.length;
+      symbolPicker.idx = (symbolPicker.idx + dir + n) % n;
+      paintSymbolPicker();
+      symbolPicker.el
+        .querySelector(`button[data-i="${symbolPicker.idx}"]`)
+        ?.scrollIntoView({ block: 'nearest' });
+    }
+
+    function confirmSymbolPicker() {
+      if (!symbolPicker) return;
+      const { mf, blockId, idx, items } = symbolPicker;
+      const op = items[idx];
+      closeSymbolPicker();
+      try {
+        mf.focus();
+        mf.executeCommand(['insert', op.latex]);
+        updateContent(blockId, mf.value);
+      } catch {
+        /* ignore */
+      }
+    }
 
     function uid() {
       return crypto.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -516,12 +688,18 @@
     }
 
     function parseDrawContent(raw) {
-      if (!raw) return { png: '' };
+      if (!raw) return { png: '', h: 280 };
       try {
         const data = JSON.parse(raw);
-        return { png: data.png || '' };
+        return {
+          png: data.png || '',
+          h: Number(data.h) > 0 ? Number(data.h) : 280,
+        };
       } catch {
-        return { png: typeof raw === 'string' && raw.startsWith('data:') ? raw : '' };
+        return {
+          png: typeof raw === 'string' && raw.startsWith('data:') ? raw : '',
+          h: 280,
+        };
       }
     }
 
@@ -538,6 +716,10 @@
       let mode = 'brush'; // brush | erase
       let drawing = false;
       let last = null;
+      let cssH = 280;
+      const undoStack = [];
+      const redoStack = [];
+      const UNDO_MAX = 40;
 
       const swatches = DRAW_COLORS.map((c) => {
         const b = document.createElement('button');
@@ -591,6 +773,7 @@
       btnClear.className = 'danger';
       btnClear.textContent = 'Стереть всё';
       btnClear.addEventListener('click', () => {
+        pushDrawHistory();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         persist();
       });
@@ -598,21 +781,104 @@
       tools.append(...swatches, btnBrush, btnErase, sizeLabel, btnClear);
 
       const canvas = document.createElement('canvas');
-      canvas.width = DRAW_W;
-      canvas.height = DRAW_H;
       const ctx = canvas.getContext('2d');
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+
+      function setupCtx() {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+      }
+
+      function applyCssHeight(h) {
+        cssH = Math.max(140, Math.min(900, Math.round(h)));
+        canvas.style.setProperty('--draw-h', `${cssH}px`);
+        canvas.style.height = `${cssH}px`;
+      }
+
+      function syncPixelSizeFromCss(keepImage = true) {
+        const cssW = canvas.getBoundingClientRect().width || pad.clientWidth || DRAW_W;
+        const newH = Math.max(160, Math.round(DRAW_W * (cssH / cssW)));
+        let snapshot = null;
+        if (keepImage && canvas.width && canvas.height) {
+          snapshot = document.createElement('canvas');
+          snapshot.width = canvas.width;
+          snapshot.height = canvas.height;
+          snapshot.getContext('2d').drawImage(canvas, 0, 0);
+        }
+        canvas.width = DRAW_W;
+        canvas.height = newH;
+        setupCtx();
+        if (snapshot) {
+          ctx.drawImage(snapshot, 0, 0);
+        }
+      }
 
       const saved = parseDrawContent(block.content);
+      applyCssHeight(saved.h || 280);
+      // первичная высота пикселей
+      canvas.width = DRAW_W;
+      canvas.height = DRAW_H;
+      setupCtx();
+
       if (saved.png) {
         const img = new Image();
-        img.onload = () => ctx.drawImage(img, 0, 0);
+        img.onload = () => {
+          requestAnimationFrame(() => {
+            syncPixelSizeFromCss(false);
+            if (img.height > canvas.height) {
+              canvas.height = img.height;
+              setupCtx();
+            }
+            ctx.drawImage(img, 0, 0);
+          });
+        };
         img.src = saved.png;
+      } else {
+        requestAnimationFrame(() => syncPixelSizeFromCss(false));
       }
 
       function persist() {
-        updateContent(block.id, JSON.stringify({ v: 1, png: canvas.toDataURL('image/png') }));
+        updateContent(
+          block.id,
+          JSON.stringify({
+            v: 1,
+            png: canvas.toDataURL('image/png'),
+            h: cssH,
+          })
+        );
+      }
+
+      function pushDrawHistory() {
+        undoStack.push(canvas.toDataURL('image/png'));
+        if (undoStack.length > UNDO_MAX) undoStack.shift();
+        redoStack.length = 0;
+      }
+
+      function restoreDraw(dataUrl) {
+        const img = new Image();
+        img.onload = () => {
+          if (img.width && img.height) {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            setupCtx();
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+          ctx.drawImage(img, 0, 0);
+          persist();
+        };
+        img.src = dataUrl;
+      }
+
+      function undoDraw() {
+        if (!undoStack.length) return;
+        redoStack.push(canvas.toDataURL('image/png'));
+        restoreDraw(undoStack.pop());
+      }
+
+      function redoDraw() {
+        if (!redoStack.length) return;
+        undoStack.push(canvas.toDataURL('image/png'));
+        restoreDraw(redoStack.pop());
       }
 
       function pos(e) {
@@ -650,6 +916,7 @@
 
       function start(e) {
         e.preventDefault();
+        if (!drawing) pushDrawHistory();
         drawing = true;
         last = pos(e);
         stroke(last, last);
@@ -680,7 +947,54 @@
         if (drawing) end(e);
       });
 
-      pad.append(tools, canvas);
+      const resize = document.createElement('div');
+      resize.className = 'draw-resize';
+      resize.title = 'Потяни, чтобы изменить высоту';
+      let resizing = false;
+      let startY = 0;
+      let startH = 0;
+      resize.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resizing = true;
+        startY = e.clientY;
+        startH = cssH;
+        resize.setPointerCapture?.(e.pointerId);
+      });
+      resize.addEventListener('pointermove', (e) => {
+        if (!resizing) return;
+        e.preventDefault();
+        applyCssHeight(startH + (e.clientY - startY));
+      });
+      resize.addEventListener('pointerup', (e) => {
+        if (!resizing) return;
+        resizing = false;
+        pushDrawHistory();
+        applyCssHeight(startH + (e.clientY - startY));
+        syncPixelSizeFromCss(true);
+        persist();
+      });
+      resize.addEventListener('pointercancel', () => {
+        resizing = false;
+      });
+
+      pad.addEventListener('keydown', (e) => {
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        if (e.code === 'KeyZ' && !e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          undoDraw();
+        } else if (
+          (e.code === 'KeyZ' && e.shiftKey) ||
+          (e.code === 'KeyY' && !e.shiftKey)
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          redoDraw();
+        }
+      });
+
+      pad.append(tools, canvas, resize);
       return pad;
     }
 
@@ -925,6 +1239,114 @@
     function onFieldKey(e, block) {
       // Alt+Digit → степень; Ctrl+Digit → нижний индекс (Shift свободен для () и т.п.)
       if (block.type === 'math') {
+        const mf = e.currentTarget;
+
+        // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y — undo/redo MathLive
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === 'KeyZ' || e.code === 'KeyY')) {
+          if (e.code === 'KeyZ' && !e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            try {
+              mf.executeCommand('undo');
+              updateContent(block.id, mf.value);
+            } catch {
+              /* ignore */
+            }
+            return;
+          }
+          if ((e.code === 'KeyZ' && e.shiftKey) || (e.code === 'KeyY' && !e.shiftKey)) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            try {
+              mf.executeCommand('redo');
+              updateContent(block.id, mf.value);
+            } catch {
+              /* ignore */
+            }
+            return;
+          }
+        }
+
+        // Общее меню символов (множества / равенства)
+        if (symbolPicker && symbolPicker.mf === mf) {
+          const cycleCode =
+            symbolPicker.items === EQ_OP_PICKER ? 'Equal' : 'KeyU';
+          if (
+            (e.code === cycleCode && !e.altKey && !e.ctrlKey && !e.metaKey) ||
+            e.key === 'ArrowDown' ||
+            e.key === 'ArrowRight' ||
+            e.key === 'ArrowUp' ||
+            e.key === 'ArrowLeft'
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            const back =
+              e.key === 'ArrowUp' ||
+              e.key === 'ArrowLeft' ||
+              (e.code === cycleCode && e.shiftKey);
+            cycleSymbolPicker(back ? -1 : 1);
+            return;
+          }
+          if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            confirmSymbolPicker();
+            return;
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            closeSymbolPicker();
+            return;
+          }
+        }
+
+        if (
+          e.altKey &&
+          (e.ctrlKey || e.metaKey) &&
+          !e.shiftKey &&
+          e.code === 'KeyC'
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          if (
+            symbolPicker &&
+            symbolPicker.mf === mf &&
+            symbolPicker.items === SET_OP_PICKER
+          ) {
+            cycleSymbolPicker(1);
+          } else {
+            openSymbolPicker(mf, block.id, SET_OP_PICKER);
+          }
+          return;
+        }
+
+        if (
+          e.altKey &&
+          (e.ctrlKey || e.metaKey) &&
+          !e.shiftKey &&
+          e.code === 'Equal'
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          if (
+            symbolPicker &&
+            symbolPicker.mf === mf &&
+            symbolPicker.items === EQ_OP_PICKER
+          ) {
+            cycleSymbolPicker(1);
+          } else {
+            openSymbolPicker(mf, block.id, EQ_OP_PICKER);
+          }
+          return;
+        }
+
         // Хоткеи для логики / множеств / символов
         {
           let latex = null;
@@ -936,9 +1358,16 @@
             else if (e.altKey && e.shiftKey && e.code === 'KeyE') latex = '\\nexists'; // ∄
             else if (e.altKey && !e.shiftKey && e.code === 'KeyC') latex = '\\ni'; // ∋ отзеркаленный ∈
             else if (e.altKey && !e.shiftKey && e.code === 'KeyI') latex = '\\cap'; // ∩ пересечение
-            else if (e.altKey && !e.shiftKey && e.code === 'KeyO') latex = '\\cup'; // ∪ объединение
+            else if (e.altKey && !e.shiftKey && e.code === 'KeyU') latex = '\\cup'; // ∪ объединение
             else if (e.shiftKey && !e.altKey && e.code === 'Quote') latex = '\\in'; // ∈
             else if (e.shiftKey && e.altKey && e.code === 'Quote') latex = '\\notin'; // ∉
+            else if (e.shiftKey && e.altKey && e.code === 'KeyN') latex = '\\mathbb{N}'; // ℕ
+            else if (e.shiftKey && e.altKey && e.code === 'KeyZ') latex = '\\mathbb{Z}'; // ℤ
+            else if (e.shiftKey && e.altKey && e.code === 'KeyR') latex = '\\mathbb{R}'; // ℝ
+            else if (e.shiftKey && e.altKey && e.code === 'KeyQ') latex = '\\mathbb{Q}'; // ℚ
+            else if (e.shiftKey && e.altKey && e.code === 'KeyC') latex = '\\mathbb{C}'; // ℂ
+            else if (e.shiftKey && e.altKey && e.code === 'Comma') latex = '\\leq'; // ≤
+            else if (e.shiftKey && e.altKey && e.code === 'Period') latex = '\\geq'; // ≥
           }
           if (
             (e.ctrlKey || e.metaKey) &&
@@ -953,7 +1382,6 @@
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation?.();
-            const mf = e.currentTarget;
             try {
               mf.executeCommand(['insert', latex]);
               updateContent(block.id, mf.value);
@@ -965,10 +1393,10 @@
         }
 
         const digit = /^Digit([0-9])$/.exec(e.code)?.[1];
-        // Ctrl+C/V/M/S оставляем системе / глобальным хоткеям
+        // Ctrl+A/C/V/M/S/Z/Y — select all / copy / paste / save / undo / redo
         const letterRaw = /^Key([A-Z])$/.exec(e.code)?.[1]?.toLowerCase();
         const letter =
-          letterRaw && !['c', 'v', 'm', 's'].includes(letterRaw)
+          letterRaw && !['a', 'c', 'v', 'm', 's', 'z', 'y'].includes(letterRaw)
             ? letterRaw
             : null;
         if (digit != null || letter != null) {
@@ -1136,6 +1564,43 @@
         }
       }
     }
+
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (!symbolPicker) return;
+        const cycleCode =
+          symbolPicker.items === EQ_OP_PICKER ? 'Equal' : 'KeyU';
+        if (
+          (e.code === cycleCode && !e.altKey && !e.ctrlKey && !e.metaKey) ||
+          e.key === 'ArrowDown' ||
+          e.key === 'ArrowRight' ||
+          e.key === 'ArrowUp' ||
+          e.key === 'ArrowLeft'
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          const back =
+            e.key === 'ArrowUp' ||
+            e.key === 'ArrowLeft' ||
+            (e.code === cycleCode && e.shiftKey);
+          cycleSymbolPicker(back ? -1 : 1);
+        } else if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          confirmSymbolPicker();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          closeSymbolPicker();
+        }
+      },
+      true
+    );
+
+    document.addEventListener('pointerdown', (e) => {
+      if (symbolPicker && !symbolPicker.el.contains(e.target)) closeSymbolPicker();
+    });
 
     document.addEventListener('keydown', (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
