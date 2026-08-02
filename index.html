@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mathNote — прототип</title>
+  <script>
+    // сразу, чтобы не мигала светлая тема
+    try {
+      if (localStorage.getItem('mathNote.theme') === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    } catch {}
+  </script>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --bg-glow: #d1fae5;
+      --paper: #ffffff;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #e7e5e4;
+      --hover-line: #a8a29e;
+      --focus-bg: #fafaf9;
+      --kbd-bg: #f5f5f4;
+      --accent: #0f766e;
+      --accent-soft: #ccfbf1;
+      --danger: #b91c1c;
+      --shadow: rgba(28, 25, 23, 0.04);
+      /* курсор: тёплый янтарь — хорошо читается на светлом */
+      --caret: #ea580c;
+      --selection-bg: rgba(234, 88, 12, 0.22);
+      --selection-fg: #1c1917;
+      --mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+      --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #121416;
+      --bg-glow: #134e4a;
+      --paper: #1c1f24;
+      --ink: #e7e5e4;
+      --muted: #a8a29e;
+      --line: #2f343c;
+      --hover-line: #57534e;
+      --focus-bg: #252a31;
+      --kbd-bg: #252a31;
+      --accent: #2dd4bf;
+      --accent-soft: #134e4a;
+      --danger: #f87171;
+      --shadow: rgba(0, 0, 0, 0.35);
+      /* на тёмном — яркий коралл */
+      --caret: #fb7185;
+      --selection-bg: rgba(251, 113, 133, 0.35);
+      --selection-fg: #fff1f2;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html {
+      font-size: 130%; /* всё ~на 30% крупнее */
+      color-scheme: light;
+    }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--bg-glow) 0%, transparent 50%),
+        var(--bg);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .app {
+      max-width: 1140px; /* шире основного окна отдельно от масштаба */
+      margin: 0 auto;
+      padding: 1.25rem 1.25rem 4rem;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .brand {
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      font-size: 1.1rem;
+    }
+    .brand span { color: var(--accent); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    button, .file-btn {
+      font: inherit;
+      font-size: 0.85rem;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 0.4rem 0.7rem;
+      cursor: pointer;
+    }
+    button:hover, .file-btn:hover { border-color: var(--hover-line); }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    html[data-theme="dark"] button.primary { color: #042f2e; }
+    button.danger:hover { color: var(--danger); border-color: var(--danger); }
+    button#btn-theme {
+      min-width: 2.4rem;
+      padding-left: 0.55rem;
+      padding-right: 0.55rem;
+    }
+    .file-btn { display: inline-block; }
+    .file-btn input { display: none; }
+
+    .status {
+      font-size: 0.8rem;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+
+    .sheet {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.5rem 1.5rem 2.25rem;
+      box-shadow: 0 10px 30px var(--shadow);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .title,
+    .heading-input,
+    .text-input {
+      caret-color: var(--caret);
+    }
+
+    .title {
+      width: 100%;
+      border: none;
+      outline: none;
+      font: inherit;
+      font-size: 1.55rem;
+      font-weight: 650;
+      letter-spacing: -0.03em;
+      padding: 0.25rem 0.5rem;
+      margin-bottom: 0.75rem;
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .blocks { display: flex; flex-direction: column; gap: 0.35rem; }
+
+    .block {
+      display: grid;
+      grid-template-columns: 3rem 1fr auto;
+      gap: 0.45rem;
+      align-items: start;
+      padding: 0.45rem;
+      border-radius: 10px;
+      border: 1px solid transparent;
+    }
+    .block:focus-within {
+      background: var(--focus-bg);
+      border-color: var(--line);
+    }
+
+    .num {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding-top: 0.7rem;
+      text-align: right;
+      user-select: none;
+    }
+    .block.heading .num { visibility: hidden; }
+
+    .body { min-width: 0; }
+
+    .block.heading .heading-input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font: inherit;
+      font-size: 1.05rem;
+      font-weight: 650;
+      padding: 0.45rem 0.35rem;
+      color: var(--accent);
+    }
+
+    .block.text .text-input {
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      font: inherit;
+      font-size: 1rem;
+      line-height: 1.45;
+      padding: 0.5rem 0.35rem;
+      min-height: 2.4rem;
+      overflow: hidden;
+    }
+
+    math-field {
+      display: block;
+      width: 100%;
+      font-size: 1.35rem;
+      padding: 0.45rem;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--ink);
+      caret-color: var(--caret);
+      --caret-color: var(--caret);
+      --selection-color: var(--selection-fg);
+      --selection-background-color: var(--selection-bg);
+      --contains-highlight-background-color: color-mix(in srgb, var(--caret) 18%, transparent);
+      --hue: 20;
+      min-height: 2.5rem;
+    }
+    math-field:focus-within {
+      background: var(--accent-soft);
+      border-radius: 8px;
+    }
+
+    .ops {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+    .block:hover .ops, .block:focus-within .ops { opacity: 1; }
+    .ops button {
+      padding: 0.15rem 0.4rem;
+      font-size: 0.75rem;
+      line-height: 1.2;
+    }
+
+    details.help {
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    details.help summary { cursor: pointer; color: var(--ink); }
+    details.help ul { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+    kbd {
+      font-family: var(--mono);
+      font-size: 0.78em;
+      background: var(--kbd-bg);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0.05rem 0.3rem;
+    }
+
+    .text-input, .heading-input {
+      color: inherit;
+    }
+
+    .empty-hint {
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 0.75rem 0.5rem;
+    }
+
+    .draw-pad {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+    html[data-theme="dark"] .draw-pad {
+      background: #fafaf9;
+    }
+    .draw-tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.55rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--focus-bg);
+    }
+    .draw-tools .swatch {
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      border: 2px solid transparent;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+    }
+    .draw-tools .swatch.active {
+      border-color: var(--caret);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--caret) 35%, transparent);
+    }
+    .draw-tools .tool-btn.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .draw-tools label.size {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .draw-tools input[type="range"] {
+      width: 7rem;
+      accent-color: var(--accent);
+    }
+    .draw-pad canvas {
+      display: block;
+      width: 100%;
+      height: 280px;
+      touch-action: none;
+      cursor: crosshair;
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 24px 24px,
+        linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 24px 24px,
+        #fff;
+    }
+    html[data-theme="dark"] .draw-pad canvas {
+      background:
+        linear-gradient(#e7e5e4 1px, transparent 1px) 0 0 / 24px 24px,
+        linear-gradient(90deg, #e7e5e4 1px, transparent 1px) 0 0 / 24px 24px,
+        #fafaf9;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">math<span>Note</span></div>
+      <div class="toolbar">
+        <button type="button" id="btn-theme" title="Светлая / тёмная тема" aria-label="Переключить тему">☾</button>
+        <button type="button" id="btn-heading">Заголовок</button>
+        <button type="button" id="btn-text">Текст</button>
+        <button type="button" class="primary" id="btn-math">Формула</button>
+        <button type="button" id="btn-draw" title="Ctrl+Shift+Enter">Рисовалка</button>
+        <button type="button" id="btn-export">JSON ↓</button>
+        <label class="file-btn">JSON ↑<input type="file" id="import-file" accept="application/json,.json" /></label>
+        <button type="button" class="danger" id="btn-clear">Очистить</button>
+      </div>
+    </header>
+
+    <div class="status" id="status">загрузка…</div>
+
+    <div class="sheet">
+      <input class="title" id="title" type="text" placeholder="Название листа" spellcheck="true" />
+      <div class="blocks" id="blocks"></div>
+      <p class="empty-hint" id="empty-hint" hidden>
+        Добавь формулу или текст. <kbd>Ctrl</kbd>+<kbd>M</kbd> — math, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг.
+      </p>
+    </div>
+
+    <details class="help">
+      <summary>Клавиши</summary>
+      <ul>
+        <li><kbd>Ctrl</kbd>+<kbd>M</kbd> — новый блок формулы</li>
+        <li>В формуле <kbd>Enter</kbd> — из степени/индекса выйти вправо; на основной линии — новая строка</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — удалить текущую строку (курсор в конце предыдущей)</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
+        <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — заголовок (Дано / Решение…)</li>
+        <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь, <kbd>Space</kbd> — пробел</li>
+        <li><kbd>Alt</kbd>+цифра — степень слева от курсора (<code>x</code> → <code>x²</code>)</li>
+        <li><kbd>Ctrl</kbd>+цифра/буква — нижний индекс (<code>a</code> → <code>a₂</code>, <code>x</code> → <code>xₙ</code>)</li>
+        <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠</li>
+        <li><kbd>Alt</kbd>+<kbd>A</kbd> — ∀ · <kbd>Alt</kbd>+<kbd>E</kbd> — ∃ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> — ∄</li>
+        <li><kbd>Shift</kbd>+<kbd>'</kbd> — ∈ · <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>'</kbd> — ∉</li>
+        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>O</kbd> — ∪</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> — индекс Δ (например <code>x_Δ</code>)</li>
+        <li><kbd>\lim</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab</li>
+        <li>Пустой текстовый блок + <kbd>Backspace</kbd> — удалить</li>
+      </ul>
+    </details>
+  </div>
+
+  <script type="module">
+    import 'https://cdn.jsdelivr.net/npm/mathlive@0.105.0/+esm';
+
+    const STORAGE_KEY = 'mathNote.v1';
+    const blocksEl = document.getElementById('blocks');
+    const titleEl = document.getElementById('title');
+    const statusEl = document.getElementById('status');
+    const emptyHint = document.getElementById('empty-hint');
+
+    /** @type {{ id: string, type: 'heading'|'text'|'math'|'draw', content: string }[]} */
+    let blocks = [];
+    let saveTimer = null;
+    let statusTimer = null;
+
+    const DRAW_COLORS = ['#1c1917', '#dc2626', '#2563eb', '#16a34a', '#ea580c'];
+    const DRAW_W = 900;
+    const DRAW_H = 420;
+
+    function uid() {
+      return crypto.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    /**
+     * Раньше всё оборачивали в \\displaylines{} — из‑за этого ^ (степень)
+     * уезжала на «следующую строку». Однострочное — разворачиваем обратно.
+     * Многострочное (есть \\\\) оставляем.
+     */
+    function normalizeMathLatex(latex) {
+      let t = (latex ?? '').trim();
+      if (isVisuallyEmptyMath(t)) return '';
+      const m = t.match(/^\\displaylines\{([\s\S]*)\}$/);
+      if (m) {
+        const inner = m[1];
+        if (!/\\\\/.test(inner)) {
+          return inner.replace(/\\placeholder(\[[^\]]*\])?\{[^}]*\}/g, '').trim();
+        }
+      }
+      return t;
+    }
+
+    /** Пусто / одни placeholder'ы и разрывы строк — как чистый лист */
+    function isVisuallyEmptyMath(latex) {
+      let t = (latex ?? '').trim();
+      if (!t) return true;
+      const dl = t.match(/^\\displaylines\{([\s\S]*)\}$/);
+      if (dl) t = dl[1];
+      t = t
+        .replace(/\\begin\{(?:lines|gather|gathered|aligned|align\*?)\}/g, '')
+        .replace(/\\end\{(?:lines|gather|gathered|aligned|align\*?)\}/g, '')
+        .replace(/\\placeholder(\[[^\]]*\])?\{[^}]*\}/g, '')
+        .replace(/\\\\(?:\[[^\]]*\])?/g, '')
+        .replace(/[{}&]/g, '')
+        .replace(/\s+/g, '');
+      return t.length === 0;
+    }
+
+    function isMathEmpty(latex) {
+      return isVisuallyEmptyMath(latex);
+    }
+
+    let clearingMath = false;
+
+    function wireMathField(mf, block) {
+      mf.setAttribute('virtual-keyboard-mode', 'onfocus');
+      mf.setAttribute('smart-mode', '');
+      mf.setAttribute('smart-fence', '');
+      // Space вставляет матв пробел (по умолчанию MathLive его игнорирует)
+      mf.mathModeSpace = '\\:';
+      mf.value = block.content || '';
+      mf.addEventListener('input', () => {
+        if (clearingMath) return;
+        // только сохраняем; схлопывание пустых рядов — после Backspace/Delete,
+        // иначе набор \команд ломается (value ещё пустой → remount)
+        updateContent(block.id, mf.value ?? '');
+      });
+      mf.addEventListener('keydown', (e) => onFieldKey(e, block), true);
+      return mf;
+    }
+
+    /**
+     * После Ctrl+A → Delete MathLive часто оставляет пустые ряды на экране.
+     * Пересоздаём только это поле — сразу одна чистая строка.
+     */
+    function clearMathBlockIfEmpty(mf, blockId) {
+      const raw = mf?.value ?? '';
+      if (!isVisuallyEmptyMath(raw)) return raw;
+      if (clearingMath) return '';
+
+      const block = blocks.find((b) => b.id === blockId);
+      if (!block) return '';
+
+      const body = mf.closest('.block')?.querySelector('.body');
+      const needsRemount =
+        raw !== '' ||
+        block.content !== '' ||
+        /\\displaylines|\\\\/.test(raw);
+
+      // Уже чистая однострочная пустая формула — не мигаем пересозданием
+      if (!needsRemount) return '';
+
+      clearingMath = true;
+      block.content = '';
+      scheduleSave();
+
+      if (body) {
+        body.replaceChildren();
+        const fresh = wireMathField(document.createElement('math-field'), block);
+        body.appendChild(fresh);
+        requestAnimationFrame(() => {
+          try {
+            fresh.focus();
+          } catch {}
+          clearingMath = false;
+        });
+      } else {
+        render();
+        focusBlock(blockId);
+        queueMicrotask(() => {
+          clearingMath = false;
+        });
+      }
+      return '';
+    }
+
+    function parseDrawContent(raw) {
+      if (!raw) return { png: '' };
+      try {
+        const data = JSON.parse(raw);
+        return { png: data.png || '' };
+      } catch {
+        return { png: typeof raw === 'string' && raw.startsWith('data:') ? raw : '' };
+      }
+    }
+
+    function wireDrawPad(block) {
+      const pad = document.createElement('div');
+      pad.className = 'draw-pad';
+      pad.tabIndex = 0;
+
+      const tools = document.createElement('div');
+      tools.className = 'draw-tools';
+
+      let color = DRAW_COLORS[0];
+      let size = 6;
+      let mode = 'brush'; // brush | erase
+      let drawing = false;
+      let last = null;
+
+      const swatches = DRAW_COLORS.map((c) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'swatch' + (c === color ? ' active' : '');
+        b.style.background = c;
+        b.title = c;
+        b.addEventListener('click', () => {
+          color = c;
+          mode = 'brush';
+          swatches.forEach((s) => s.classList.toggle('active', s === b));
+          btnBrush.classList.add('active');
+          btnErase.classList.remove('active');
+        });
+        return b;
+      });
+
+      const btnBrush = document.createElement('button');
+      btnBrush.type = 'button';
+      btnBrush.className = 'tool-btn active';
+      btnBrush.textContent = 'Кисть';
+      btnBrush.addEventListener('click', () => {
+        mode = 'brush';
+        btnBrush.classList.add('active');
+        btnErase.classList.remove('active');
+      });
+
+      const btnErase = document.createElement('button');
+      btnErase.type = 'button';
+      btnErase.className = 'tool-btn';
+      btnErase.textContent = 'Стерка';
+      btnErase.addEventListener('click', () => {
+        mode = 'erase';
+        btnErase.classList.add('active');
+        btnBrush.classList.remove('active');
+        swatches.forEach((s) => s.classList.remove('active'));
+      });
+
+      const sizeLabel = document.createElement('label');
+      sizeLabel.className = 'size';
+      sizeLabel.innerHTML = `Размер <input type="range" min="2" max="36" value="${size}" /> <span>${size}</span>`;
+      const sizeInput = sizeLabel.querySelector('input');
+      const sizeVal = sizeLabel.querySelector('span');
+      sizeInput.addEventListener('input', () => {
+        size = Number(sizeInput.value);
+        sizeVal.textContent = String(size);
+      });
+
+      const btnClear = document.createElement('button');
+      btnClear.type = 'button';
+      btnClear.className = 'danger';
+      btnClear.textContent = 'Стереть всё';
+      btnClear.addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        persist();
+      });
+
+      tools.append(...swatches, btnBrush, btnErase, sizeLabel, btnClear);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = DRAW_W;
+      canvas.height = DRAW_H;
+      const ctx = canvas.getContext('2d');
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const saved = parseDrawContent(block.content);
+      if (saved.png) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0);
+        img.src = saved.png;
+      }
+
+      function persist() {
+        updateContent(block.id, JSON.stringify({ v: 1, png: canvas.toDataURL('image/png') }));
+      }
+
+      function pos(e) {
+        const r = canvas.getBoundingClientRect();
+        const src = e.touches ? e.touches[0] : e;
+        return {
+          x: ((src.clientX - r.left) / r.width) * canvas.width,
+          y: ((src.clientY - r.top) / r.height) * canvas.height,
+        };
+      }
+
+      function stroke(from, to) {
+        ctx.save();
+        if (mode === 'erase') {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.strokeStyle = 'rgba(0,0,0,1)';
+          ctx.lineWidth = size * 2.2;
+        } else {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = color;
+          ctx.lineWidth = size;
+          ctx.globalAlpha = 0.92;
+        }
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+        // плотная кисть: чуть дублируем точкой
+        ctx.beginPath();
+        ctx.fillStyle = mode === 'erase' ? 'rgba(0,0,0,1)' : color;
+        ctx.arc(to.x, to.y, (mode === 'erase' ? size * 1.1 : size * 0.45), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function start(e) {
+        e.preventDefault();
+        drawing = true;
+        last = pos(e);
+        stroke(last, last);
+        pad.focus({ preventScroll: true });
+      }
+      function move(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = pos(e);
+        stroke(last, p);
+        last = p;
+      }
+      function end() {
+        if (!drawing) return;
+        drawing = false;
+        last = null;
+        persist();
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        canvas.setPointerCapture?.(e.pointerId);
+        start(e);
+      });
+      canvas.addEventListener('pointermove', move);
+      canvas.addEventListener('pointerup', end);
+      canvas.addEventListener('pointercancel', end);
+      canvas.addEventListener('pointerleave', (e) => {
+        if (drawing) end(e);
+      });
+
+      pad.append(tools, canvas);
+      return pad;
+    }
+
+    /** Удалить текущую строку; курсор — в конце предыдущей (поведение MathLive removeRow) */
+    function deleteCurrentMathLine(mf) {
+      // выйти из степени/индекса на уровень строки
+      for (let i = 0; i < 16; i++) {
+        const caretKey = () => {
+          try {
+            return JSON.stringify(mf.selection ?? mf.position);
+          } catch {
+            return String(mf.position);
+          }
+        };
+        const p = caretKey();
+        mf.executeCommand('moveAfterParent');
+        if (caretKey() === p) break;
+      }
+
+      const before = mf.value ?? '';
+      const removed = mf.executeCommand('removeRow');
+
+      // одна строка — просто очищаем поле
+      if (!removed || before === (mf.value ?? '')) {
+        if (!/\\displaylines|\\\\/.test(before)) {
+          mf.value = '';
+        } else {
+          // removeRow не сработал на единственном ряде
+          mf.value = '';
+        }
+      }
+    }
+
+    function setStatus(text, ok = true) {
+      statusEl.textContent = text;
+      statusEl.style.color = ok ? 'var(--muted)' : 'var(--danger)';
+      clearTimeout(statusTimer);
+      if (ok) {
+        statusTimer = setTimeout(() => {
+          statusEl.textContent = 'сохранено локально';
+        }, 1600);
+      }
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      statusEl.textContent = 'сохранение…';
+      saveTimer = setTimeout(save, 400);
+    }
+
+    function save() {
+      const doc = {
+        title: titleEl.value,
+        blocks: blocks.map(({ id, type, content }) => ({ id, type, content })),
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
+      setStatus('сохранено ' + new Date().toLocaleTimeString());
+    }
+
+    function load() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        blocks = [
+          { id: uid(), type: 'heading', content: 'Решение' },
+          { id: uid(), type: 'math', content: '' },
+        ];
+        titleEl.value = 'Лист 1';
+        return;
+      }
+      try {
+        const doc = JSON.parse(raw);
+        titleEl.value = doc.title || 'Лист 1';
+        blocks = Array.isArray(doc.blocks) ? doc.blocks : [];
+        blocks = blocks.map((b) =>
+          b.type === 'math' ? { ...b, content: normalizeMathLatex(b.content) } : b
+        );
+        if (!blocks.length) {
+          blocks = [{ id: uid(), type: 'math', content: '' }];
+        }
+      } catch {
+        setStatus('не удалось прочитать localStorage', false);
+        blocks = [{ id: uid(), type: 'math', content: '' }];
+      }
+    }
+
+    function stepNumber(index) {
+      let n = 0;
+      for (let i = 0; i <= index; i++) {
+        if (blocks[i].type !== 'heading') n += 1;
+      }
+      return n;
+    }
+
+    function autosizeTextarea(el) {
+      el.style.height = 'auto';
+      el.style.height = `${Math.max(38, el.scrollHeight)}px`;
+    }
+
+    function focusBlock(id, atEnd = false) {
+      requestAnimationFrame(() => {
+        const row = blocksEl.querySelector(`[data-id="${id}"]`);
+        if (!row) return;
+        const mf = row.querySelector('math-field');
+        const input = row.querySelector('textarea, input.heading-input');
+        const draw = row.querySelector('.draw-pad');
+        if (mf) {
+          mf.focus();
+          if (atEnd) {
+            try { mf.executeCommand('moveToMathFieldEnd'); } catch {}
+          }
+        } else if (input) {
+          input.focus();
+          if (atEnd) {
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+          }
+        } else if (draw) {
+          draw.focus({ preventScroll: true });
+        }
+      });
+    }
+
+    function insertBlock(type, afterId = null, content = '') {
+      const block = {
+        id: uid(),
+        type,
+        content:
+          type === 'math'
+            ? normalizeMathLatex(content)
+            : type === 'draw'
+              ? content || JSON.stringify({ v: 1, png: '' })
+              : content,
+      };
+      if (afterId == null) {
+        blocks.push(block);
+      } else {
+        const i = blocks.findIndex((b) => b.id === afterId);
+        blocks.splice(i < 0 ? blocks.length : i + 1, 0, block);
+      }
+      render();
+      scheduleSave();
+      focusBlock(block.id);
+      return block;
+    }
+
+    function removeBlock(id) {
+      if (blocks.length <= 1) {
+        blocks[0] = { id: uid(), type: 'math', content: '' };
+        render();
+        scheduleSave();
+        focusBlock(blocks[0].id);
+        return;
+      }
+      const i = blocks.findIndex((b) => b.id === id);
+      blocks = blocks.filter((b) => b.id !== id);
+      render();
+      scheduleSave();
+      const next = blocks[Math.max(0, i - 1)] || blocks[0];
+      focusBlock(next.id, true);
+    }
+
+    function updateContent(id, content) {
+      const b = blocks.find((x) => x.id === id);
+      if (!b) return;
+      b.content = content;
+      scheduleSave();
+    }
+
+    function render() {
+      blocksEl.innerHTML = '';
+      emptyHint.hidden = blocks.length > 0;
+
+      blocks.forEach((block, index) => {
+        const row = document.createElement('div');
+        row.className = `block ${block.type}`;
+        row.dataset.id = block.id;
+
+        const num = document.createElement('div');
+        num.className = 'num';
+        num.textContent = block.type === 'heading' ? '' : `(${stepNumber(index)})`;
+
+        const body = document.createElement('div');
+        body.className = 'body';
+
+        if (block.type === 'heading') {
+          const input = document.createElement('input');
+          input.className = 'heading-input';
+          input.value = block.content;
+          input.placeholder = 'Дано / Найти / Решение / Доказательство';
+          input.addEventListener('input', () => updateContent(block.id, input.value));
+          input.addEventListener('keydown', (e) => onFieldKey(e, block));
+          body.appendChild(input);
+        } else if (block.type === 'text') {
+          const ta = document.createElement('textarea');
+          ta.className = 'text-input';
+          ta.value = block.content;
+          ta.placeholder = 'Пояснение к шагу…';
+          ta.rows = 1;
+          ta.addEventListener('input', () => {
+            updateContent(block.id, ta.value);
+            autosizeTextarea(ta);
+          });
+          ta.addEventListener('keydown', (e) => onFieldKey(e, block));
+          body.appendChild(ta);
+          requestAnimationFrame(() => autosizeTextarea(ta));
+        } else if (block.type === 'draw') {
+          body.appendChild(wireDrawPad(block));
+        } else {
+          body.appendChild(wireMathField(document.createElement('math-field'), block));
+        }
+
+        const ops = document.createElement('div');
+        ops.className = 'ops';
+        const addMath = document.createElement('button');
+        addMath.type = 'button';
+        addMath.title = 'Формула ниже';
+        addMath.textContent = '+∑';
+        addMath.addEventListener('click', () => insertBlock('math', block.id));
+        const addText = document.createElement('button');
+        addText.type = 'button';
+        addText.title = 'Текст ниже';
+        addText.textContent = '+T';
+        addText.addEventListener('click', () => insertBlock('text', block.id));
+        const addDraw = document.createElement('button');
+        addDraw.type = 'button';
+        addDraw.title = 'Рисовалка ниже';
+        addDraw.textContent = '+✎';
+        addDraw.addEventListener('click', () => insertBlock('draw', block.id));
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.title = 'Удалить';
+        del.textContent = '×';
+        del.addEventListener('click', () => removeBlock(block.id));
+        ops.append(addMath, addText, addDraw, del);
+
+        row.append(num, body, ops);
+        blocksEl.appendChild(row);
+      });
+    }
+
+    function onFieldKey(e, block) {
+      // Alt+Digit → степень; Ctrl+Digit → нижний индекс (Shift свободен для () и т.п.)
+      if (block.type === 'math') {
+        // Хоткеи для логики / множеств / символов
+        {
+          let latex = null;
+          if (!e.ctrlKey && !e.metaKey) {
+            if (e.altKey && !e.shiftKey && e.code === 'Equal') latex = '\\Leftrightarrow'; // ⇔
+            else if (e.altKey && e.shiftKey && e.code === 'Equal') latex = '\\neq'; // ≠
+            else if (e.altKey && !e.shiftKey && e.code === 'KeyA') latex = '\\forall'; // ∀
+            else if (e.altKey && !e.shiftKey && e.code === 'KeyE') latex = '\\exists'; // ∃
+            else if (e.altKey && e.shiftKey && e.code === 'KeyE') latex = '\\nexists'; // ∄
+            else if (e.altKey && !e.shiftKey && e.code === 'KeyC') latex = '\\ni'; // ∋ отзеркаленный ∈
+            else if (e.altKey && !e.shiftKey && e.code === 'KeyI') latex = '\\cap'; // ∩ пересечение
+            else if (e.altKey && !e.shiftKey && e.code === 'KeyO') latex = '\\cup'; // ∪ объединение
+            else if (e.shiftKey && !e.altKey && e.code === 'Quote') latex = '\\in'; // ∈
+            else if (e.shiftKey && e.altKey && e.code === 'Quote') latex = '\\notin'; // ∉
+          }
+          if (
+            (e.ctrlKey || e.metaKey) &&
+            e.shiftKey &&
+            !e.altKey &&
+            e.code === 'KeyD'
+          ) {
+            latex = '{#@}_{\\Delta}'; // индекс Δ
+          }
+
+          if (latex) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            const mf = e.currentTarget;
+            try {
+              mf.executeCommand(['insert', latex]);
+              updateContent(block.id, mf.value);
+            } catch {
+              /* ignore */
+            }
+            return;
+          }
+        }
+
+        const digit = /^Digit([0-9])$/.exec(e.code)?.[1];
+        // Ctrl+C/V/M/S оставляем системе / глобальным хоткеям
+        const letterRaw = /^Key([A-Z])$/.exec(e.code)?.[1]?.toLowerCase();
+        const letter =
+          letterRaw && !['c', 'v', 'm', 's'].includes(letterRaw)
+            ? letterRaw
+            : null;
+        if (digit != null || letter != null) {
+          // Alt+цифра → степень; Ctrl+цифра/буква → индекс
+          const power =
+            digit != null &&
+            e.altKey &&
+            !e.ctrlKey &&
+            !e.metaKey &&
+            !e.shiftKey;
+          const index =
+            (e.ctrlKey || e.metaKey) &&
+            !e.altKey &&
+            !e.shiftKey &&
+            (digit != null || letter != null);
+          if (power || index) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            const mf = e.currentTarget;
+            try {
+              const sym = digit ?? letter;
+              const latex = power ? `{#@}^{${sym}}` : `{#@}_{${sym}}`;
+              mf.executeCommand(['insert', latex]);
+              updateContent(block.id, mf.value);
+            } catch {
+              /* ignore */
+            }
+            return;
+          }
+        }
+      }
+
+      // Ctrl/Cmd+Backspace — удалить строку, курсор в конце предыдущей
+      if (
+        e.key === 'Backspace' &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        block.type === 'math'
+      ) {
+        const mf = e.currentTarget;
+        const mode = mf.mode;
+        if (mode === 'latex' || mode === 'text') return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        if (e.repeat) return;
+
+        try {
+          deleteCurrentMathLine(mf);
+          const after = mf.value ?? '';
+          if (isVisuallyEmptyMath(after)) {
+            clearMathBlockIfEmpty(mf, block.id);
+          } else {
+            updateContent(block.id, after);
+          }
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
+      if (e.key === 'Enter' && block.type === 'math' && !e.shiftKey && !e.altKey) {
+        const mf = e.currentTarget;
+        // в режиме \команды (и если mode недоступен — при незавершённом \) не перехватываем
+        const mode = mf.mode;
+        if (mode === 'latex' || mode === 'text') return;
+
+        if (e.ctrlKey || e.metaKey) {
+          // новый блок-шаг
+          e.preventDefault();
+          insertBlock('math', block.id);
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          // если курсор в степени / индексе / основании лога — выйти вправо на основную линию
+          const caretKey = () => {
+            try {
+              return JSON.stringify(mf.selection ?? mf.position);
+            } catch {
+              return String(mf.position);
+            }
+          };
+          const before = caretKey();
+          mf.executeCommand('moveAfterParent');
+          if (caretKey() !== before) {
+            // выходим из всех вложенностей до основной строки
+            for (let i = 0; i < 16; i++) {
+              const p = caretKey();
+              mf.executeCommand('moveAfterParent');
+              if (caretKey() === p) break;
+            }
+          } else {
+            // уже на основной линии — новая строка
+            mf.executeCommand('addRowAfter');
+          }
+          updateContent(block.id, mf.value);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        insertBlock('draw', block.id);
+        return;
+      }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        insertBlock(block.type === 'heading' ? 'text' : block.type === 'draw' ? 'math' : block.type, block.id);
+        return;
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (block.type === 'math' && !e.repeat) {
+          const mf = e.currentTarget;
+          const mode = mf.mode;
+          if (mode === 'latex' || mode === 'text') return;
+
+          const before = mf.value ?? '';
+          requestAnimationFrame(() => {
+            queueMicrotask(() => {
+              if (!mf.isConnected) return;
+              const modeAfter = mf.mode;
+              if (modeAfter === 'latex' || modeAfter === 'text') return;
+              const after = mf.value ?? '';
+              if (!isVisuallyEmptyMath(after)) return;
+              if (before !== '' || /\\displaylines|\\\\/.test(before)) {
+                clearMathBlockIfEmpty(mf, block.id);
+              }
+            });
+          });
+        }
+      }
+
+      if (e.key === 'Backspace') {
+        if (block.type === 'math') {
+          const mf = e.currentTarget;
+          const mode = mf.mode;
+          // не трогаем Backspace во время набора \команды
+          if (mode === 'latex' || mode === 'text') return;
+          // и не preventDefault, пока в поле есть хоть что-то
+          if (!isVisuallyEmptyMath(mf.value ?? '') || e.repeat) return;
+
+          const otherSteps = blocks.filter(
+            (b) => b.id !== block.id && b.type !== 'heading'
+          );
+          if (otherSteps.length === 0) return;
+
+          e.preventDefault();
+          removeBlock(block.id);
+          return;
+        }
+
+        const empty = !block.content;
+        const el = e.target;
+        const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
+        if (empty && atStart && !e.repeat) {
+          e.preventDefault();
+          removeBlock(block.id);
+        }
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const active = document.activeElement?.closest?.('.block')?.dataset?.id;
+      const after = active ?? blocks.at(-1)?.id ?? null;
+
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        insertBlock('draw', after);
+        return;
+      }
+
+      const k = e.key.toLowerCase();
+      if (k === 'm') {
+        e.preventDefault();
+        insertBlock('math', after);
+      } else if (k === 'h') {
+        e.preventDefault();
+        insertBlock('heading', after);
+      } else if (k === 's') {
+        e.preventDefault();
+        save();
+      }
+    });
+
+    const THEME_KEY = 'mathNote.theme';
+    const themeBtn = document.getElementById('btn-theme');
+
+    function currentTheme() {
+      return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+      } else {
+        delete document.documentElement.dataset.theme;
+      }
+      localStorage.setItem(THEME_KEY, theme);
+      themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
+      themeBtn.title = theme === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+    }
+
+    applyTheme(currentTheme() === 'dark' || localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light');
+    themeBtn.onclick = () => applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+
+    titleEl.addEventListener('input', scheduleSave);
+
+    document.getElementById('btn-heading').onclick = () =>
+      insertBlock('heading', blocks.at(-1)?.id ?? null);
+    document.getElementById('btn-text').onclick = () =>
+      insertBlock('text', blocks.at(-1)?.id ?? null);
+    document.getElementById('btn-math').onclick = () =>
+      insertBlock('math', blocks.at(-1)?.id ?? null);
+    document.getElementById('btn-draw').onclick = () =>
+      insertBlock('draw', blocks.at(-1)?.id ?? null);
+
+    document.getElementById('btn-export').onclick = () => {
+      save();
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const blob = new Blob([raw], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(titleEl.value || 'mathNote').replace(/\s+/g, '_')}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus('JSON скачан');
+    };
+
+    document.getElementById('import-file').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const doc = JSON.parse(await file.text());
+        titleEl.value = doc.title || 'Импорт';
+        blocks = Array.isArray(doc.blocks) ? doc.blocks : [];
+        if (!blocks.length) blocks = [{ id: uid(), type: 'math', content: '' }];
+        render();
+        save();
+        setStatus('импортировано');
+      } catch {
+        setStatus('битый JSON', false);
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('btn-clear').onclick = () => {
+      if (!confirm('Очистить лист?')) return;
+      titleEl.value = 'Лист 1';
+      blocks = [
+        { id: uid(), type: 'heading', content: 'Решение' },
+        { id: uid(), type: 'math', content: '' },
+      ];
+      render();
+      save();
+    };
+
+    load();
+    render();
+    setStatus('готово — пиши решение');
+    focusBlock(blocks[0]?.id);
+  </script>
+</body>
+</html>
