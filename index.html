@@ -72,7 +72,7 @@
     }
 
     .app {
-      max-width: 1140px; /* шире основного окна отдельно от масштаба */
+      max-width: 1254px; /* лист шире на 10% */
       margin: 0 auto;
       padding: 1.25rem 1.25rem 4rem;
     }
@@ -228,7 +228,9 @@
       --caret-color: var(--caret);
       --selection-color: var(--selection-fg);
       --selection-background-color: var(--selection-bg);
-      --contains-highlight-background-color: color-mix(in srgb, var(--caret) 18%, transparent);
+      --contains-highlight-background-color: transparent;
+      --highlight-text: transparent;
+      --text-highlight-background-color: transparent;
       --hue: 20;
       min-height: 2.5rem;
     }
@@ -424,8 +426,8 @@
         <button type="button" id="btn-text">Текст</button>
         <button type="button" class="primary" id="btn-math">Формула</button>
         <button type="button" id="btn-draw" title="Ctrl+Shift+Enter">Рисовалка</button>
-        <button type="button" id="btn-export">JSON ↓</button>
-        <label class="file-btn">JSON ↑<input type="file" id="import-file" accept="application/json,.json" /></label>
+        <button type="button" id="btn-export">JSON ↑</button>
+        <label class="file-btn">JSON ↓<input type="file" id="import-file" accept="application/json,.json" /></label>
         <button type="button" class="danger" id="btn-clear">Очистить</button>
       </div>
     </header>
@@ -445,22 +447,24 @@
       <ul>
         <li><kbd>Ctrl</kbd>+<kbd>M</kbd> — новый блок формулы</li>
         <li>В формуле <kbd>Enter</kbd> — из степени/индекса выйти вправо; на основной линии — новая строка</li>
-        <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — удалить текущую строку (курсор в конце предыдущей)</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — в комментарии стереть слово; в формуле — удалить строку</li>
         <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
-        <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — заголовок (Дано / Решение…)</li>
-        <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь, <kbd>Space</kbd> — пробел</li>
+        <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — новый текстовый блок</li>
+        <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь (после <code>x^2</code> числитель — вся степень), <kbd>(</kbd> → <code>()</code> с курсором внутри, <kbd>)</kbd> — просто скобка, <kbd>Space</kbd> — пробел</li>
         <li><kbd>Alt</kbd>+цифра — степень слева от курсора (<code>x</code> → <code>x²</code>)</li>
-        <li><kbd>Ctrl</kbd>+цифра/буква — нижний индекс (<code>a</code> → <code>a₂</code>, <code>x</code> → <code>xₙ</code>)</li>
+        <li><kbd>Ctrl</kbd>+цифра/буква — нижний индекс (<code>a</code> → <code>a₂</code>); буквы A/C/V/M/S/Z/Y/H заняты</li>
         <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠</li>
         <li><kbd>Alt</kbd>+<kbd>A</kbd> — ∀ · <kbd>Alt</kbd>+<kbd>E</kbd> — ∃ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> — ∄</li>
         <li><kbd>Shift</kbd>+<kbd>'</kbd> — ∈ · <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>'</kbd> — ∉</li>
-        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪</li>
+        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪ · <kbd>Alt</kbd>+<kbd>R</kbd> — √</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> — индекс Δ (например <code>x_Δ</code>)</li>
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>&lt;</kbd> / <kbd>&gt;</kbd> — ≤ / ≥</li>
         <li><kbd>\lim</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab</li>
+        <li>В формуле <kbd>#</kbd> — комментарий (серый текст, пробелы ок); <kbd>Esc</kbd> — снова формула</li>
+        <li>Буквенные шорткаты — только на EN-раскладке; на русской <kbd>.</kbd>/<kbd>,</kbd> не становятся дробью</li>
         <li>Пустой текстовый блок + <kbd>Backspace</kbd> — удалить</li>
         <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> — отменить · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> — вернуть</li>
       </ul>
@@ -575,7 +579,7 @@
       try {
         mf.focus();
         mf.executeCommand(['insert', op.latex]);
-        updateContent(blockId, mf.value);
+        saveMathField(mf, blockId);
       } catch {
         /* ignore */
       }
@@ -619,32 +623,1163 @@
       return t.length === 0;
     }
 
-    function isMathEmpty(latex) {
-      return isVisuallyEmptyMath(latex);
+    let clearingMath = false;
+
+    /**
+     * Свой undo/redo по снимкам LaTeX: стек MathLive ломается после applyStyle/#-комментариев
+     * (canUndo=true, а value не меняется). Ctrl+Z перехватываем сами.
+     * @type {WeakMap<HTMLElement, { undo: string[], redo: string[], last: string, applying: boolean }>}
+     */
+    const mathHistory = new WeakMap();
+    const MATH_UNDO_MAX = 200;
+
+    function mathHistoryState(mf) {
+      let s = mathHistory.get(mf);
+      if (!s) {
+        s = { undo: [], redo: [], last: mf.value ?? '', applying: false };
+        mathHistory.set(mf, s);
+      }
+      return s;
     }
 
-    let clearingMath = false;
+    function trackMathHistory(mf) {
+      if (!mf || clearingMath) return;
+      const s = mathHistoryState(mf);
+      if (s.applying) return;
+      const cur = mf.value ?? '';
+      if (cur === s.last) return;
+      s.undo.push(s.last);
+      if (s.undo.length > MATH_UNDO_MAX) s.undo.shift();
+      s.redo.length = 0;
+      s.last = cur;
+    }
+
+    function applyMathHistoryValue(mf, latex) {
+      const s = mathHistoryState(mf);
+      s.applying = true;
+      try {
+        mf.value = latex;
+        s.last = latex;
+        try {
+          mf.resetUndo?.();
+        } catch {
+          /* ignore */
+        }
+      } finally {
+        s.applying = false;
+      }
+    }
+
+    /** @returns {boolean} */
+    function mathFieldUndo(mf) {
+      if (!mf) return false;
+      const s = mathHistoryState(mf);
+      // догнать снимок, если input ещё не успел
+      trackMathHistory(mf);
+      if (s.undo.length) {
+        s.redo.push(s.last);
+        applyMathHistoryValue(mf, s.undo.pop());
+        return true;
+      }
+      const before = mf.value ?? '';
+      try {
+        mf.executeCommand('undo');
+      } catch {
+        return false;
+      }
+      const after = mf.value ?? '';
+      if (after === before) return false;
+      s.last = after;
+      s.redo.length = 0;
+      return true;
+    }
+
+    /** @returns {boolean} */
+    function mathFieldRedo(mf) {
+      if (!mf) return false;
+      const s = mathHistoryState(mf);
+      if (s.redo.length) {
+        s.undo.push(s.last);
+        if (s.undo.length > MATH_UNDO_MAX) s.undo.shift();
+        applyMathHistoryValue(mf, s.redo.pop());
+        return true;
+      }
+      const before = mf.value ?? '';
+      try {
+        mf.executeCommand('redo');
+      } catch {
+        return false;
+      }
+      const after = mf.value ?? '';
+      if (after === before) return false;
+      s.last = after;
+      return true;
+    }
+
+    function handleMathUndoRedoKey(e, mf, blockId) {
+      if (!mf || !(e.ctrlKey || e.metaKey) || e.altKey) return false;
+      if (e.code !== 'KeyZ' && e.code !== 'KeyY') return false;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      const redo =
+        (e.code === 'KeyZ' && e.shiftKey) ||
+        (e.code === 'KeyY' && !e.shiftKey);
+      try {
+        if (redo) mathFieldRedo(mf);
+        else mathFieldUndo(mf);
+        if (!isMathTextMode(mf)) endCommentSession(mf);
+        if (blockId) updateContent(blockId, mf.value ?? '');
+      } catch {
+        /* ignore */
+      }
+      return true;
+    }
+
+    /** После программного insert — снимок для Ctrl+Z (input может не прийти). */
+    function saveMathField(mf, blockId) {
+      trackMathHistory(mf);
+      updateContent(blockId, mf.value ?? '');
+    }
+
+    function mathCaretKey(mf) {
+      try {
+        return JSON.stringify(mf.selection ?? mf.position);
+      } catch {
+        return String(mf.position);
+      }
+    }
+
+    /** Курсор внутри ^ / _ — #@ забирает только показатель; выходим вправо. */
+    function exitScriptBeforeFraction(mf) {
+      for (let i = 0; i < 8; i++) {
+        let branch;
+        try {
+          const model = mf._mathfield?.model;
+          const atom = model?.at(model.position);
+          branch = atom?.parentBranch;
+        } catch {
+          branch = undefined;
+        }
+        if (branch !== 'superscript' && branch !== 'subscript') break;
+        const before = mathCaretKey(mf);
+        mf.executeCommand('moveAfterParent');
+        if (mathCaretKey(mf) === before) break;
+      }
+    }
+
+    function isFractionLeftAtom(atom) {
+      if (!atom) return false;
+      try {
+        if (typeof atom.isDigit === 'function' && atom.isDigit()) return true;
+      } catch {
+        /* ignore */
+      }
+      const t = atom.type;
+      if (!t || t === 'extensible-symbol') return false;
+      return /^(mord|surd|subsup|leftright|mop|mclose)$/.test(t);
+    }
+
+    /**
+     * Дробь: вручную забираем левый аргумент (x^2 целиком), без #@.
+     */
+    function insertSmartFraction(mf) {
+      exitScriptBeforeFraction(mf);
+
+      const model = mf._mathfield?.model;
+      if (!model) {
+        mf.executeCommand(['insert', '\\frac{#@}{#?}']);
+        return;
+      }
+
+      if (!model.selectionIsCollapsed) {
+        const selected = (model.getValue(model.selection, 'latex') || '').trim();
+        if (selected) {
+          const ok = mf.insert(`\\frac{${selected}}{#?}`, {
+            insertionMode: 'replaceSelection',
+            selectionMode: 'placeholder',
+            format: 'latex',
+          });
+          if (ok) return;
+        }
+        mf.executeCommand(['insert', '\\frac{#@}{#?}']);
+        return;
+      }
+
+      const end = model.position;
+      let atom = model.at(end);
+      const atCursor = atom;
+
+      if (atom?.type === 'mclose') {
+        const opens = { ')': '(', ']': '[', '}': '{', '\\rangle': '\\langle' };
+        const open = opens[atom.value];
+        while (
+          atom &&
+          !atom.isFirstSibling &&
+          !(atom.type === 'mopen' && atom.value === open)
+        ) {
+          atom = atom.leftSibling;
+        }
+        if (atom && !atom.isFirstSibling) atom = atom.leftSibling;
+      } else if (atom?.type === 'leftright') {
+        atom = atom.leftSibling;
+      }
+
+      while (atom && !atom.isFirstSibling && isFractionLeftAtom(atom)) {
+        atom = atom.leftSibling;
+      }
+
+      if (!atom || atCursor === atom) {
+        mf.insert('\\frac{#?}{#?}', {
+          selectionMode: 'placeholder',
+          format: 'latex',
+        });
+        return;
+      }
+
+      const start = model.offsetOf(atom);
+      let num = (model.getValue(start, end, 'latex') || '').trim();
+
+      // На случай если диапазон не захватил степень — расширяем выделение
+      try {
+        model.extendSelectionTo(start, end);
+        const expanded = (model.getValue(model.selection, 'latex') || '').trim();
+        if (expanded) num = expanded;
+        if (num) {
+          const ok = mf.insert(`\\frac{${num}}{#?}`, {
+            insertionMode: 'replaceSelection',
+            selectionMode: 'placeholder',
+            format: 'latex',
+          });
+          if (ok) return;
+        }
+      } catch {
+        /* fall through */
+      }
+
+      if (!num) {
+        mf.insert('\\frac{#?}{#?}', {
+          selectionMode: 'placeholder',
+          format: 'latex',
+        });
+        return;
+      }
+
+      try {
+        model.deleteAtoms([start, end]);
+      } catch {
+        /* ignore */
+      }
+      mf.insert(`\\frac{${num}}{#?}`, {
+        selectionMode: 'placeholder',
+        format: 'latex',
+      });
+    }
+
+    function isFractionSlashKey(e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return false;
+      // Не e.code === 'Slash': на RU эта клавиша даёт `.` / `,`
+      return e.key === '/' || e.code === 'NumpadDivide';
+    }
+
+    /** Шорткат по букве только на EN-раскладке (e.key совпадает с латиницей). */
+    function isEnLetter(e, letter) {
+      const L = letter.toUpperCase();
+      return e.code === `Key${L}` && e.key.toLowerCase() === letter.toLowerCase();
+    }
+
+    /** Физическая клавиша даёт ожидаемый EN-символ (не русскую букву на том же месте). */
+    function isEnKey(e, code, allowedKeys) {
+      return e.code === code && allowedKeys.includes(e.key);
+    }
+
+    /** Как в VS Code: `(` → `()` с курсором между; выделение оборачивается. */
+    function insertAutoParens(mf) {
+      const model = mf._mathfield?.model;
+      if (model && !model.selectionIsCollapsed) {
+        mf.insert('(#0)', {
+          insertionMode: 'replaceSelection',
+          format: 'latex',
+          smartFence: false,
+        });
+        return;
+      }
+      mf.insert('()', { format: 'latex', smartFence: false });
+      mf.executeCommand('moveToPreviousChar');
+    }
+
+    function mathSelectionCollapsed(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (model && typeof model.selectionIsCollapsed === 'boolean') {
+          return model.selectionIsCollapsed;
+        }
+        const sel = mf?.selection;
+        const range = sel?.ranges?.[0];
+        if (!range) return true;
+        return range[0] === range[1];
+      } catch {
+        return true;
+      }
+    }
+
+    function setMathSelection(mf, start, end) {
+      if (typeof start !== 'number' || typeof end !== 'number') return false;
+      const a = Math.min(start, end);
+      const b = Math.max(start, end);
+      try {
+        mf.selection = { ranges: [[a, b]] };
+        return true;
+      } catch {
+        /* ignore */
+      }
+      try {
+        mf._mathfield?.model?.setSelection?.(a, b);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function rangeOfAtomList(model, atoms) {
+      if (!model || !atoms?.length) return null;
+      const start = model.offsetOf(atoms[0]);
+      const last = atoms[atoms.length - 1];
+      if (typeof start !== 'number' || !last) return null;
+      // offset последнего атома — позиция сразу после него.
+      const end = model.offsetOf(last);
+      if (typeof end !== 'number') return null;
+      return [start, end];
+    }
+
+    function isMultilineMathParent(parent) {
+      if (!parent) return false;
+      if (parent.isMultiline) return true;
+      const env = String(parent.environmentName || parent.envName || '');
+      if (/^(lines|displaylines|gather|align|multline|eqnarray)$/i.test(env)) {
+        return true;
+      }
+      return parent.type === 'array' && typeof parent.getCell === 'function';
+    }
+
+    function collectMathAtomTree(atom, result) {
+      if (!atom || result.has(atom)) return;
+      result.add(atom);
+      for (const branch of [
+        'body',
+        'superscript',
+        'subscript',
+        'above',
+        'below',
+        'index',
+      ]) {
+        const children = atom[branch];
+        if (Array.isArray(children)) {
+          for (const child of children) collectMathAtomTree(child, result);
+        } else if (children) {
+          collectMathAtomTree(children, result);
+        }
+      }
+    }
+
+    function renderedBoundsForAtoms(mf, atoms) {
+      const root = mf?.shadowRoot;
+      if (!root || !atoms?.length) return null;
+      const tree = new Set();
+      for (const atom of atoms) collectMathAtomTree(atom, tree);
+      let left = Infinity;
+      let right = -Infinity;
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (const atom of tree) {
+        const id = atom?.id;
+        if (!id) continue;
+        for (const el of root.querySelectorAll(`[data-atom-id="${id}"]`)) {
+          const r = el.getBoundingClientRect();
+          if (r.width < 0.5 || r.height < 0.5) continue;
+          left = Math.min(left, r.left);
+          right = Math.max(right, r.right);
+          top = Math.min(top, r.top);
+          bottom = Math.max(bottom, r.bottom);
+        }
+      }
+      if (!Number.isFinite(top)) return null;
+      return { left, right, top, bottom };
+    }
+
+    /**
+     * Строки displaylines вместе с экранными Y-границами.
+     * Нужны для двойного клика по пустому месту справа от формулы:
+     * там MathLive не даёт atom и оставляет position на старой строке.
+     */
+    function renderedMathRows(mf) {
+      const model = mf?._mathfield?.model;
+      if (!model) return [];
+      const parents = new Map();
+      for (let i = 0; i <= model.lastOffset; i++) {
+        let atom = model.at(i);
+        while (atom) {
+          const branch = atom.parentBranch;
+          const parent = atom.parent;
+          if (
+            parent &&
+            Array.isArray(branch) &&
+            typeof branch[0] === 'number' &&
+            isMultilineMathParent(parent)
+          ) {
+            let rows = parents.get(parent);
+            if (!rows) {
+              rows = new Map();
+              parents.set(parent, rows);
+            }
+            let cells = rows.get(branch[0]);
+            if (!cells) {
+              cells = new Map();
+              rows.set(branch[0], cells);
+            }
+            cells.set(branch[1] ?? 0, true);
+            break;
+          }
+          atom = parent;
+        }
+      }
+
+      const result = [];
+      for (const [parent, rows] of parents) {
+        for (const [rowIndex, columns] of rows) {
+          const atoms = [];
+          for (const colIndex of columns.keys()) {
+            const cell =
+              typeof parent.getCell === 'function'
+                ? parent.getCell(rowIndex, colIndex)
+                : parent._rows?.[rowIndex]?.[colIndex];
+            if (Array.isArray(cell)) atoms.push(...cell);
+          }
+          const range = rangeOfAtomList(model, atoms);
+          const bounds = renderedBoundsForAtoms(mf, atoms);
+          if (range && bounds) result.push({ range, bounds });
+        }
+      }
+      if (!result.length && model.lastOffset > 0) {
+        const atoms = [];
+        for (let i = 0; i <= model.lastOffset; i++) {
+          const atom = model.at(i);
+          if (atom && !atoms.includes(atom)) atoms.push(atom);
+        }
+        const bounds = renderedBoundsForAtoms(mf, atoms);
+        if (bounds) {
+          result.push({ range: [0, model.lastOffset], bounds });
+        }
+      }
+      return result;
+    }
+
+    function renderedMathRowAtY(mf, clientY) {
+      const rows = renderedMathRows(mf);
+      let best = null;
+      let bestDistance = Infinity;
+      for (const row of rows) {
+        const { bounds } = row;
+        const distance =
+          clientY < bounds.top
+            ? bounds.top - clientY
+            : clientY > bounds.bottom
+              ? clientY - bounds.bottom
+              : 0;
+        if (
+          distance < bestDistance ||
+          (distance === bestDistance &&
+            (!best ||
+              bounds.right - bounds.left >
+                best.bounds.right - best.bounds.left))
+        ) {
+          best = row;
+          bestDistance = distance;
+        }
+      }
+      return best && bestDistance <= 24 ? best : null;
+    }
+
+    function selectMathLineAtPoint(mf, clientX, clientY) {
+      const row = renderedMathRowAtY(mf, clientY);
+      if (row) {
+        setMathSelection(mf, row.range[0], row.range[1]);
+        return;
+      }
+      selectMathLine(mf, modelAtomFromPoint(mf, clientX, clientY));
+    }
+
+    /**
+     * Двойной клик в формуле: выделить текущую строку (ряд multiline),
+     * иначе всё содержимое поля (одна «строка» формулы).
+     * pointerdown/move/up не трогаем — drag MathLive должен жить.
+     */
+    function selectMathLine(mf, atomHint = null) {
+      if (!mf) return;
+      try {
+        const model = mf._mathfield?.model;
+        if (model) {
+          let atom = atomHint || model.at(model.position);
+          while (atom) {
+            const branch = atom.parentBranch;
+            const parent = atom.parent;
+            if (
+              parent &&
+              Array.isArray(branch) &&
+              typeof branch[0] === 'number' &&
+              isMultilineMathParent(parent)
+            ) {
+              const cell =
+                typeof parent.getCell === 'function'
+                  ? parent.getCell(branch[0], branch[1] ?? 0)
+                  : parent._rows?.[branch[0]]?.[branch[1] ?? 0];
+              const range = rangeOfAtomList(model, cell);
+              if (range && setMathSelection(mf, range[0], range[1])) return;
+              break;
+            }
+            atom = parent;
+          }
+        }
+      } catch {
+        /* fall through */
+      }
+      try {
+        mf.executeCommand('selectAll');
+      } catch {
+        try {
+          mf.select?.();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    /** Пока true — не трогать выделение (dblclick / drag). */
+    const selectionHold = new WeakMap();
+
+    function holdMathSelection(mf, ms = 320) {
+      if (!mf) return;
+      const token = (selectionHold.get(mf) || 0) + 1;
+      selectionHold.set(mf, token);
+      setTimeout(() => {
+        if (selectionHold.get(mf) === token) selectionHold.delete(mf);
+      }, ms);
+    }
+
+    function shouldLeaveMathSelectionAlone(mf) {
+      if (!mf || selectionHold.has(mf)) return true;
+      return !mathSelectionCollapsed(mf);
+    }
+
+    function isSelectionNavKey(e) {
+      if (e.altKey) return false;
+      if (
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowRight' ||
+        e.key === 'ArrowUp' ||
+        e.key === 'ArrowDown' ||
+        e.key === 'Home' ||
+        e.key === 'End' ||
+        e.key === 'PageUp' ||
+        e.key === 'PageDown'
+      ) {
+        return true;
+      }
+      return false;
+    }
+
+    function extendMathSelection(mf, e) {
+      if (!mf) return false;
+      const key = e.key;
+      const word = e.ctrlKey || e.metaKey;
+      const cmd =
+        key === 'ArrowRight'
+          ? word
+            ? 'extendToNextWord'
+            : 'extendSelectionForward'
+          : key === 'ArrowLeft'
+            ? word
+              ? 'extendToPreviousWord'
+              : 'extendSelectionBackward'
+            : key === 'ArrowUp'
+              ? 'extendSelectionUpward'
+              : key === 'ArrowDown'
+                ? 'extendSelectionDownward'
+                : key === 'Home'
+                  ? word
+                    ? 'extendToMathFieldStart'
+                    : 'extendToGroupStart'
+                  : key === 'End'
+                    ? word
+                      ? 'extendToMathFieldEnd'
+                      : 'extendToGroupEnd'
+                    : null;
+      if (!cmd) return false;
+      holdMathSelection(mf, 200);
+      try {
+        mf.executeCommand(cmd);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function siblingAtomRow(atom) {
+      if (!atom) return [];
+      let start = atom;
+      while (start && !start.isFirstSibling) start = start.leftSibling;
+      const list = [];
+      let cur = start;
+      while (cur) {
+        list.push(cur);
+        if (cur.isLastSibling) break;
+        cur = cur.rightSibling;
+      }
+      return list;
+    }
+
+    function atomsOfCurrentMathLine(model, atomHint = null) {
+      if (!model) return [];
+      let atom = atomHint || model.at(model.position);
+      if (!atom) return [];
+      while (
+        atom?.parent &&
+        (atom.parentBranch === 'superscript' || atom.parentBranch === 'subscript')
+      ) {
+        atom = atom.parent;
+      }
+      while (atom) {
+        const branch = atom.parentBranch;
+        const parent = atom.parent;
+        if (
+          parent &&
+          Array.isArray(branch) &&
+          typeof branch[0] === 'number' &&
+          isMultilineMathParent(parent)
+        ) {
+          const cell =
+            typeof parent.getCell === 'function'
+              ? parent.getCell(branch[0], branch[1] ?? 0)
+              : parent._rows?.[branch[0]]?.[branch[1] ?? 0];
+          return Array.isArray(cell) && cell.length ? cell : siblingAtomRow(atom);
+        }
+        if (!parent || parent.type === 'root' || parent.isRoot) {
+          return siblingAtomRow(atom);
+        }
+        atom = parent;
+      }
+      return [];
+    }
+
+    function atomHasScript(atom) {
+      if (!atom) return false;
+      const t = atom.type;
+      if (t === 'subsup' || t === 'msubsup') return true;
+      try {
+        if (atom.superscript?.length || atom.subscript?.length) return true;
+        if (atom.superscript || atom.subscript) return true;
+      } catch {
+        /* ignore */
+      }
+      return false;
+    }
+
+    function placeCaretAfterAtom(mf, atom) {
+      const model = mf._mathfield?.model;
+      if (!model || !atom) return;
+      try {
+        for (let i = 0; i < 8; i++) {
+          const at = model.at(model.position);
+          if (
+            at?.parentBranch !== 'superscript' &&
+            at?.parentBranch !== 'subscript'
+          ) {
+            break;
+          }
+          const before = mathCaretKey(mf);
+          mf.executeCommand('moveAfterParent');
+          if (mathCaretKey(mf) === before) break;
+        }
+        // В MathLive offset атома — позиция сразу после него.
+        const pos = model.offsetOf(atom);
+        if (typeof pos === 'number') model.position = pos;
+      } catch {
+        try {
+          mf.executeCommand('moveAfterParent');
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    function modelAtomForElement(mf, el) {
+      const model = mf?._mathfield?.model;
+      if (!model || !el) return null;
+      // У .ML__msubsup нет своего id; сначала берём дочерний атом степени.
+      // Иначе closest() возвращает id всей таблицы displaylines.
+      const atomEl =
+        el.querySelector?.('[data-atom-id]') || el.closest?.('[data-atom-id]');
+      const id = atomEl?.dataset?.atomId;
+      if (!id) return null;
+      for (let i = 0; i <= model.lastOffset; i++) {
+        const atom = model.at(i);
+        if (String(atom?.id ?? '') === id) return atom;
+      }
+      return null;
+    }
+
+    function modelAtomById(model, id) {
+      if (!model || !id) return null;
+      for (let i = 0; i <= model.lastOffset; i++) {
+        const atom = model.at(i);
+        if (String(atom?.id ?? '') === String(id)) return atom;
+      }
+      return null;
+    }
+
+    function modelAtomFromPoint(mf, clientX, clientY) {
+      try {
+        const root = mf?.shadowRoot;
+        if (!root) return null;
+        const el = root.elementFromPoint?.(clientX, clientY);
+        return modelAtomForElement(mf, el);
+      } catch {
+        return null;
+      }
+    }
+
+    /**
+     * Fallback для клика в визуальный промежуток/контейнер MathLive.
+     * Находим ближайший видимый атом и выбираем позицию слева или справа.
+     */
+    function nearestAtomCaretAnchor(mf, clientX, clientY) {
+      if (
+        !mf ||
+        selectionHold.has(mf) ||
+        !mathSelectionCollapsed(mf) ||
+        mf.mode === 'latex'
+      ) {
+        return null;
+      }
+      try {
+        const root = mf.shadowRoot;
+        const model = mf._mathfield?.model;
+        if (!root || !model) return null;
+        let best = null;
+        let bestScore = Infinity;
+        let bestArea = Infinity;
+        for (const el of root.querySelectorAll('[data-atom-id]')) {
+          const atom = modelAtomById(model, el.dataset.atomId);
+          if (!atom || atom.type === 'first') continue;
+          const r = el.getBoundingClientRect();
+          if (r.width < 0.5 || r.height < 0.5) continue;
+          const dx =
+            clientX < r.left
+              ? r.left - clientX
+              : clientX > r.right
+                ? clientX - r.right
+                : 0;
+          const dy =
+            clientY < r.top
+              ? r.top - clientY
+              : clientY > r.bottom
+                ? clientY - r.bottom
+                : 0;
+          const area = r.width * r.height;
+          // Небольшой штраф большим контейнерам: возле дробной черты
+          // выбираем ближайший атом числителя/знаменателя, а не всю genfrac.
+          const score = dx * dx + 4 * dy * dy + area * 0.01;
+          if (
+            score < bestScore ||
+            (score === bestScore && area < bestArea)
+          ) {
+            best = { atom, rect: r };
+            bestScore = score;
+            bestArea = area;
+          }
+        }
+        if (!best || bestScore > 48 * 48) return null;
+        const after = model.offsetOf(best.atom);
+        const before = best.atom.leftSibling
+          ? model.offsetOf(best.atom.leftSibling)
+          : after - 1;
+        const position =
+          clientX < best.rect.left + best.rect.width / 2 ? before : after;
+        if (typeof position !== 'number') return null;
+        return { atom: null, position: Math.max(0, position) };
+      } catch {
+        return null;
+      }
+    }
+
+    function trailingScriptBox(mf, clientY) {
+      const root = mf.shadowRoot;
+      if (!root) return null;
+      let best = null;
+      let bestDistance = Infinity;
+      for (const el of root.querySelectorAll('.ML__msubsup')) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 0.5 || r.height < 0.5) continue;
+        const distance =
+          clientY < r.top
+            ? r.top - clientY
+            : clientY > r.bottom
+              ? clientY - r.bottom
+              : 0;
+        if (
+          distance < bestDistance ||
+          (distance === bestDistance && (!best || r.right > best.rect.right))
+        ) {
+          best = { rect: r, el };
+          bestDistance = distance;
+        }
+      }
+      return bestDistance <= 14 ? best : null;
+    }
+
+    /**
+     * Клик в пустое место справа от x²: MathLive ставит каретку после основания
+     * (x|²). Ставим после всей степени, чтобы можно было протянуть выделение.
+     * Клик по основанию (x) не трогаем — можно дописывать базу.
+     */
+    function trailingScriptAnchor(mf, clientX, clientY) {
+      if (!mf) return null;
+      if (selectionHold.has(mf) || !mathSelectionCollapsed(mf)) return null;
+      try {
+        if (mf.mode === 'latex' || mf.mode === 'text') return;
+        const model = mf._mathfield?.model;
+        if (!model) return;
+        const script = trailingScriptBox(mf, clientY);
+        if (!script) return;
+        let last = modelAtomForElement(mf, script.el);
+        while (
+          last?.parent &&
+          (last.parentBranch === 'superscript' ||
+            last.parentBranch === 'subscript')
+        ) {
+          last = last.parent;
+        }
+        if (!last?.isLastSibling) return;
+        if (!atomHasScript(last)) return;
+
+        const box = script.rect;
+        // Степень может быть вложена в корень/дробь и быть последним атомом
+        // своей ветки, хотя справа на общей строке ещё есть выражение.
+        if (clientX < box.left - 2 || clientX > box.right + 10) return null;
+
+        const at = model.at(model.position);
+        const inScript =
+          at?.parentBranch === 'superscript' || at?.parentBranch === 'subscript';
+
+        // пустое место справа от выражения
+        const pastGlyphs =
+          clientX > box.right + 1 && clientX <= box.right + 10;
+        // правая половина x² (зона степени) при каретке «слева от квадрата»
+        const onScriptSide =
+          clientX >= box.left + (box.right - box.left) * 0.5 &&
+          clientX <= box.right + 2 &&
+          clientY >= box.top - 6 &&
+          clientY <= box.bottom + 6 &&
+          !inScript;
+
+        if (!pastGlyphs && !onScriptSide) return null;
+        const position = model.offsetOf(last);
+        if (typeof position !== 'number') return null;
+        return { atom: last, position };
+      } catch {
+        return null;
+      }
+    }
+
+    function rowEndAnchor(mf, clientX, clientY) {
+      if (
+        !mf ||
+        selectionHold.has(mf) ||
+        !mathSelectionCollapsed(mf) ||
+        mf.mode === 'latex' ||
+        mf.mode === 'text'
+      ) {
+        return null;
+      }
+      const row = renderedMathRowAtY(mf, clientY);
+      if (!row || clientX <= row.bounds.right + 1) return null;
+      return { atom: null, position: row.range[1] };
+    }
+
+    function caretAnchorAtPoint(mf, clientX, clientY) {
+      return (
+        rowEndAnchor(mf, clientX, clientY) ||
+        trailingScriptAnchor(mf, clientX, clientY)
+      );
+    }
+
+    function applyCaretAnchor(mf, anchor) {
+      if (!anchor) return;
+      if (anchor.atom) {
+        placeCaretAfterAtom(mf, anchor.atom);
+        return;
+      }
+      try {
+        mf._mathfield.model.position = anchor.position;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    function snapCaretToClickedRow(mf, clientX, clientY) {
+      applyCaretAnchor(
+        mf,
+        caretAnchorAtPoint(mf, clientX, clientY) ||
+          nearestAtomCaretAnchor(mf, clientX, clientY)
+      );
+    }
+
+    const mathPtrDown = new WeakMap();
+
+    function wireMathFieldClickCaret(mf) {
+      mf.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
+        const anchor = caretAnchorAtPoint(mf, e.clientX, e.clientY);
+        mathPtrDown.set(mf, {
+          x: e.clientX,
+          y: e.clientY,
+          anchor: anchor?.position ?? null,
+        });
+        // Host bubble идёт после внутреннего pointerdown MathLive: успеваем
+        // поправить anchor до первого pointermove при drag-выделении.
+        applyCaretAnchor(mf, anchor);
+      });
+      mf.addEventListener('pointermove', (e) => {
+        const down = mathPtrDown.get(mf);
+        if (
+          !down ||
+          down.anchor == null ||
+          Math.hypot(e.clientX - down.x, e.clientY - down.y) <= 4
+        ) {
+          return;
+        }
+        try {
+          const model = mf._mathfield?.model;
+          const moving = model?.position;
+          if (typeof moving !== 'number') return;
+          holdMathSelection(mf, 200);
+          setMathSelection(mf, moving, down.anchor);
+        } catch {
+          /* ignore */
+        }
+      });
+      mf.addEventListener('pointerup', (e) => {
+        const down = mathPtrDown.get(mf);
+        mathPtrDown.delete(mf);
+        if (!down || e.detail >= 2) return;
+        if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
+        queueMicrotask(() => {
+          snapCaretToClickedRow(mf, e.clientX, e.clientY);
+        });
+      });
+      mf.addEventListener('click', (e) => {
+        if (e.detail >= 2) return;
+        const x = e.clientX;
+        const y = e.clientY;
+        queueMicrotask(() => {
+          snapCaretToClickedRow(mf, x, y);
+        });
+        // Некоторые вложенные ветки (числитель/знаменатель/корень)
+        // обновляют selection ещё одной задачей после click.
+        requestAnimationFrame(() => {
+          if (mf.matches(':focus')) snapCaretToClickedRow(mf, x, y);
+        });
+      });
+      mf.addEventListener('pointercancel', () => {
+        mathPtrDown.delete(mf);
+      });
+    }
+
+    function wireMathFieldDblClickLineSelect(mf) {
+      const selectClickedLine = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        holdMathSelection(mf, 400);
+        // Не полагаемся на model.position: при втором клике он может быть старым.
+        selectMathLineAtPoint(mf, e.clientX, e.clientY);
+      };
+
+      // Основной путь: второй mousedown приходит даже когда MathLive поглощает
+      // итоговый dblclick внутри shadow DOM.
+      mf.addEventListener(
+        'mousedown',
+        (e) => {
+          if (e.button === 0 && e.detail === 2) selectClickedLine(e);
+        },
+        true
+      );
+      // Fallback для браузеров, где click-count на mousedown недоступен.
+      mf.addEventListener('dblclick', selectClickedLine, true);
+    }
+
+    function selectedMathLatex(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model || model.selectionIsCollapsed) return '';
+        return (
+          model.getValue(model.selection, 'latex') ||
+          mf.getValue?.(mf.selection, 'latex') ||
+          ''
+        );
+      } catch {
+        return '';
+      }
+    }
+
+    function unwrapClipboardLatex(text) {
+      const value = String(text ?? '').trim();
+      const display = value.match(/^\$\$([\s\S]*)\$\$$/);
+      if (display) return display[1].trim();
+      const bracket = value.match(/^\\\[([\s\S]*)\\\]$/);
+      if (bracket) return bracket[1].trim();
+      const inline = value.match(/^\\\(([\s\S]*)\\\)$/);
+      if (inline) return inline[1].trim();
+      return value;
+    }
+
+    function looksLikeStructuredLatex(value) {
+      return /\\(?:d?frac|tfrac|cfrac|sqrt|binom|begin|left|right|overline|underline)\b/.test(
+        value
+      );
+    }
+
+    function copyMathSelection(e, mf, blockId, cut = false) {
+      const latex = selectedMathLatex(mf);
+      if (!latex || !e.clipboardData) return false;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      e.clipboardData.setData('application/x-latex', latex);
+      // Обёртка позволяет распознать LaTeX даже если браузер отбросит custom MIME.
+      e.clipboardData.setData('text/plain', `$$${latex}$$`);
+      if (cut) {
+        try {
+          mf.executeCommand('deleteBackward');
+          saveMathField(mf, blockId);
+        } catch {
+          /* ignore */
+        }
+      }
+      return true;
+    }
+
+    function pasteMathSelection(e, mf, blockId) {
+      if (!e.clipboardData || isInHashComment(mf)) return false;
+      let latex = e.clipboardData.getData('application/x-latex');
+      const plain = e.clipboardData.getData('text/plain');
+      if (!latex) {
+        const unwrapped = unwrapClipboardLatex(plain);
+        const wasWrapped = unwrapped !== String(plain ?? '').trim();
+        if (!wasWrapped && !looksLikeStructuredLatex(unwrapped)) return false;
+        latex = unwrapped;
+      }
+      if (!latex) return false;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      try {
+        mf.insert(latex, {
+          format: 'latex',
+          insertionMode: 'replaceSelection',
+          selectionMode: 'after',
+        });
+        saveMathField(mf, blockId);
+      } catch {
+        return false;
+      }
+      return true;
+    }
 
     function wireMathField(mf, block) {
       mf.setAttribute('virtual-keyboard-mode', 'onfocus');
       mf.setAttribute('smart-mode', '');
-      mf.setAttribute('smart-fence', '');
+      // сами делаем () как в VS Code; smartFence даёт \\left...\\right
+      mf.smartFence = false;
       // Space вставляет матв пробел (по умолчанию MathLive его игнорирует)
       mf.mathModeSpace = '\\:';
       mf.value = block.content || '';
+      mathHistory.set(mf, {
+        undo: [],
+        redo: [],
+        last: mf.value ?? '',
+        applying: false,
+      });
+      // Отключаем встроенный `/` после mount (до mount keybindings недоступны)
+      const disableBuiltinFrac = () => {
+        try {
+          const kb = mf.keybindings;
+          if (Array.isArray(kb)) {
+            mf.keybindings = kb.filter(
+              (k) => k.key !== '/' && k.key !== '[NumpadDivide]'
+            );
+          }
+        } catch {
+          /* ignore */
+        }
+      };
+      // персиковая подсветка .ML__highlight живёт в shadow DOM
+      const neutralizeHighlight = () => {
+        try {
+          const root = mf.shadowRoot;
+          if (!root || root.querySelector('style[data-mn-hl]')) return;
+          const s = document.createElement('style');
+          s.dataset.mnHl = '1';
+          s.textContent =
+            '.ML__highlight:not(.ML__selected):not(.ML__selection){background:transparent!important;box-shadow:none!important}';
+          root.appendChild(s);
+        } catch {
+          /* ignore */
+        }
+      };
+      mf.addEventListener('mount', disableBuiltinFrac, { once: true });
+      mf.addEventListener('mount', neutralizeHighlight, { once: true });
+      queueMicrotask(disableBuiltinFrac);
+      queueMicrotask(neutralizeHighlight);
       mf.addEventListener('input', () => {
         if (clearingMath) return;
-        // только сохраняем; схлопывание пустых рядов — после Backspace/Delete,
-        // иначе набор \команд ломается (value ещё пустой → remount)
-        updateContent(block.id, mf.value ?? '');
+        saveMathField(mf, block.id);
+      });
+      // Клик в существующий #-комментарий — снова серая сессия.
+      // Не трогаем несвёрнутое выделение (dblclick-строка, drag, Shift+стрелки).
+      mf.addEventListener('selection-change', () => {
+        if (shouldLeaveMathSelectionAlone(mf)) return;
+        if (isInHashComment(mf)) tryResumeCommentSession(mf, { moveCaret: false });
+        else {
+          commentExitGuard.delete(mf);
+          if (isCommentSession(mf)) endCommentSession(mf);
+        }
       });
       mf.addEventListener('keydown', (e) => onFieldKey(e, block), true);
+      mf.addEventListener(
+        'copy',
+        (e) => copyMathSelection(e, mf, block.id),
+        true
+      );
+      mf.addEventListener(
+        'cut',
+        (e) => copyMathSelection(e, mf, block.id, true),
+        true
+      );
+      mf.addEventListener(
+        'paste',
+        (e) => pasteMathSelection(e, mf, block.id),
+        true
+      );
+      wireMathFieldClickCaret(mf);
+      wireMathFieldDblClickLineSelect(mf);
       return mf;
     }
 
     /**
      * После Ctrl+A → Delete MathLive часто оставляет пустые ряды на экране.
      * Пересоздаём только это поле — сразу одна чистая строка.
+     * Стек снимков переносим на новое поле, иначе Ctrl+Z после очистки теряется.
      */
     function clearMathBlockIfEmpty(mf, blockId) {
       const raw = mf?.value ?? '';
@@ -663,6 +1798,18 @@
       // Уже чистая однострочная пустая формула — не мигаем пересозданием
       if (!needsRemount) return '';
 
+      // До remount: зафиксировать переход к пустому и сохранить undo
+      trackMathHistory(mf);
+      const prevHist = mathHistory.get(mf);
+      const carriedUndo = prevHist ? prevHist.undo.slice() : [];
+      if (
+        !carriedUndo.length &&
+        block.content &&
+        !isVisuallyEmptyMath(block.content)
+      ) {
+        carriedUndo.push(block.content);
+      }
+
       clearingMath = true;
       block.content = '';
       scheduleSave();
@@ -670,6 +1817,12 @@
       if (body) {
         body.replaceChildren();
         const fresh = wireMathField(document.createElement('math-field'), block);
+        mathHistory.set(fresh, {
+          undo: carriedUndo,
+          redo: [],
+          last: '',
+          applying: false,
+        });
         body.appendChild(fresh);
         requestAnimationFrame(() => {
           try {
@@ -681,6 +1834,17 @@
         render();
         focusBlock(blockId);
         queueMicrotask(() => {
+          const remounted = document.querySelector(
+            `.block[data-id="${blockId}"] math-field`
+          );
+          if (remounted) {
+            mathHistory.set(remounted, {
+              undo: carriedUndo,
+              redo: [],
+              last: '',
+              applying: false,
+            });
+          }
           clearingMath = false;
         });
       }
@@ -1016,15 +2180,8 @@
 
       const before = mf.value ?? '';
       const removed = mf.executeCommand('removeRow');
-
-      // одна строка — просто очищаем поле
       if (!removed || before === (mf.value ?? '')) {
-        if (!/\\displaylines|\\\\/.test(before)) {
-          mf.value = '';
-        } else {
-          // removeRow не сработал на единственном ряде
-          mf.value = '';
-        }
+        mf.value = '';
       }
     }
 
@@ -1087,6 +2244,313 @@
         if (blocks[i].type !== 'heading') n += 1;
       }
       return n;
+    }
+
+    /** Сессия #-комментария: пока активна, ввод только серым текстом. */
+    const commentSession = new WeakMap();
+    /**
+     * После Esc каретка часто остаётся сразу за комментарием (math-mode).
+     * Не возобновляем сессию, пока курсор не уйдёт из зоны комментария
+     * или не войдёт снова внутрь text-run.
+     */
+    const commentExitGuard = new WeakMap();
+
+    function beginCommentSession(mf) {
+      if (!mf) return;
+      commentSession.set(mf, true);
+      commentExitGuard.delete(mf);
+    }
+
+    function endCommentSession(mf, opts = {}) {
+      if (!mf) return;
+      commentSession.delete(mf);
+      if (opts.keepExitGuard) commentExitGuard.set(mf, true);
+    }
+
+    function isCommentSession(mf) {
+      return !!mf && commentSession.has(mf);
+    }
+
+    function isMathTextMode(mf) {
+      if (mf?.mode === 'text') return true;
+      try {
+        const model = mf._mathfield?.model;
+        return model?.at(model.position)?.mode === 'text';
+      } catch {
+        return false;
+      }
+    }
+
+    /**
+     * Комментарий определяется строкой, а не mode отдельных атомов:
+     * после сохранения MathLive восстанавливает серые буквы как math/mord.
+     */
+    function commentRowAtCaret(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return null;
+        const atoms = atomsOfCurrentMathLine(model);
+        if (!atoms.length) return null;
+        const firstContent = atoms.find(
+          (atom) => atom && !atom.isFirstSibling && atom.type !== 'first'
+        );
+        const value = String(firstContent?.value ?? '');
+        if (value !== '#' && value !== '\\#') return null;
+        const range = rangeOfAtomList(model, atoms);
+        return range ? { atoms, range } : null;
+      } catch {
+        return null;
+      }
+    }
+
+    /** Вся строка, начинающаяся с #, является комментарием. */
+    function isInHashComment(mf) {
+      return !!commentRowAtCaret(mf);
+    }
+
+    function selectionIsInsideComment(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model || model.selectionIsCollapsed) return false;
+        const row = commentRowAtCaret(mf);
+        const selected =
+          model.selection?.ranges?.[0] || mf.selection?.ranges?.[0];
+        if (!row || !selected) return false;
+        const start = Math.min(selected[0], selected[1]);
+        const end = Math.max(selected[0], selected[1]);
+        return start >= row.range[0] && end <= row.range[1];
+      } catch {
+        return false;
+      }
+    }
+
+    /** В комментарии включаем серый текстовый ввод, не двигая каретку. */
+    function ensureCommentCaret(mf) {
+      try {
+        if (shouldLeaveMathSelectionAlone(mf) || !commentRowAtCaret(mf)) {
+          return false;
+        }
+        try {
+          mf.mode = 'text';
+        } catch {
+          mf.executeCommand(['switchMode', 'text']);
+        }
+        paintCommentStyle(mf);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    /** Возобновить серую сессию, если каретка в/за #-комментарием. */
+    function tryResumeCommentSession(mf, { moveCaret = true } = {}) {
+      if (!mf) return false;
+      if (shouldLeaveMathSelectionAlone(mf)) return false;
+      if (!isInHashComment(mf)) {
+        commentExitGuard.delete(mf);
+        return false;
+      }
+      if (commentExitGuard.has(mf)) {
+        // Esc → формула: не возобновляем на границе; только явный text mode
+        // (клик/стрелка внутрь серого текста) снимает guard.
+        if (mf.mode !== 'text') return false;
+        commentExitGuard.delete(mf);
+      }
+      ensureCommentCaret(mf, { moveCaret });
+      beginCommentSession(mf);
+      paintCommentStyle(mf);
+      return true;
+    }
+
+    function paintCommentStyle(mf) {
+      // applyStyle красит текущее выделение — при селекте не вызываем
+      if (!mathSelectionCollapsed(mf)) return;
+      try {
+        mf.applyStyle({
+          color: '#6b7280',
+          fontShape: 'n',
+          fontSeries: 'm',
+          variant: 'main',
+        });
+      } catch {
+        try {
+          mf.applyStyle({ color: 'gray' });
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    function insertInlineComment(mf) {
+      const model = mf._mathfield?.model;
+      let selected = '';
+      if (model && !model.selectionIsCollapsed) {
+        selected = (model.getValue(model.selection, 'latex-unstyled') || '').trim();
+      }
+
+      beginCommentSession(mf);
+
+      if (selected) {
+        const safe = selected
+          .replace(/\\/g, '\\textbackslash{}')
+          .replace(/[{}]/g, '');
+        mf.insert(`\\:\\textcolor{gray}{\\text{\\# ${safe}}}`, {
+          format: 'latex',
+          insertionMode: 'replaceSelection',
+          selectionMode: 'after',
+        });
+        try {
+          mf.mode = 'text';
+        } catch {
+          mf.executeCommand(['switchMode', 'text']);
+        }
+        paintCommentStyle(mf);
+        return;
+      }
+
+      try {
+        mf.mode = 'text';
+      } catch {
+        mf.executeCommand(['switchMode', 'text']);
+      }
+      paintCommentStyle(mf);
+      mf.executeCommand(['insert', '# ']);
+      paintCommentStyle(mf);
+    }
+
+    /**
+     * Пока сессия комментария — полностью контролируем ввод (пробелы/буквы).
+     * @returns {boolean} true если событие обработано
+     */
+    function handleCommentTyping(e, mf, blockId) {
+      if (!mf) return false;
+      // Ctrl/Cmd всегда пропускаем (undo, redo, Ctrl+Backspace и т.д.)
+      if (e.ctrlKey || e.metaKey) return false;
+
+      // Shift+стрелки / Home/End — не трогаем каретку, иначе схлопывается селект
+      if (isSelectionNavKey(e)) {
+        if (e.shiftKey) {
+          holdMathSelection(mf, 200);
+          return false;
+        }
+        queueMicrotask(() => {
+          if (shouldLeaveMathSelectionAlone(mf)) return;
+          if (isInHashComment(mf)) tryResumeCommentSession(mf, { moveCaret: false });
+          else {
+            commentExitGuard.delete(mf);
+            endCommentSession(mf);
+          }
+        });
+        return false;
+      }
+
+      const replacingCommentSel =
+        !mathSelectionCollapsed(mf) &&
+        selectionIsInsideComment(mf) &&
+        (e.key === 'Backspace' ||
+          e.key === 'Delete' ||
+          e.key === ' ' ||
+          (e.key && e.key.length === 1));
+
+      if (shouldLeaveMathSelectionAlone(mf) && e.key !== 'Escape' && !replacingCommentSel) {
+        return false;
+      }
+
+      if (!replacingCommentSel) {
+        tryResumeCommentSession(mf);
+        if (!isCommentSession(mf)) return false;
+        ensureCommentCaret(mf, {
+          moveCaret: e.key.length === 1 || e.key === ' ',
+        });
+      } else {
+        beginCommentSession(mf);
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        endCommentSession(mf, { keepExitGuard: true });
+        try {
+          mf.mode = 'math';
+        } catch {
+          mf.executeCommand(['switchMode', 'math']);
+        }
+        saveMathField(mf, blockId);
+        return true;
+      }
+
+      if (e.key === 'Enter' && !e.altKey) {
+        endCommentSession(mf);
+        commentExitGuard.delete(mf);
+        try {
+          mf.mode = 'math';
+        } catch {
+          mf.executeCommand(['switchMode', 'math']);
+        }
+        return false;
+      }
+
+      if (e.altKey) return false;
+      if (e.isComposing || e.key === 'Process') {
+        paintCommentStyle(mf);
+        return false;
+      }
+
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        try {
+          // В text-mode обычный пробел MathLive игнорирует, а LaTeX пишет
+          // буквально. Вставляем математический пробел и возвращаем text-mode.
+          mf.mode = 'math';
+          paintCommentStyle(mf);
+          mf.insert('\\:', { format: 'latex' });
+          mf.mode = 'text';
+          paintCommentStyle(mf);
+          saveMathField(mf, blockId);
+        } catch {
+          /* ignore */
+        }
+        return true;
+      }
+
+      if (e.key && e.key.length === 1) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        try {
+          if (mf.mode !== 'text') mf.mode = 'text';
+          paintCommentStyle(mf);
+          mf.executeCommand(['insert', e.key]);
+          paintCommentStyle(mf);
+          saveMathField(mf, blockId);
+        } catch {
+          /* ignore */
+        }
+        return true;
+      }
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        try {
+          if (mf.mode !== 'text') mf.mode = 'text';
+          mf.executeCommand('deleteBackward');
+          saveMathField(mf, blockId);
+          if (!isInHashComment(mf) && !isMathTextMode(mf)) {
+            endCommentSession(mf);
+            commentExitGuard.delete(mf);
+          }
+        } catch {
+          /* ignore */
+        }
+        return true;
+      }
+
+      return false;
     }
 
     function autosizeTextarea(el) {
@@ -1241,75 +2705,29 @@
       if (block.type === 'math') {
         const mf = e.currentTarget;
 
-        // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y — undo/redo MathLive
-        if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === 'KeyZ' || e.code === 'KeyY')) {
-          if (e.code === 'KeyZ' && !e.shiftKey) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation?.();
-            try {
-              mf.executeCommand('undo');
-              updateContent(block.id, mf.value);
-            } catch {
-              /* ignore */
-            }
-            return;
-          }
-          if ((e.code === 'KeyZ' && e.shiftKey) || (e.code === 'KeyY' && !e.shiftKey)) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation?.();
-            try {
-              mf.executeCommand('redo');
-              updateContent(block.id, mf.value);
-            } catch {
-              /* ignore */
-            }
-            return;
-          }
-        }
+        // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y — снимки LaTeX (см. mathHistory)
+        if (handleMathUndoRedoKey(e, mf, block.id)) return;
 
-        // Общее меню символов (множества / равенства)
-        if (symbolPicker && symbolPicker.mf === mf) {
-          const cycleCode =
-            symbolPicker.items === EQ_OP_PICKER ? 'Equal' : 'KeyU';
-          if (
-            (e.code === cycleCode && !e.altKey && !e.ctrlKey && !e.metaKey) ||
-            e.key === 'ArrowDown' ||
-            e.key === 'ArrowRight' ||
-            e.key === 'ArrowUp' ||
-            e.key === 'ArrowLeft'
-          ) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation?.();
-            const back =
-              e.key === 'ArrowUp' ||
-              e.key === 'ArrowLeft' ||
-              (e.code === cycleCode && e.shiftKey);
-            cycleSymbolPicker(back ? -1 : 1);
-            return;
-          }
-          if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation?.();
-            confirmSymbolPicker();
-            return;
-          }
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation();
-            closeSymbolPicker();
-            return;
-          }
+        // Shift+стрелки / Home/End — как в редакторе. Явно: capture на host
+        // иначе может обогнать textarea в shadow, а комментарий — схлопнуть селект.
+        if (
+          e.shiftKey &&
+          !e.altKey &&
+          isSelectionNavKey(e) &&
+          !(symbolPicker && symbolPicker.mf === mf)
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          extendMathSelection(mf, e);
+          return;
         }
 
         if (
           e.altKey &&
           (e.ctrlKey || e.metaKey) &&
           !e.shiftKey &&
-          e.code === 'KeyC'
+          isEnLetter(e, 'c')
         ) {
           e.preventDefault();
           e.stopPropagation();
@@ -1353,29 +2771,30 @@
           if (!e.ctrlKey && !e.metaKey) {
             if (e.altKey && !e.shiftKey && e.code === 'Equal') latex = '\\Leftrightarrow'; // ⇔
             else if (e.altKey && e.shiftKey && e.code === 'Equal') latex = '\\neq'; // ≠
-            else if (e.altKey && !e.shiftKey && e.code === 'KeyA') latex = '\\forall'; // ∀
-            else if (e.altKey && !e.shiftKey && e.code === 'KeyE') latex = '\\exists'; // ∃
-            else if (e.altKey && e.shiftKey && e.code === 'KeyE') latex = '\\nexists'; // ∄
-            else if (e.altKey && !e.shiftKey && e.code === 'KeyC') latex = '\\ni'; // ∋ отзеркаленный ∈
-            else if (e.altKey && !e.shiftKey && e.code === 'KeyI') latex = '\\cap'; // ∩ пересечение
-            else if (e.altKey && !e.shiftKey && e.code === 'KeyU') latex = '\\cup'; // ∪ объединение
-            else if (e.shiftKey && !e.altKey && e.code === 'Quote') latex = '\\in'; // ∈
-            else if (e.shiftKey && e.altKey && e.code === 'Quote') latex = '\\notin'; // ∉
-            else if (e.shiftKey && e.altKey && e.code === 'KeyN') latex = '\\mathbb{N}'; // ℕ
-            else if (e.shiftKey && e.altKey && e.code === 'KeyZ') latex = '\\mathbb{Z}'; // ℤ
-            else if (e.shiftKey && e.altKey && e.code === 'KeyR') latex = '\\mathbb{R}'; // ℝ
-            else if (e.shiftKey && e.altKey && e.code === 'KeyQ') latex = '\\mathbb{Q}'; // ℚ
-            else if (e.shiftKey && e.altKey && e.code === 'KeyC') latex = '\\mathbb{C}'; // ℂ
-            else if (e.shiftKey && e.altKey && e.code === 'Comma') latex = '\\leq'; // ≤
-            else if (e.shiftKey && e.altKey && e.code === 'Period') latex = '\\geq'; // ≥
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'a')) latex = '\\forall'; // ∀
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'e')) latex = '\\exists'; // ∃
+            else if (e.altKey && e.shiftKey && isEnLetter(e, 'e')) latex = '\\nexists'; // ∄
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'c')) latex = '\\ni'; // ∋
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'i')) latex = '\\cap'; // ∩
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'u')) latex = '\\cup'; // ∪
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'r')) latex = '\\sqrt{#0}'; // √
+            else if (e.shiftKey && !e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\in'; // ∈
+            else if (e.shiftKey && e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\notin'; // ∉
+            else if (e.shiftKey && e.altKey && isEnLetter(e, 'n')) latex = '\\mathbb{N}'; // ℕ
+            else if (e.shiftKey && e.altKey && isEnLetter(e, 'z')) latex = '\\mathbb{Z}'; // ℤ
+            else if (e.shiftKey && e.altKey && isEnLetter(e, 'r')) latex = '\\mathbb{R}'; // ℝ
+            else if (e.shiftKey && e.altKey && isEnLetter(e, 'q')) latex = '\\mathbb{Q}'; // ℚ
+            else if (e.shiftKey && e.altKey && isEnLetter(e, 'c')) latex = '\\mathbb{C}'; // ℂ
+            else if (e.shiftKey && e.altKey && isEnKey(e, 'Comma', [',', '<'])) latex = '\\leq'; // ≤
+            else if (e.shiftKey && e.altKey && isEnKey(e, 'Period', ['.', '>'])) latex = '\\geq'; // ≥
           }
           if (
             (e.ctrlKey || e.metaKey) &&
             e.shiftKey &&
             !e.altKey &&
-            e.code === 'KeyD'
+            isEnLetter(e, 'd')
           ) {
-            latex = '{#@}_{\\Delta}'; // индекс Δ
+            latex = '#@_{\\Delta}'; // индекс Δ
           }
 
           if (latex) {
@@ -1384,7 +2803,7 @@
             e.stopImmediatePropagation?.();
             try {
               mf.executeCommand(['insert', latex]);
-              updateContent(block.id, mf.value);
+              saveMathField(mf, block.id);
             } catch {
               /* ignore */
             }
@@ -1393,10 +2812,12 @@
         }
 
         const digit = /^Digit([0-9])$/.exec(e.code)?.[1];
-        // Ctrl+A/C/V/M/S/Z/Y — select all / copy / paste / save / undo / redo
+        // Ctrl+A/C/V/M/S/Z/Y/H — системные; индекс только на EN (латиница)
         const letterRaw = /^Key([A-Z])$/.exec(e.code)?.[1]?.toLowerCase();
         const letter =
-          letterRaw && !['a', 'c', 'v', 'm', 's', 'z', 'y'].includes(letterRaw)
+          letterRaw &&
+          e.key.toLowerCase() === letterRaw &&
+          !['a', 'c', 'v', 'm', 's', 'z', 'y', 'h'].includes(letterRaw)
             ? letterRaw
             : null;
         if (digit != null || letter != null) {
@@ -1419,9 +2840,10 @@
             const mf = e.currentTarget;
             try {
               const sym = digit ?? letter;
-              const latex = power ? `{#@}^{${sym}}` : `{#@}_{${sym}}`;
+              // без {#@}: иначе group+отдельный subsup → / ломает числитель
+              const latex = power ? `#@^{${sym}}` : `#@_{${sym}}`;
               mf.executeCommand(['insert', latex]);
-              updateContent(block.id, mf.value);
+              saveMathField(mf, block.id);
             } catch {
               /* ignore */
             }
@@ -1430,7 +2852,7 @@
         }
       }
 
-      // Ctrl/Cmd+Backspace — удалить строку, курсор в конце предыдущей
+      // Ctrl/Cmd+Backspace — в комментарии (text) слово; иначе удалить строку формулы
       if (
         e.key === 'Backspace' &&
         (e.ctrlKey || e.metaKey) &&
@@ -1439,7 +2861,30 @@
       ) {
         const mf = e.currentTarget;
         const mode = mf.mode;
-        if (mode === 'latex' || mode === 'text') return;
+        if (mode === 'latex') return;
+
+        // комментарий / текстовый режим — стереть слово до пробела
+        let inText = mode === 'text';
+        if (!inText) {
+          try {
+            const model = mf._mathfield?.model;
+            inText = model?.at(model.position)?.mode === 'text';
+          } catch {
+            /* ignore */
+          }
+        }
+        if (inText) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          try {
+            mf.executeCommand('deletePreviousWord');
+            saveMathField(mf, block.id);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
 
         e.preventDefault();
         e.stopPropagation();
@@ -1452,7 +2897,7 @@
           if (isVisuallyEmptyMath(after)) {
             clearMathBlockIfEmpty(mf, block.id);
           } else {
-            updateContent(block.id, after);
+            saveMathField(mf, block.id);
           }
         } catch {
           /* ignore */
@@ -1477,27 +2922,20 @@
         e.stopPropagation();
         try {
           // если курсор в степени / индексе / основании лога — выйти вправо на основную линию
-          const caretKey = () => {
-            try {
-              return JSON.stringify(mf.selection ?? mf.position);
-            } catch {
-              return String(mf.position);
-            }
-          };
-          const before = caretKey();
+          const before = mathCaretKey(mf);
           mf.executeCommand('moveAfterParent');
-          if (caretKey() !== before) {
+          if (mathCaretKey(mf) !== before) {
             // выходим из всех вложенностей до основной строки
             for (let i = 0; i < 16; i++) {
-              const p = caretKey();
+              const p = mathCaretKey(mf);
               mf.executeCommand('moveAfterParent');
-              if (caretKey() === p) break;
+              if (mathCaretKey(mf) === p) break;
             }
           } else {
             // уже на основной линии — новая строка
             mf.executeCommand('addRowAfter');
           }
-          updateContent(block.id, mf.value);
+          saveMathField(mf, block.id);
         } catch {
           /* ignore */
         }
@@ -1565,6 +3003,70 @@
       }
     }
 
+    // MathLive слушает textarea в shadow — / ( # раньше него.
+    // Ctrl+Z: стек MathLive после #-комментариев/applyStyle часто «залипает»,
+    // поэтому откат по снимкам latex (handleMathUndoRedoKey), capture на window.
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+        const mf = path.find((n) => n && n.tagName === 'MATH-FIELD');
+        if (!mf || e.defaultPrevented) return;
+        const blockId = mf.closest?.('.block')?.dataset?.id;
+        if (!blockId) return;
+
+        if (handleMathUndoRedoKey(e, mf, blockId)) return;
+
+        // Остальные Ctrl/Cmd (save, индекс и т.д.) — не перехватывать
+        if (e.ctrlKey || e.metaKey) return;
+
+        // Сессия комментария — до проверки mode (там как раз text)
+        if (handleCommentTyping(e, mf, blockId)) return;
+
+        const mode = mf.mode;
+        if (mode === 'latex' || mode === 'text') return;
+
+        if (isFractionSlashKey(e)) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            insertSmartFraction(mf);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
+        if (e.key === '(' && !e.altKey) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            insertAutoParens(mf);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
+        if (e.key === '#' && !e.altKey) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            insertInlineComment(mf);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+        }
+      },
+      true
+    );
+
     document.addEventListener(
       'keydown',
       (e) => {
@@ -1580,6 +3082,7 @@
         ) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation?.();
           const back =
             e.key === 'ArrowUp' ||
             e.key === 'ArrowLeft' ||
@@ -1588,10 +3091,12 @@
         } else if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation?.();
           confirmSymbolPicker();
         } else if (e.key === 'Escape') {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation?.();
           closeSymbolPicker();
         }
       },
@@ -1619,7 +3124,7 @@
         insertBlock('math', after);
       } else if (k === 'h') {
         e.preventDefault();
-        insertBlock('heading', after);
+        insertBlock('text', after);
       } else if (k === 's') {
         e.preventDefault();
         save();
@@ -1677,6 +3182,9 @@
         const doc = JSON.parse(await file.text());
         titleEl.value = doc.title || 'Импорт';
         blocks = Array.isArray(doc.blocks) ? doc.blocks : [];
+        blocks = blocks.map((b) =>
+          b.type === 'math' ? { ...b, content: normalizeMathLatex(b.content) } : b
+        );
         if (!blocks.length) blocks = [{ id: uid(), type: 'math', content: '' }];
         render();
         save();
