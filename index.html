@@ -126,6 +126,78 @@
     .file-btn { display: inline-block; }
     .file-btn input { display: none; }
 
+    .auth-controls {
+      display: inline-flex;
+      gap: 0.4rem;
+      align-items: center;
+      padding-left: 0.2rem;
+    }
+    .auth-user {
+      max-width: 10rem;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .auth-dialog {
+      width: min(92vw, 430px);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.2rem;
+      color: var(--ink);
+      background: var(--paper);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+    }
+    .auth-dialog::backdrop {
+      background: rgba(28, 25, 23, 0.45);
+      backdrop-filter: blur(3px);
+    }
+    .auth-dialog h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.15rem;
+    }
+    .auth-dialog p {
+      margin: 0 0 0.9rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+    .auth-form {
+      display: grid;
+      gap: 0.65rem;
+    }
+    .auth-form label {
+      display: grid;
+      gap: 0.25rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    .auth-form input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.5rem 0.65rem;
+      color: var(--ink);
+      background: var(--focus-bg);
+      font: inherit;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .auth-form input:focus { border-color: var(--accent); }
+    .auth-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.25rem;
+    }
+    .auth-error {
+      min-height: 1.2em;
+      color: var(--danger);
+      font-size: 0.76rem;
+    }
+
     .status {
       font-size: 0.8rem;
       color: var(--muted);
@@ -429,13 +501,40 @@
         <button type="button" id="btn-export">JSON ↑</button>
         <label class="file-btn">JSON ↓<input type="file" id="import-file" accept="application/json,.json" /></label>
         <button type="button" class="danger" id="btn-clear">Очистить</button>
+        <span class="auth-controls">
+          <span class="auth-user" id="auth-user"></span>
+          <button type="button" id="btn-auth">Войти</button>
+          <button type="button" id="btn-logout" hidden>Выйти</button>
+          <button type="button" class="danger" id="btn-delete-account" hidden>Удалить аккаунт</button>
+        </span>
       </div>
     </header>
 
-    <div class="status" id="status">загрузка…</div>
+    <div class="status" id="status" role="status" aria-live="polite">загрузка…</div>
+
+    <dialog class="auth-dialog" id="auth-dialog">
+      <h2>Аккаунт mathNote</h2>
+      <p>Войди или создай аккаунт. Лист будет синхронизироваться с сервером, а локальная копия останется резервной.</p>
+      <form class="auth-form" id="auth-form">
+        <label>
+          Ник
+          <input id="auth-username" name="username" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]+" autocomplete="username" required />
+        </label>
+        <label>
+          Пароль
+          <input id="auth-password" name="password" type="password" minlength="8" maxlength="128" autocomplete="current-password" required />
+        </label>
+        <div class="auth-error" id="auth-error" role="alert"></div>
+        <div class="auth-actions">
+          <button type="submit" class="primary" id="btn-login">Войти</button>
+          <button type="button" id="btn-register">Регистрация</button>
+          <button type="button" id="btn-local">Пока локально</button>
+        </div>
+      </form>
+    </dialog>
 
     <div class="sheet">
-      <input class="title" id="title" type="text" placeholder="Название листа" spellcheck="true" />
+      <input class="title" id="title" type="text" placeholder="Название листа" aria-label="Название листа" spellcheck="true" />
       <div class="blocks" id="blocks"></div>
       <p class="empty-hint" id="empty-hint" hidden>
         Добавь формулу или текст. <kbd>Ctrl</kbd>+<kbd>M</kbd> — math, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг.
@@ -446,7 +545,8 @@
       <summary>Клавиши</summary>
       <ul>
         <li><kbd>Ctrl</kbd>+<kbd>M</kbd> — новый блок формулы</li>
-        <li>В формуле <kbd>Enter</kbd> — из степени/индекса выйти вправо; на основной линии — новая строка</li>
+        <li>В формуле <kbd>Enter</kbd> — из степени/индекса или системы выйти вправо; <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе — новая строка</li>
+        <li>В формуле <kbd>↓</kbd> — выйти из дроби/степени или перейти в конец строки; из конца — на следующую строку</li>
         <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — в комментарии стереть слово; в формуле — удалить строку</li>
         <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
@@ -457,7 +557,7 @@
         <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠</li>
         <li><kbd>Alt</kbd>+<kbd>A</kbd> — ∀ · <kbd>Alt</kbd>+<kbd>E</kbd> — ∃ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> — ∄</li>
         <li><kbd>Shift</kbd>+<kbd>'</kbd> — ∈ · <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>'</kbd> — ∉</li>
-        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪ · <kbd>Alt</kbd>+<kbd>R</kbd> — √</li>
+        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪ · <kbd>Alt</kbd>+<kbd>R</kbd> — √ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> — индекс Δ (например <code>x_Δ</code>)</li>
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
@@ -475,19 +575,66 @@
     import 'https://cdn.jsdelivr.net/npm/mathlive@0.105.0/+esm';
 
     const STORAGE_KEY = 'mathNote.v1';
+    const AUTH_KEY = 'mathNote.auth.v1';
+    const API_BASE_KEY = 'mathNote.apiBase';
     const blocksEl = document.getElementById('blocks');
     const titleEl = document.getElementById('title');
     const statusEl = document.getElementById('status');
     const emptyHint = document.getElementById('empty-hint');
+    const authDialog = document.getElementById('auth-dialog');
+    const authForm = document.getElementById('auth-form');
+    const authUsernameEl = document.getElementById('auth-username');
+    const authPasswordEl = document.getElementById('auth-password');
+    const authErrorEl = document.getElementById('auth-error');
+    const authUserEl = document.getElementById('auth-user');
+    const authBtn = document.getElementById('btn-auth');
+    const logoutBtn = document.getElementById('btn-logout');
+    const deleteAccountBtn = document.getElementById('btn-delete-account');
+
+    function normalizeApiBase(url) {
+      try {
+        const parsed = new URL(url, location.href);
+        if (parsed.hostname === 'localhost') parsed.hostname = '127.0.0.1';
+        if (parsed.port === '8001') parsed.port = '8042';
+        return parsed.origin;
+      } catch {
+        return String(url || '').replace(/\/+$/, '');
+      }
+    }
+
+    let storedApiBase = '';
+    try {
+      const queryApiBase = new URLSearchParams(location.search).get('api');
+      if (queryApiBase) localStorage.setItem(API_BASE_KEY, queryApiBase);
+      storedApiBase = queryApiBase || '';
+    } catch {
+      /* use default */
+    }
+    const API_BASE = normalizeApiBase(
+      window.MATHNOTE_API_BASE ||
+        storedApiBase ||
+        (location.protocol === 'file:'
+          ? 'http://127.0.0.1:8042'
+          : location.origin)
+    );
 
     /** @type {{ id: string, type: 'heading'|'text'|'math'|'draw', content: string }[]} */
     let blocks = [];
     let saveTimer = null;
     let statusTimer = null;
+    let authState = null;
+    let notebookVersion = null;
+    let remoteSaveInFlight = false;
+    let remoteSaveQueued = false;
+    let remoteConflict = false;
+    let hasLocalDocument = false;
+    const structuralHistory = { undo: [], redo: [] };
+    const STRUCTURAL_UNDO_MAX = 50;
 
     const DRAW_COLORS = ['#1c1917', '#dc2626', '#2563eb', '#16a34a', '#ea580c'];
     const DRAW_W = 900;
     const DRAW_H = 420;
+    const drawHistoryByBlockId = new Map();
 
     /** Множества — Ctrl+Alt+C */
     const SET_OP_PICKER = [
@@ -586,7 +733,44 @@
     }
 
     function uid() {
-      return crypto.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      if (crypto.randomUUID) return crypto.randomUUID();
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'));
+      return [
+        hex.slice(0, 4).join(''),
+        hex.slice(4, 6).join(''),
+        hex.slice(6, 8).join(''),
+        hex.slice(8, 10).join(''),
+        hex.slice(10).join(''),
+      ].join('-');
+    }
+
+    const BLOCK_TYPES = new Set(['heading', 'text', 'math', 'draw']);
+    const UUID_PATTERN =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    function normalizeBlocks(rawBlocks) {
+      if (!Array.isArray(rawBlocks)) return [];
+      const seen = new Set();
+      const result = [];
+      for (const raw of rawBlocks) {
+        if (!raw || typeof raw !== 'object' || !BLOCK_TYPES.has(raw.type)) continue;
+        let id =
+          typeof raw.id === 'string' && UUID_PATTERN.test(raw.id)
+            ? raw.id
+            : uid();
+        if (seen.has(id)) id = uid();
+        seen.add(id);
+        const content = typeof raw.content === 'string' ? raw.content : '';
+        result.push({
+          id,
+          type: raw.type,
+          content: raw.type === 'math' ? normalizeMathLatex(content) : content,
+        });
+      }
+      return result;
     }
 
     /**
@@ -631,6 +815,7 @@
      * @type {WeakMap<HTMLElement, { undo: string[], redo: string[], last: string, applying: boolean }>}
      */
     const mathHistory = new WeakMap();
+    const mathHistoryByBlockId = new Map();
     const MATH_UNDO_MAX = 200;
 
     function mathHistoryState(mf) {
@@ -726,9 +911,10 @@
         (e.code === 'KeyZ' && e.shiftKey) ||
         (e.code === 'KeyY' && !e.shiftKey);
       try {
-        if (redo) mathFieldRedo(mf);
-        else mathFieldUndo(mf);
-        if (!isMathTextMode(mf)) endCommentSession(mf);
+        const changed = redo ? mathFieldRedo(mf) : mathFieldUndo(mf);
+        if (changed && !tryResumeCommentSession(mf, { moveCaret: false })) {
+          endCommentSession(mf);
+        }
         if (blockId) updateContent(blockId, mf.value ?? '');
       } catch {
         /* ignore */
@@ -962,6 +1148,29 @@
       return parent.type === 'array' && typeof parent.getCell === 'function';
     }
 
+    function mathEnvironmentAtCaret(mf, environmentName) {
+      try {
+        const model = mf?._mathfield?.model;
+        let atom = model?.at(model.position);
+        while (atom) {
+          const env = String(atom.environmentName || atom.envName || '');
+          if (env.toLowerCase() === environmentName.toLowerCase()) {
+            // model.at(position) — атом слева от каретки. Если это сама
+            // система, каретка уже находится после неё, а не внутри.
+            if (atom === model.at(model.position)) {
+              const offset = model.offsetOf(atom);
+              if (offset === model.position) return null;
+            }
+            return atom;
+          }
+          atom = atom.parent;
+        }
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
+
     function collectMathAtomTree(atom, result) {
       if (!atom || result.has(atom)) return;
       result.add(atom);
@@ -1179,9 +1388,7 @@
         e.key === 'ArrowUp' ||
         e.key === 'ArrowDown' ||
         e.key === 'Home' ||
-        e.key === 'End' ||
-        e.key === 'PageUp' ||
-        e.key === 'PageDown'
+        e.key === 'End'
       ) {
         return true;
       }
@@ -1271,6 +1478,80 @@
       return [];
     }
 
+    function moveCaretToCurrentMathLineEnd(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        const range = rangeOfAtomList(model, atomsOfCurrentMathLine(model));
+        if (!range) return false;
+        return setMathSelection(mf, range[1], range[1]);
+      } catch {
+        return false;
+      }
+    }
+
+    function caretIsAtCurrentMathLineEnd(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        const range = rangeOfAtomList(model, atomsOfCurrentMathLine(model));
+        return !!range && model.position === range[1];
+      } catch {
+        return false;
+      }
+    }
+
+    function caretIsInsideFractionOrScript(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        const initial = model.at(model.position);
+        let atom = initial;
+        while (atom) {
+          if (
+            atom.parentBranch === 'superscript' ||
+            atom.parentBranch === 'subscript'
+          ) {
+            return true;
+          }
+          if (atom.type === 'genfrac') {
+            const alreadyAfter =
+              atom === initial && model.offsetOf(atom) === model.position;
+            return !alreadyAfter;
+          }
+          atom = atom.parent;
+        }
+      } catch {
+        /* ignore */
+      }
+      return false;
+    }
+
+    function moveCaretLikeEnterFromNested(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        const cases = mathEnvironmentAtCaret(mf, 'cases');
+        if (cases) {
+          const afterCases = model.offsetOf(cases);
+          return (
+            typeof afterCases === 'number' &&
+            setMathSelection(mf, afterCases, afterCases)
+          );
+        }
+        let moved = false;
+        for (let i = 0; i < 16; i++) {
+          const before = mathCaretKey(mf);
+          mf.executeCommand('moveAfterParent');
+          if (mathCaretKey(mf) === before) break;
+          moved = true;
+        }
+        return moved;
+      } catch {
+        return false;
+      }
+    }
+
     function atomHasScript(atom) {
       if (!atom) return false;
       const t = atom.type;
@@ -1328,15 +1609,6 @@
       return null;
     }
 
-    function modelAtomById(model, id) {
-      if (!model || !id) return null;
-      for (let i = 0; i <= model.lastOffset; i++) {
-        const atom = model.at(i);
-        if (String(atom?.id ?? '') === String(id)) return atom;
-      }
-      return null;
-    }
-
     function modelAtomFromPoint(mf, clientX, clientY) {
       try {
         const root = mf?.shadowRoot;
@@ -1368,8 +1640,13 @@
         let best = null;
         let bestScore = Infinity;
         let bestArea = Infinity;
+        const atomsById = new Map();
+        for (let i = 0; i <= model.lastOffset; i++) {
+          const atom = model.at(i);
+          if (atom?.id != null) atomsById.set(String(atom.id), atom);
+        }
         for (const el of root.querySelectorAll('[data-atom-id]')) {
-          const atom = modelAtomById(model, el.dataset.atomId);
+          const atom = atomsById.get(String(el.dataset.atomId));
           if (!atom || atom.type === 'first') continue;
           const r = el.getBoundingClientRect();
           if (r.width < 0.5 || r.height < 0.5) continue;
@@ -1412,7 +1689,7 @@
       }
     }
 
-    function trailingScriptBox(mf, clientY) {
+    function trailingScriptBox(mf, clientX, clientY) {
       const root = mf.shadowRoot;
       if (!root) return null;
       let best = null;
@@ -1420,12 +1697,19 @@
       for (const el of root.querySelectorAll('.ML__msubsup')) {
         const r = el.getBoundingClientRect();
         if (r.width < 0.5 || r.height < 0.5) continue;
-        const distance =
+        const dy =
           clientY < r.top
             ? r.top - clientY
             : clientY > r.bottom
               ? clientY - r.bottom
               : 0;
+        const dx =
+          clientX < r.left
+            ? r.left - clientX
+            : clientX > r.right
+              ? clientX - r.right
+              : 0;
+        const distance = Math.hypot(dx, dy);
         if (
           distance < bestDistance ||
           (distance === bestDistance && (!best || r.right > best.rect.right))
@@ -1449,7 +1733,7 @@
         if (mf.mode === 'latex' || mf.mode === 'text') return;
         const model = mf._mathfield?.model;
         if (!model) return;
-        const script = trailingScriptBox(mf, clientY);
+        const script = trailingScriptBox(mf, clientX, clientY);
         if (!script) return;
         let last = modelAtomForElement(mf, script.el);
         while (
@@ -1459,17 +1743,13 @@
         ) {
           last = last.parent;
         }
-        if (!last?.isLastSibling) return;
+        if (!last) return;
         if (!atomHasScript(last)) return;
 
         const box = script.rect;
         // Степень может быть вложена в корень/дробь и быть последним атомом
         // своей ветки, хотя справа на общей строке ещё есть выражение.
         if (clientX < box.left - 2 || clientX > box.right + 10) return null;
-
-        const at = model.at(model.position);
-        const inScript =
-          at?.parentBranch === 'superscript' || at?.parentBranch === 'subscript';
 
         // пустое место справа от выражения
         const pastGlyphs =
@@ -1479,8 +1759,7 @@
           clientX >= box.left + (box.right - box.left) * 0.5 &&
           clientX <= box.right + 2 &&
           clientY >= box.top - 6 &&
-          clientY <= box.bottom + 6 &&
-          !inScript;
+          clientY <= box.bottom + 6;
 
         if (!pastGlyphs && !onScriptSide) return null;
         const position = model.offsetOf(last);
@@ -1596,6 +1875,7 @@
     }
 
     function wireMathFieldDblClickLineSelect(mf) {
+      let lastHandledMouseDown = -Infinity;
       const selectClickedLine = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1610,12 +1890,27 @@
       mf.addEventListener(
         'mousedown',
         (e) => {
-          if (e.button === 0 && e.detail === 2) selectClickedLine(e);
+          if (e.button === 0 && e.detail === 2) {
+            lastHandledMouseDown = e.timeStamp;
+            selectClickedLine(e);
+          }
         },
         true
       );
       // Fallback для браузеров, где click-count на mousedown недоступен.
-      mf.addEventListener('dblclick', selectClickedLine, true);
+      mf.addEventListener(
+        'dblclick',
+        (e) => {
+          if (e.timeStamp - lastHandledMouseDown < 1000) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            return;
+          }
+          selectClickedLine(e);
+        },
+        true
+      );
     }
 
     function selectedMathLatex(mf) {
@@ -1704,12 +1999,19 @@
       // Space вставляет матв пробел (по умолчанию MathLive его игнорирует)
       mf.mathModeSpace = '\\:';
       mf.value = block.content || '';
-      mathHistory.set(mf, {
-        undo: [],
-        redo: [],
-        last: mf.value ?? '',
-        applying: false,
-      });
+      const savedHistory = mathHistoryByBlockId.get(block.id);
+      const currentValue = mf.value ?? '';
+      const history =
+        savedHistory && savedHistory.last === currentValue
+          ? {
+              undo: savedHistory.undo.slice(),
+              redo: savedHistory.redo.slice(),
+              last: savedHistory.last,
+              applying: false,
+            }
+          : { undo: [], redo: [], last: currentValue, applying: false };
+      mathHistory.set(mf, history);
+      mathHistoryByBlockId.set(block.id, history);
       // Отключаем встроенный `/` после mount (до mount keybindings недоступны)
       const disableBuiltinFrac = () => {
         try {
@@ -1811,18 +2113,21 @@
       }
 
       clearingMath = true;
+      markContentMutation();
       block.content = '';
       scheduleSave();
 
       if (body) {
         body.replaceChildren();
         const fresh = wireMathField(document.createElement('math-field'), block);
-        mathHistory.set(fresh, {
+        const freshHistory = {
           undo: carriedUndo,
           redo: [],
           last: '',
           applying: false,
-        });
+        };
+        mathHistory.set(fresh, freshHistory);
+        mathHistoryByBlockId.set(blockId, freshHistory);
         body.appendChild(fresh);
         requestAnimationFrame(() => {
           try {
@@ -1834,16 +2139,16 @@
         render();
         focusBlock(blockId);
         queueMicrotask(() => {
-          const remounted = document.querySelector(
-            `.block[data-id="${blockId}"] math-field`
-          );
+          const remounted = blockElementById(blockId)?.querySelector('math-field');
           if (remounted) {
-            mathHistory.set(remounted, {
+            const remountedHistory = {
               undo: carriedUndo,
               redo: [],
               last: '',
               applying: false,
-            });
+            };
+            mathHistory.set(remounted, remountedHistory);
+            mathHistoryByBlockId.set(blockId, remountedHistory);
           }
           clearingMath = false;
         });
@@ -1881,8 +2186,13 @@
       let drawing = false;
       let last = null;
       let cssH = 280;
-      const undoStack = [];
-      const redoStack = [];
+      let drawHistory = drawHistoryByBlockId.get(block.id);
+      if (!drawHistory) {
+        drawHistory = { undo: [], redo: [] };
+        drawHistoryByBlockId.set(block.id, drawHistory);
+      }
+      const undoStack = drawHistory.undo;
+      const redoStack = drawHistory.redo;
       const UNDO_MAX = 40;
 
       const swatches = DRAW_COLORS.map((c) => {
@@ -1995,6 +2305,7 @@
             ctx.drawImage(img, 0, 0);
           });
         };
+        img.onerror = () => setStatus('не удалось загрузить рисунок', false);
         img.src = saved.png;
       } else {
         requestAnimationFrame(() => syncPixelSizeFromCss(false));
@@ -2101,6 +2412,7 @@
       }
 
       canvas.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
         canvas.setPointerCapture?.(e.pointerId);
         start(e);
       });
@@ -2118,6 +2430,7 @@
       let startY = 0;
       let startH = 0;
       resize.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
         resizing = true;
@@ -2191,9 +2504,22 @@
       clearTimeout(statusTimer);
       if (ok) {
         statusTimer = setTimeout(() => {
-          statusEl.textContent = 'сохранено локально';
+          statusEl.textContent =
+            authState?.token && authState?.notebookId
+              ? 'синхронизировано'
+              : 'сохранено локально';
         }, 1600);
       }
+    }
+
+    function currentDocument() {
+      return {
+        title: titleEl.value.trim() || 'Лист 1',
+        document: {
+          schemaVersion: 1,
+          blocks: blocks.map(({ id, type, content }) => ({ id, type, content })),
+        },
+      };
     }
 
     function scheduleSave() {
@@ -2202,19 +2528,232 @@
       saveTimer = setTimeout(save, 400);
     }
 
-    function save() {
+    function save({ remote = true } = {}) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
       const doc = {
         title: titleEl.value,
         blocks: blocks.map(({ id, type, content }) => ({ id, type, content })),
         updatedAt: new Date().toISOString(),
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
-      setStatus('сохранено ' + new Date().toLocaleTimeString());
+      const raw = JSON.stringify(doc);
+      try {
+        localStorage.setItem(STORAGE_KEY, raw);
+        hasLocalDocument = true;
+        setStatus(
+          authState?.token && authState?.notebookId
+            ? 'сохранено локально, синхронизация…'
+            : 'сохранено ' + new Date().toLocaleTimeString()
+        );
+      } catch {
+        setStatus('не удалось сохранить: хранилище недоступно или заполнено', false);
+      }
+      if (remote) queueRemoteSave();
+      return raw;
+    }
+
+    function readAuthState() {
+      try {
+        const state = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
+        if (
+          state &&
+          typeof state.token === 'string' &&
+          typeof state.notebookId === 'string' &&
+          typeof state.user?.username === 'string'
+        ) {
+          return state;
+        }
+      } catch {
+        /* ignore invalid auth cache */
+      }
+      return null;
+    }
+
+    function persistAuthState(state) {
+      authState = state;
+      try {
+        if (state) localStorage.setItem(AUTH_KEY, JSON.stringify(state));
+        else localStorage.removeItem(AUTH_KEY);
+      } catch {
+        /* текущая вкладка всё равно продолжит работать */
+      }
+      updateAuthUI();
+    }
+
+    function updateAuthUI() {
+      const username = authState?.user?.username || '';
+      authUserEl.textContent = username ? `@${username}` : 'локально';
+      authBtn.hidden = !!username;
+      logoutBtn.hidden = !username;
+      deleteAccountBtn.hidden = !username;
+    }
+
+    function openAuthDialog(message = '') {
+      authErrorEl.textContent = message;
+      if (!authDialog.open) authDialog.showModal();
+      queueMicrotask(() => authUsernameEl.focus());
+    }
+
+    function clearAuthState(message = '') {
+      persistAuthState(null);
+      notebookVersion = null;
+      remoteSaveQueued = false;
+      remoteConflict = false;
+      if (message) openAuthDialog(message);
+    }
+
+    async function responseMessage(response) {
+      try {
+        const data = await response.clone().json();
+        if (typeof data.detail === 'string') return data.detail;
+        if (Array.isArray(data.detail)) {
+          return data.detail.map((item) => item.msg).filter(Boolean).join('; ');
+        }
+      } catch {
+        /* use fallback */
+      }
+      return `Ошибка сервера (${response.status})`;
+    }
+
+    async function apiRequest(path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      if (options.body && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+      }
+      if (authState?.token) {
+        headers.set('Authorization', `Bearer ${authState.token}`);
+      }
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      });
+      if (response.status === 401 && authState) {
+        clearAuthState('Сессия истекла. Войди снова.');
+      }
+      return response;
+    }
+
+    function applyRemoteNotebook(notebook) {
+      titleEl.value =
+        typeof notebook.title === 'string' && notebook.title
+          ? notebook.title
+          : 'Лист 1';
+      blocks = normalizeBlocks(notebook.document?.blocks);
+      if (!blocks.length) blocks = [{ id: uid(), type: 'math', content: '' }];
+      notebookVersion = Number(notebook.version) || 1;
+      remoteConflict = false;
+      structuralHistory.undo.length = 0;
+      structuralHistory.redo.length = 0;
+      mathHistoryByBlockId.clear();
+      drawHistoryByBlockId.clear();
+      render();
+      save({ remote: false });
+    }
+
+    async function loadRemoteNotebook() {
+      if (!authState?.token) return false;
+      if (!authState.notebookId) {
+        const listResponse = await apiRequest('/api/notebooks');
+        if (!listResponse.ok) throw new Error(await responseMessage(listResponse));
+        const notebooks = await listResponse.json();
+        if (!notebooks.length) throw new Error('У аккаунта нет доступных листов');
+        authState.notebookId = notebooks[0].id;
+        persistAuthState(authState);
+      }
+
+      const response = await apiRequest(
+        `/api/notebooks/${encodeURIComponent(authState.notebookId)}`
+      );
+      if (!response.ok) throw new Error(await responseMessage(response));
+      applyRemoteNotebook(await response.json());
+      setStatus('лист загружен с сервера');
+      return true;
+    }
+
+    function queueRemoteSave() {
+      if (
+        !authState?.token ||
+        !authState?.notebookId ||
+        notebookVersion == null ||
+        remoteConflict
+      ) {
+        return;
+      }
+      remoteSaveQueued = true;
+      if (!remoteSaveInFlight) void flushRemoteSaves();
+    }
+
+    async function flushRemoteSaves() {
+      if (remoteSaveInFlight) return;
+      remoteSaveInFlight = true;
+      try {
+        while (
+          remoteSaveQueued &&
+          authState?.token &&
+          authState?.notebookId &&
+          notebookVersion != null &&
+          !remoteConflict
+        ) {
+          remoteSaveQueued = false;
+          const snapshot = currentDocument();
+          const response = await apiRequest(
+            `/api/notebooks/${encodeURIComponent(authState.notebookId)}`,
+            {
+              method: 'PUT',
+              keepalive: true,
+              body: JSON.stringify({
+                ...snapshot,
+                baseVersion: notebookVersion,
+              }),
+            }
+          );
+
+          if (response.status === 409) {
+            const conflict = await response.json();
+            remoteConflict = true;
+            const keepLocal = confirm(
+              'Лист изменён в другой вкладке. Нажми OK, чтобы сохранить эту локальную версию поверх серверной. Отмена — загрузить серверную версию.'
+            );
+            if (keepLocal && Number(conflict.currentVersion)) {
+              notebookVersion = Number(conflict.currentVersion);
+              remoteConflict = false;
+              remoteSaveQueued = true;
+              continue;
+            }
+            await loadRemoteNotebook();
+            remoteConflict = false;
+            break;
+          }
+
+          if (!response.ok) {
+            throw new Error(await responseMessage(response));
+          }
+          const saved = await response.json();
+          notebookVersion = Number(saved.version);
+          setStatus('синхронизировано ' + new Date().toLocaleTimeString());
+        }
+      } catch (error) {
+        if (authState) {
+          setStatus(
+            `сохранено локально — ${error?.message || 'сервер недоступен'}`,
+            false
+          );
+        }
+      } finally {
+        remoteSaveInFlight = false;
+        if (remoteSaveQueued && !remoteConflict) void flushRemoteSaves();
+      }
     }
 
     function load() {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      let raw = null;
+      try {
+        raw = localStorage.getItem(STORAGE_KEY);
+      } catch {
+        setStatus('localStorage недоступен', false);
+      }
       if (!raw) {
+        hasLocalDocument = false;
         blocks = [
           { id: uid(), type: 'heading', content: 'Решение' },
           { id: uid(), type: 'math', content: '' },
@@ -2223,18 +2762,114 @@
         return;
       }
       try {
+        hasLocalDocument = true;
         const doc = JSON.parse(raw);
-        titleEl.value = doc.title || 'Лист 1';
-        blocks = Array.isArray(doc.blocks) ? doc.blocks : [];
-        blocks = blocks.map((b) =>
-          b.type === 'math' ? { ...b, content: normalizeMathLatex(b.content) } : b
-        );
+        titleEl.value =
+          typeof doc.title === 'string' && doc.title ? doc.title : 'Лист 1';
+        blocks = normalizeBlocks(doc.blocks);
         if (!blocks.length) {
           blocks = [{ id: uid(), type: 'math', content: '' }];
         }
       } catch {
         setStatus('не удалось прочитать localStorage', false);
         blocks = [{ id: uid(), type: 'math', content: '' }];
+      }
+    }
+
+    async function authenticate(mode) {
+      if (!authForm.reportValidity()) return;
+      authErrorEl.textContent = '';
+      const controls = authForm.querySelectorAll('input, button');
+      controls.forEach((control) => {
+        control.disabled = true;
+      });
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/${mode}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: authUsernameEl.value.trim(),
+            password: authPasswordEl.value,
+          }),
+        });
+        if (!response.ok) throw new Error(await responseMessage(response));
+
+        const result = await response.json();
+        const state = {
+          token: result.access_token,
+          user: result.user,
+          notebookId: result.initialNotebookId,
+        };
+        persistAuthState(state);
+        notebookVersion = 1;
+        remoteConflict = false;
+        authPasswordEl.value = '';
+        if (authDialog.open) authDialog.close();
+
+        if (
+          mode === 'register' &&
+          hasLocalDocument &&
+          confirm('Перенести текущий локальный лист в новый аккаунт?')
+        ) {
+          setStatus('перенос локального листа…');
+          queueRemoteSave();
+        } else {
+          await loadRemoteNotebook();
+          focusBlock(blocks[0]?.id);
+        }
+      } catch (error) {
+        authErrorEl.textContent =
+          error?.message === 'Failed to fetch'
+            ? `API недоступен: ${API_BASE}`
+            : error?.message || 'Не удалось выполнить вход';
+        if (!authDialog.open) openAuthDialog(authErrorEl.textContent);
+      } finally {
+        controls.forEach((control) => {
+          control.disabled = false;
+        });
+      }
+    }
+
+    authForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void authenticate('login');
+    });
+    document.getElementById('btn-register').addEventListener('click', () => {
+      void authenticate('register');
+    });
+    document.getElementById('btn-local').addEventListener('click', () => {
+      if (authDialog.open) authDialog.close();
+      setStatus('локальный режим');
+    });
+    authBtn.addEventListener('click', () => openAuthDialog());
+    logoutBtn.addEventListener('click', () => {
+      save({ remote: false });
+      clearAuthState();
+      setStatus('выполнен выход — лист сохранён локально');
+    });
+    deleteAccountBtn.addEventListener('click', () => {
+      void deleteAccount();
+    });
+
+    async function deleteAccount() {
+      if (!authState?.token) return;
+      if (
+        !confirm(
+          'Удалить аккаунт и все листы на сервере? Локальная копия останется на этом устройстве.'
+        )
+      ) {
+        return;
+      }
+      try {
+        const response = await apiRequest('/api/auth/delete', { method: 'DELETE' });
+        if (!response.ok && response.status !== 204) {
+          throw new Error(await responseMessage(response));
+        }
+        save({ remote: false });
+        clearAuthState();
+        setStatus('аккаунт удалён — лист сохранён локально');
+      } catch (error) {
+        setStatus(error?.message || 'не удалось удалить аккаунт', false);
       }
     }
 
@@ -2368,13 +3003,14 @@
       try {
         mf.applyStyle({
           color: '#6b7280',
+          fontSize: 4,
           fontShape: 'n',
           fontSeries: 'm',
           variant: 'main',
         });
       } catch {
         try {
-          mf.applyStyle({ color: 'gray' });
+          mf.applyStyle({ color: 'gray', fontSize: 4 });
         } catch {
           /* ignore */
         }
@@ -2558,9 +3194,113 @@
       el.style.height = `${Math.max(38, el.scrollHeight)}px`;
     }
 
+    function blockElementById(id) {
+      return Array.from(blocksEl.children).find(
+        (row) => row.dataset.id === String(id)
+      );
+    }
+
+    function activeBlockId() {
+      return document.activeElement?.closest?.('.block')?.dataset?.id ?? null;
+    }
+
+    function documentSnapshot() {
+      return {
+        title: titleEl.value,
+        blocks: blocks.map(({ id, type, content }) => ({ id, type, content })),
+      };
+    }
+
+    function recordStructuralChange(before, focusBefore, focusAfter) {
+      const after = documentSnapshot();
+      structuralHistory.undo.push({ before, after, focusBefore, focusAfter });
+      if (structuralHistory.undo.length > STRUCTURAL_UNDO_MAX) {
+        structuralHistory.undo.shift();
+      }
+      structuralHistory.redo.length = 0;
+    }
+
+    function markContentMutation() {
+      structuralHistory.redo.length = 0;
+    }
+
+    function snapshotsEqual(a, b) {
+      if (!a || !b || a.title !== b.title || a.blocks.length !== b.blocks.length) {
+        return false;
+      }
+      return a.blocks.every((block, i) => {
+        const other = b.blocks[i];
+        return (
+          block.id === other.id &&
+          block.type === other.type &&
+          block.content === other.content
+        );
+      });
+    }
+
+    function restoreDocumentSnapshot(snapshot, focusId) {
+      titleEl.value = snapshot.title;
+      blocks = snapshot.blocks.map(({ id, type, content }) => ({
+        id,
+        type,
+        content,
+      }));
+      const liveIds = new Set(blocks.map((block) => block.id));
+      for (const id of mathHistoryByBlockId.keys()) {
+        if (!liveIds.has(id)) mathHistoryByBlockId.delete(id);
+      }
+      for (const id of drawHistoryByBlockId.keys()) {
+        if (!liveIds.has(id)) drawHistoryByBlockId.delete(id);
+      }
+      render();
+      save();
+      focusBlock(
+        liveIds.has(focusId) ? focusId : blocks.at(-1)?.id ?? null,
+        true
+      );
+    }
+
+    function undoStructuralChange() {
+      const entry = structuralHistory.undo.at(-1);
+      if (!entry || !snapshotsEqual(documentSnapshot(), entry.after)) return false;
+      structuralHistory.undo.pop();
+      structuralHistory.redo.push(entry);
+      restoreDocumentSnapshot(entry.before, entry.focusBefore);
+      return true;
+    }
+
+    function redoStructuralChange() {
+      const entry = structuralHistory.redo.at(-1);
+      if (!entry || !snapshotsEqual(documentSnapshot(), entry.before)) return false;
+      structuralHistory.redo.pop();
+      structuralHistory.undo.push(entry);
+      restoreDocumentSnapshot(entry.after, entry.focusAfter);
+      return true;
+    }
+
+    function handleStructuralUndoRedoKey(e) {
+      if (
+        e.defaultPrevented ||
+        !(e.ctrlKey || e.metaKey) ||
+        e.altKey ||
+        (e.code !== 'KeyZ' && e.code !== 'KeyY')
+      ) {
+        return false;
+      }
+      const redo =
+        (e.code === 'KeyZ' && e.shiftKey) ||
+        (e.code === 'KeyY' && !e.shiftKey);
+      const changed = redo ? redoStructuralChange() : undoStructuralChange();
+      if (!changed) return false;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      return true;
+    }
+
     function focusBlock(id, atEnd = false) {
       requestAnimationFrame(() => {
-        const row = blocksEl.querySelector(`[data-id="${id}"]`);
+        const row = blockElementById(id);
         if (!row) return;
         const mf = row.querySelector('math-field');
         const input = row.querySelector('textarea, input.heading-input');
@@ -2583,6 +3323,8 @@
     }
 
     function insertBlock(type, afterId = null, content = '') {
+      const before = documentSnapshot();
+      const focusBefore = activeBlockId();
       const block = {
         id: uid(),
         type,
@@ -2602,33 +3344,45 @@
       render();
       scheduleSave();
       focusBlock(block.id);
+      recordStructuralChange(before, focusBefore, block.id);
       return block;
     }
 
     function removeBlock(id) {
+      const before = documentSnapshot();
+      const focusBefore = activeBlockId() ?? id;
       if (blocks.length <= 1) {
+        mathHistoryByBlockId.delete(blocks[0]?.id);
+        drawHistoryByBlockId.delete(blocks[0]?.id);
         blocks[0] = { id: uid(), type: 'math', content: '' };
         render();
         scheduleSave();
         focusBlock(blocks[0].id);
+        recordStructuralChange(before, focusBefore, blocks[0].id);
         return;
       }
       const i = blocks.findIndex((b) => b.id === id);
       blocks = blocks.filter((b) => b.id !== id);
+      mathHistoryByBlockId.delete(id);
+      drawHistoryByBlockId.delete(id);
       render();
       scheduleSave();
       const next = blocks[Math.max(0, i - 1)] || blocks[0];
       focusBlock(next.id, true);
+      recordStructuralChange(before, focusBefore, next.id);
     }
 
     function updateContent(id, content) {
       const b = blocks.find((x) => x.id === id);
       if (!b) return;
+      if (b.content === content) return;
+      markContentMutation();
       b.content = content;
       scheduleSave();
     }
 
     function render() {
+      closeSymbolPicker();
       blocksEl.innerHTML = '';
       emptyHint.hidden = blocks.length > 0;
 
@@ -2676,21 +3430,25 @@
         const addMath = document.createElement('button');
         addMath.type = 'button';
         addMath.title = 'Формула ниже';
+        addMath.setAttribute('aria-label', 'Добавить формулу ниже');
         addMath.textContent = '+∑';
         addMath.addEventListener('click', () => insertBlock('math', block.id));
         const addText = document.createElement('button');
         addText.type = 'button';
         addText.title = 'Текст ниже';
+        addText.setAttribute('aria-label', 'Добавить текст ниже');
         addText.textContent = '+T';
         addText.addEventListener('click', () => insertBlock('text', block.id));
         const addDraw = document.createElement('button');
         addDraw.type = 'button';
         addDraw.title = 'Рисовалка ниже';
+        addDraw.setAttribute('aria-label', 'Добавить рисовалку ниже');
         addDraw.textContent = '+✎';
         addDraw.addEventListener('click', () => insertBlock('draw', block.id));
         const del = document.createElement('button');
         del.type = 'button';
         del.title = 'Удалить';
+        del.setAttribute('aria-label', 'Удалить блок');
         del.textContent = '×';
         del.addEventListener('click', () => removeBlock(block.id));
         ops.append(addMath, addText, addDraw, del);
@@ -2707,6 +3465,39 @@
 
         // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y — снимки LaTeX (см. mathHistory)
         if (handleMathUndoRedoKey(e, mf, block.id)) return;
+
+        if (
+          (e.key === 'PageDown' || e.key === 'ArrowDown') &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          !e.shiftKey
+        ) {
+          const nested = caretIsInsideFractionOrScript(mf);
+          // В конце строки обычную ↓ не перехватываем: MathLive сам
+          // переводит каретку на следующую визуальную строку.
+          if (
+            e.key === 'ArrowDown' &&
+            !nested &&
+            caretIsAtCurrentMathLineEnd(mf)
+          ) {
+            return;
+          }
+          const moved = nested
+            ? moveCaretLikeEnterFromNested(mf)
+            : moveCaretToCurrentMathLineEnd(mf);
+          if (moved) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            queueMicrotask(() => {
+              if (isInHashComment(mf)) {
+                tryResumeCommentSession(mf, { moveCaret: false });
+              }
+            });
+          }
+          return;
+        }
 
         // Shift+стрелки / Home/End — как в редакторе. Явно: capture на host
         // иначе может обогнать textarea в shadow, а комментарий — схлопнуть селект.
@@ -2778,6 +3569,7 @@
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'i')) latex = '\\cap'; // ∩
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'u')) latex = '\\cup'; // ∪
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'r')) latex = '\\sqrt{#0}'; // √
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 's')) latex = '\\begin{cases}#0\\end{cases}'; // система
             else if (e.shiftKey && !e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\in'; // ∈
             else if (e.shiftKey && e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\notin'; // ∉
             else if (e.shiftKey && e.altKey && isEnLetter(e, 'n')) latex = '\\mathbb{N}'; // ℕ
@@ -2905,6 +3697,30 @@
         return;
       }
 
+      if (
+        e.key === 'Enter' &&
+        block.type === 'math' &&
+        e.shiftKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        const mf = e.currentTarget;
+        if (mf.mode === 'latex' || mf.mode === 'text') return;
+        if (mathEnvironmentAtCaret(mf, 'cases')) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          try {
+            mf.executeCommand('addRowAfter');
+            saveMathField(mf, block.id);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+      }
+
       if (e.key === 'Enter' && block.type === 'math' && !e.shiftKey && !e.altKey) {
         const mf = e.currentTarget;
         // в режиме \команды (и если mode недоступен — при незавершённом \) не перехватываем
@@ -2920,7 +3736,18 @@
 
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation?.();
         try {
+          const cases = mathEnvironmentAtCaret(mf, 'cases');
+          const model = mf._mathfield?.model;
+          if (cases && model) {
+            const afterCases = model.offsetOf(cases);
+            if (typeof afterCases === 'number') {
+              setMathSelection(mf, afterCases, afterCases);
+              saveMathField(mf, block.id);
+              return;
+            }
+          }
           // если курсор в степени / индексе / основании лога — выйти вправо на основную линию
           const before = mathCaretKey(mf);
           mf.executeCommand('moveAfterParent');
@@ -3009,6 +3836,7 @@
     window.addEventListener(
       'keydown',
       (e) => {
+        if (handleStructuralUndoRedoKey(e)) return;
         const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
         const mf = path.find((n) => n && n.tagName === 'MATH-FIELD');
         if (!mf || e.defaultPrevented) return;
@@ -3144,15 +3972,31 @@
       } else {
         delete document.documentElement.dataset.theme;
       }
-      localStorage.setItem(THEME_KEY, theme);
+      try {
+        localStorage.setItem(THEME_KEY, theme);
+      } catch {
+        /* тема всё равно применяется в текущей вкладке */
+      }
       themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
       themeBtn.title = theme === 'dark' ? 'Светлая тема' : 'Тёмная тема';
     }
 
-    applyTheme(currentTheme() === 'dark' || localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light');
+    let savedTheme = null;
+    try {
+      savedTheme = localStorage.getItem(THEME_KEY);
+    } catch {
+      /* ignore */
+    }
+    applyTheme(currentTheme() === 'dark' || savedTheme === 'dark' ? 'dark' : 'light');
     themeBtn.onclick = () => applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
 
-    titleEl.addEventListener('input', scheduleSave);
+    titleEl.addEventListener('input', () => {
+      markContentMutation();
+      scheduleSave();
+    });
+    window.addEventListener('pagehide', () => {
+      if (saveTimer) save();
+    });
 
     document.getElementById('btn-heading').onclick = () =>
       insertBlock('heading', blocks.at(-1)?.id ?? null);
@@ -3164,8 +4008,7 @@
       insertBlock('draw', blocks.at(-1)?.id ?? null);
 
     document.getElementById('btn-export').onclick = () => {
-      save();
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = save();
       const blob = new Blob([raw], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -3179,15 +4022,22 @@
       const file = e.target.files?.[0];
       if (!file) return;
       try {
+        const before = documentSnapshot();
+        const focusBefore = activeBlockId() ?? blocks.at(-1)?.id ?? null;
         const doc = JSON.parse(await file.text());
-        titleEl.value = doc.title || 'Импорт';
-        blocks = Array.isArray(doc.blocks) ? doc.blocks : [];
-        blocks = blocks.map((b) =>
-          b.type === 'math' ? { ...b, content: normalizeMathLatex(b.content) } : b
-        );
+        titleEl.value =
+          typeof doc.title === 'string' && doc.title ? doc.title : 'Импорт';
+        mathHistoryByBlockId.clear();
+        drawHistoryByBlockId.clear();
+        blocks = normalizeBlocks(doc.blocks);
         if (!blocks.length) blocks = [{ id: uid(), type: 'math', content: '' }];
         render();
         save();
+        recordStructuralChange(
+          before,
+          focusBefore,
+          blocks.at(-1)?.id ?? null
+        );
         setStatus('импортировано');
       } catch {
         setStatus('битый JSON', false);
@@ -3197,19 +4047,49 @@
 
     document.getElementById('btn-clear').onclick = () => {
       if (!confirm('Очистить лист?')) return;
+      const before = documentSnapshot();
+      const focusBefore = activeBlockId() ?? blocks.at(-1)?.id ?? null;
       titleEl.value = 'Лист 1';
+      mathHistoryByBlockId.clear();
+      drawHistoryByBlockId.clear();
       blocks = [
         { id: uid(), type: 'heading', content: 'Решение' },
         { id: uid(), type: 'math', content: '' },
       ];
       render();
       save();
+      recordStructuralChange(
+        before,
+        focusBefore,
+        blocks.at(-1)?.id ?? null
+      );
     };
 
-    load();
-    render();
-    setStatus('готово — пиши решение');
-    focusBlock(blocks[0]?.id);
+    async function initialize() {
+      load();
+      render();
+      authState = readAuthState();
+      updateAuthUI();
+
+      if (authState) {
+        try {
+          await loadRemoteNotebook();
+        } catch (error) {
+          if (authState) {
+            setStatus(
+              `локальная копия — ${error?.message || 'сервер недоступен'}`,
+              false
+            );
+          }
+        }
+      } else {
+        setStatus('готово локально — войди для синхронизации');
+        queueMicrotask(() => openAuthDialog());
+      }
+      focusBlock(blocks[0]?.id);
+    }
+
+    void initialize();
   </script>
 </body>
 </html>
