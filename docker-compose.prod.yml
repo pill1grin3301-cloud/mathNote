@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:17
     env_file:
-      - backend/.env
-    ports:
-      - "5432:5432"
+      - backend/.env.prod
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -12,20 +12,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - backend/.env
-    network_mode: host
-    environment:
-      TELEGRAM_PROXY: http://127.0.0.1:10809
-    command:
-      - sh
-      - -c
-      - export DATABASE_URL="postgresql+psycopg://$$POSTGRES_USER:$$POSTGRES_PASSWORD@127.0.0.1:5432/$$POSTGRES_DB" && uv run --no-dev alembic upgrade head && uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port 8042
+      - backend/.env.prod
     depends_on:
       db:
         condition: service_healthy
@@ -35,24 +29,26 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8042/health')",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
         ]
       interval: 5s
       timeout: 5s
       retries: 12
       start_period: 20s
+    restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        NGINX_CONF: nginx.prod.conf
     ports:
-      - "8767:80"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "80:80"
     depends_on:
       api:
         condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:
