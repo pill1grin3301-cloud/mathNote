@@ -624,10 +624,14 @@
     let statusTimer = null;
     let authState = null;
     let notebookVersion = null;
+    let notebookReady = false;
     let remoteSaveInFlight = false;
     let remoteSaveQueued = false;
     let remoteConflict = false;
     let hasLocalDocument = false;
+    let drawPadEpoch = 0;
+    let mathFieldEpoch = 0;
+    let ignoreEditorEvents = false;
     const structuralHistory = { undo: [], redo: [] };
     const STRUCTURAL_UNDO_MAX = 50;
 
@@ -730,6 +734,14 @@
       } catch {
         /* ignore */
       }
+    }
+
+    function currentUserId() {
+      return authState?.user?.id || authState?.user?.username || '';
+    }
+
+    function documentStorageKey(userId = currentUserId()) {
+      return userId ? `${STORAGE_KEY}.${userId}` : STORAGE_KEY;
     }
 
     function uid() {
@@ -924,6 +936,7 @@
 
     /** После программного insert — снимок для Ctrl+Z (input может не прийти). */
     function saveMathField(mf, blockId) {
+      if (ignoreEditorEvents) return;
       trackMathHistory(mf);
       updateContent(blockId, mf.value ?? '');
     }
@@ -1992,6 +2005,7 @@
     }
 
     function wireMathField(mf, block) {
+      const fieldEpoch = mathFieldEpoch;
       mf.setAttribute('virtual-keyboard-mode', 'onfocus');
       mf.setAttribute('smart-mode', '');
       // сами делаем () как в VS Code; smartFence даёт \\left...\\right
@@ -2044,7 +2058,8 @@
       queueMicrotask(disableBuiltinFrac);
       queueMicrotask(neutralizeHighlight);
       mf.addEventListener('input', () => {
-        if (clearingMath) return;
+        if (ignoreEditorEvents || clearingMath) return;
+        if (fieldEpoch !== mathFieldEpoch || !mf.isConnected) return;
         saveMathField(mf, block.id);
       });
       // Клик в существующий #-комментарий — снова серая сессия.
@@ -2173,6 +2188,7 @@
     }
 
     function wireDrawPad(block) {
+      const padEpoch = drawPadEpoch;
       const pad = document.createElement('div');
       pad.className = 'draw-pad';
       pad.tabIndex = 0;
@@ -2257,6 +2273,14 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
+      function drawPadAlive(requireConnected = false) {
+        if (padEpoch !== drawPadEpoch) return false;
+        if (!blocks.some((item) => item.id === block.id && item.type === 'draw')) {
+          return false;
+        }
+        return !requireConnected || canvas.isConnected;
+      }
+
       function setupCtx() {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -2297,6 +2321,7 @@
         const img = new Image();
         img.onload = () => {
           requestAnimationFrame(() => {
+            if (!drawPadAlive()) return;
             syncPixelSizeFromCss(false);
             if (img.height > canvas.height) {
               canvas.height = img.height;
@@ -2305,13 +2330,18 @@
             ctx.drawImage(img, 0, 0);
           });
         };
-        img.onerror = () => setStatus('не удалось загрузить рисунок', false);
+        img.onerror = () => {
+          if (drawPadAlive()) setStatus('не удалось загрузить рисунок', false);
+        };
         img.src = saved.png;
       } else {
-        requestAnimationFrame(() => syncPixelSizeFromCss(false));
+        requestAnimationFrame(() => {
+          if (drawPadAlive()) syncPixelSizeFromCss(false);
+        });
       }
 
       function persist() {
+        if (!drawPadAlive()) return;
         updateContent(
           block.id,
           JSON.stringify({
@@ -2331,6 +2361,7 @@
       function restoreDraw(dataUrl) {
         const img = new Image();
         img.onload = () => {
+          if (!drawPadAlive()) return;
           if (img.width && img.height) {
             canvas.width = img.width;
             canvas.height = img.height;
@@ -2538,7 +2569,7 @@
       };
       const raw = JSON.stringify(doc);
       try {
-        localStorage.setItem(STORAGE_KEY, raw);
+        localStorage.setItem(documentStorageKey(), raw);
         hasLocalDocument = true;
         setStatus(
           authState?.token && authState?.notebookId
@@ -2597,8 +2628,11 @@
     function clearAuthState(message = '') {
       persistAuthState(null);
       notebookVersion = null;
+      notebookReady = false;
       remoteSaveQueued = false;
       remoteConflict = false;
+      drawPadEpoch += 1;
+      mathFieldEpoch += 1;
       if (message) openAuthDialog(message);
     }
 
@@ -2634,6 +2668,7 @@
     }
 
     function applyRemoteNotebook(notebook) {
+      ignoreEditorEvents = true;
       titleEl.value =
         typeof notebook.title === 'string' && notebook.title
           ? notebook.title
@@ -2646,7 +2681,9 @@
       structuralHistory.redo.length = 0;
       mathHistoryByBlockId.clear();
       drawHistoryByBlockId.clear();
+      notebookReady = true;
       render();
+      ignoreEditorEvents = false;
       save({ remote: false });
     }
 
@@ -2672,6 +2709,7 @@
 
     function queueRemoteSave() {
       if (
+        !notebookReady ||
         !authState?.token ||
         !authState?.notebookId ||
         notebookVersion == null ||
@@ -2689,24 +2727,31 @@
       try {
         while (
           remoteSaveQueued &&
+          notebookReady &&
           authState?.token &&
           authState?.notebookId &&
           notebookVersion != null &&
           !remoteConflict
         ) {
           remoteSaveQueued = false;
+          const notebookId = authState.notebookId;
+          const token = authState.token;
           const snapshot = currentDocument();
+          const baseVersion = notebookVersion;
           const response = await apiRequest(
-            `/api/notebooks/${encodeURIComponent(authState.notebookId)}`,
+            `/api/notebooks/${encodeURIComponent(notebookId)}`,
             {
               method: 'PUT',
               keepalive: true,
               body: JSON.stringify({
                 ...snapshot,
-                baseVersion: notebookVersion,
+                baseVersion,
               }),
             }
           );
+          if (authState?.token !== token || authState?.notebookId !== notebookId) {
+            return;
+          }
 
           if (response.status === 409) {
             const conflict = await response.json();
@@ -2745,10 +2790,10 @@
       }
     }
 
-    function load() {
+    function load(userId = currentUserId()) {
       let raw = null;
       try {
-        raw = localStorage.getItem(STORAGE_KEY);
+        raw = localStorage.getItem(documentStorageKey(userId));
       } catch {
         setStatus('localStorage недоступен', false);
       }
@@ -2801,8 +2846,13 @@
           notebookId: result.initialNotebookId,
         };
         persistAuthState(state);
-        notebookVersion = 1;
+        notebookVersion = null;
+        notebookReady = false;
+        remoteSaveQueued = false;
         remoteConflict = false;
+        ignoreEditorEvents = true;
+        drawPadEpoch += 1;
+        mathFieldEpoch += 1;
         authPasswordEl.value = '';
         if (authDialog.open) authDialog.close();
 
@@ -2811,6 +2861,9 @@
           hasLocalDocument &&
           confirm('Перенести текущий локальный лист в новый аккаунт?')
         ) {
+          ignoreEditorEvents = false;
+          notebookVersion = 1;
+          notebookReady = true;
           setStatus('перенос локального листа…');
           queueRemoteSave();
         } else {
@@ -2818,12 +2871,18 @@
           focusBlock(blocks[0]?.id);
         }
       } catch (error) {
+        ignoreEditorEvents = false;
+        if (authState && !notebookReady) {
+          load(currentUserId());
+          render();
+        }
         authErrorEl.textContent =
           error?.message === 'Failed to fetch'
             ? `API недоступен: ${API_BASE}`
             : error?.message || 'Не удалось выполнить вход';
         if (!authDialog.open) openAuthDialog(authErrorEl.textContent);
       } finally {
+        ignoreEditorEvents = false;
         controls.forEach((control) => {
           control.disabled = false;
         });
@@ -3373,6 +3432,7 @@
     }
 
     function updateContent(id, content) {
+      if (ignoreEditorEvents) return;
       const b = blocks.find((x) => x.id === id);
       if (!b) return;
       if (b.content === content) return;
@@ -3383,6 +3443,8 @@
 
     function render() {
       closeSymbolPicker();
+      drawPadEpoch += 1;
+      mathFieldEpoch += 1;
       blocksEl.innerHTML = '';
       emptyHint.hidden = blocks.length > 0;
 
@@ -4066,8 +4128,6 @@
     };
 
     async function initialize() {
-      load();
-      render();
       authState = readAuthState();
       updateAuthUI();
 
@@ -4075,6 +4135,8 @@
         try {
           await loadRemoteNotebook();
         } catch (error) {
+          load(currentUserId());
+          render();
           if (authState) {
             setStatus(
               `локальная копия — ${error?.message || 'сервер недоступен'}`,
@@ -4083,6 +4145,8 @@
           }
         }
       } else {
+        load();
+        render();
         setStatus('готово локально — войди для синхронизации');
         queueMicrotask(() => openAuthDialog());
       }
