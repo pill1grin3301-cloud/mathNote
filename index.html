@@ -2940,6 +2940,9 @@
             password: authPasswordEl.value,
           }),
         });
+        if (response.status === 429) {
+          throw new Error('Слишком много попыток. Подожди минуту и попробуй снова.');
+        }
         if (!response.ok) throw new Error(await responseMessage(response));
 
         const result = await response.json();
