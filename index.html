@@ -545,7 +545,7 @@
       <summary>Клавиши</summary>
       <ul>
         <li><kbd>Ctrl</kbd>+<kbd>M</kbd> — новый блок формулы</li>
-        <li>В формуле <kbd>Enter</kbd> — из степени/индекса или системы выйти вправо; <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе — новая строка</li>
+        <li>В формуле <kbd>Enter</kbd> — из степени/индекса или системы выйти вправо; в пределе — сначала к значению (<code>0</code>), ещё раз — из предела вперёд; <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе — новая строка</li>
         <li>В формуле <kbd>↓</kbd> — выйти из дроби/степени или перейти в конец строки; из конца — на следующую строку</li>
         <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — в комментарии стереть слово; в формуле — удалить строку</li>
         <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
@@ -1182,6 +1182,109 @@
         /* ignore */
       }
       return null;
+    }
+
+    function isLimOperatorAtom(atom) {
+      if (!atom) return false;
+      const raw = [atom.value, atom.command, atom.symbol, atom.verbatimLatex]
+        .map((item) => String(item ?? '').replace(/^\\/, '').trim())
+        .find(Boolean);
+      return /^lim$/i.test(raw || '');
+    }
+
+    function limitOperatorAtCaret(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        let atom = model?.at(model.position);
+        while (atom) {
+          if (isLimOperatorAtom(atom)) {
+            const offset = model.offsetOf(atom);
+            // at() — атом слева от каретки: offset === position значит уже после lim
+            if (offset !== model.position) return atom;
+          }
+          atom = atom.parent;
+        }
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
+
+    function limitScriptAtoms(lim) {
+      if (Array.isArray(lim?.subscript) && lim.subscript.length) {
+        return lim.subscript;
+      }
+      if (Array.isArray(lim?.below) && lim.below.length) {
+        return lim.below;
+      }
+      return [];
+    }
+
+    function caretIsInLimitScript(lim, atom) {
+      let walk = atom;
+      while (walk && walk !== lim) {
+        if (
+          walk.parent === lim &&
+          (walk.parentBranch === 'subscript' || walk.parentBranch === 'below')
+        ) {
+          return true;
+        }
+        walk = walk.parent;
+      }
+      return false;
+    }
+
+    function findLimitToAtom(atoms) {
+      const stack = [...atoms];
+      while (stack.length) {
+        const atom = stack.shift();
+        if (!atom) continue;
+        const raw = `${atom.value ?? ''} ${atom.command ?? ''} ${atom.verbatimLatex ?? ''}`;
+        if (
+          atom.type === 'mrel' ||
+          atom.type === 'relop' ||
+          /\\to\b/.test(raw) ||
+          raw.includes('→')
+        ) {
+          if (/\\to\b/.test(raw) || raw.includes('→') || atom.value === '\\to') {
+            return atom;
+          }
+        }
+        for (const branch of ['body', 'subscript', 'superscript']) {
+          if (Array.isArray(atom[branch])) stack.push(...atom[branch]);
+        }
+      }
+      return null;
+    }
+
+    function moveCaretAfterAtom(mf, atom) {
+      const model = mf?._mathfield?.model;
+      if (!model || !atom) return false;
+      const offset = model.offsetOf(atom);
+      return typeof offset === 'number' && setMathSelection(mf, offset, offset);
+    }
+
+    /** В \lim_{x→0}: первый Enter — к 0, второй — из подстрочника вперёд. */
+    function handleEnterInLimit(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const lim = limitOperatorAtCaret(mf);
+        if (!model || !lim) return false;
+        if (!caretIsInLimitScript(lim, model.at(model.position))) return false;
+
+        const toAtom = findLimitToAtom(limitScriptAtoms(lim));
+        if (!toAtom) return false;
+
+        const toOffset = model.offsetOf(toAtom);
+        if (typeof toOffset !== 'number') return false;
+
+        if (model.position < toOffset) {
+          return setMathSelection(mf, toOffset, toOffset);
+        }
+        return moveCaretAfterAtom(mf, lim);
+      } catch {
+        return false;
+      }
     }
 
     function collectMathAtomTree(atom, result) {
@@ -3809,6 +3912,10 @@
               saveMathField(mf, block.id);
               return;
             }
+          }
+          if (handleEnterInLimit(mf)) {
+            saveMathField(mf, block.id);
+            return;
           }
           // если курсор в степени / индексе / основании лога — выйти вправо на основную линию
           const before = mathCaretKey(mf);
