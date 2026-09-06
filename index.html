@@ -33,6 +33,7 @@
       --selection-fg: #1c1917;
       --mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
       --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      --library-width: min(42vw, 28rem);
     }
 
     html[data-theme="dark"] {
@@ -62,6 +63,7 @@
       color-scheme: light;
     }
     html, body { margin: 0; min-height: 100%; }
+    body.library-open { overflow-x: hidden; }
     body {
       font-family: var(--sans);
       color: var(--ink);
@@ -75,6 +77,14 @@
       max-width: 1254px; /* лист шире на 10% */
       margin: 0 auto;
       padding: 1.25rem 1.25rem 4rem;
+      transition: margin 0.28s ease, max-width 0.28s ease;
+    }
+    body.library-open .app {
+      margin: 0;
+      max-width: none;
+      width: 100%;
+      padding-left: calc(var(--library-width) + 0.85rem);
+      padding-right: 0.85rem;
     }
 
     header {
@@ -204,6 +214,162 @@
       min-height: 1.2em;
     }
 
+    .library-tab {
+      position: fixed;
+      left: 0;
+      top: 50%;
+      z-index: 40;
+      transform: translateY(-50%);
+      width: 1.55rem;
+      padding: 1.7rem 0;
+      border: 1px solid var(--line);
+      border-left: 0;
+      border-radius: 0 11px 11px 0;
+      color: color-mix(in srgb, var(--muted) 72%, transparent);
+      font-size: 1.15rem;
+      font-weight: 300;
+      line-height: 1;
+      box-shadow: 4px 0 14px var(--shadow);
+      transition: left 0.28s ease, color 0.2s ease;
+    }
+    .library-tab:hover {
+      color: var(--muted);
+    }
+    body.library-open .library-tab {
+      left: var(--library-width);
+      border-left: 0;
+    }
+
+    .library {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: var(--library-width);
+      z-index: 35;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      padding: 1.15rem 1.35rem 1.75rem;
+      color: var(--muted);
+      background: var(--paper);
+      border-right: 1px solid var(--line);
+      box-shadow: 12px 0 40px var(--shadow);
+      transform: translateX(-105%);
+      transition: transform 0.28s ease;
+      overflow: auto;
+    }
+    .library-group-head strong,
+    .library-note .note-title {
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .library button:not(.primary) {
+      color: var(--muted);
+    }
+    body.library-open .library {
+      transform: translateX(0);
+    }
+    .library h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      color: var(--ink);
+      font-weight: 650;
+    }
+    .library-head, .library-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .library-actions[hidden] {
+      display: none;
+    }
+    .library-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .library-tree {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .library-group {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.55rem 0.65rem 0.65rem;
+      background: var(--focus-bg);
+    }
+    .library-group.drag-over,
+    .library-note.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .library-group-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+    .library-group-head strong {
+      flex: 1;
+      min-width: 8rem;
+    }
+    .library-notes {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .library-note {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.2rem 0.35rem;
+      background: var(--paper);
+      cursor: grab;
+    }
+    .library-note:active {
+      cursor: grabbing;
+    }
+    .library-note.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .library-note .note-open {
+      flex: 1;
+      min-width: 8rem;
+      border: 0;
+      background: transparent;
+      padding: 0.35rem 0.2rem;
+      text-align: left;
+      box-shadow: none;
+    }
+    .library-note .note-title {
+      font-weight: 550;
+    }
+    .library-note .note-meta,
+    .library-group-head button {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.45rem;
+    }
+    .drag-grip {
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: -0.12em;
+      user-select: none;
+      cursor: grab;
+    }
+
+    @media (max-width: 800px) {
+      :root { --library-width: min(78vw, 22rem); }
+    }
+
     .sheet {
       background: var(--paper);
       border: 1px solid var(--line);
@@ -211,6 +377,9 @@
       padding: 1.5rem 1.5rem 2.25rem;
       box-shadow: 0 10px 30px var(--shadow);
       transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    body.library-open .sheet {
+      min-height: calc(100vh - 7.5rem);
     }
 
     .title,
@@ -331,7 +500,12 @@
       font-size: 0.85rem;
     }
     details.help summary { cursor: pointer; color: var(--ink); }
-    details.help ul { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+    details.help ul {
+      margin: 0.5rem 0 0;
+      padding-left: 1.2rem;
+      line-height: 1.55;
+    }
+    details.help li + li { margin-top: 0.45em; }
     kbd {
       font-family: var(--mono);
       font-size: 0.78em;
@@ -489,6 +663,21 @@
   </style>
 </head>
 <body>
+  <button type="button" class="library-tab" id="library-tab" aria-expanded="false" aria-controls="library" aria-label="Разделы и листы">
+    +
+  </button>
+  <aside class="library" id="library" aria-hidden="true">
+    <div class="library-head">
+      <h2>Разделы и листы</h2>
+      <button type="button" id="library-close">Закрыть</button>
+    </div>
+    <p class="library-hint" id="library-hint"></p>
+    <div class="library-actions" id="library-actions" hidden>
+      <button type="button" id="library-new-section">Новый раздел</button>
+      <button type="button" class="primary" id="library-new-note">Новый лист</button>
+    </div>
+    <div class="library-tree" id="library-tree"></div>
+  </aside>
   <div class="app">
     <header>
       <div class="brand">math<span>Note</span></div>
@@ -545,9 +734,9 @@
       <summary>Клавиши</summary>
       <ul>
         <li><kbd>Ctrl</kbd>+<kbd>M</kbd> — новый блок формулы</li>
-        <li>В формуле <kbd>Enter</kbd> — из степени/индекса или системы выйти вправо; в пределе — сначала к значению (<code>0</code>), ещё раз — из предела вперёд; <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе — новая строка</li>
+        <li>В формуле <kbd>Enter</kbd> — из степени/индекса или системы выйти вправо; корень: степень → внутрь → за корень; интеграл и сумма: верх → низ → на знак; если справа скобка — за скобку; в пределе — сначала к значению (<code>0</code>), ещё раз — из предела вперёд; <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе — новая строка</li>
         <li>В формуле <kbd>↓</kbd> — выйти из дроби/степени или перейти в конец строки; из конца — на следующую строку</li>
-        <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — в комментарии стереть слово; в формуле — удалить строку</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — стереть до пробела; скобки и дробь целиком</li>
         <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
         <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — новый текстовый блок</li>
@@ -562,7 +751,7 @@
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>&lt;</kbd> / <kbd>&gt;</kbd> — ≤ / ≥</li>
-        <li><kbd>\lim</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab</li>
+        <li><kbd>\lim</kbd>, <kbd>\sqrt</kbd>, <kbd>\int</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab</li>
         <li>В формуле <kbd>#</kbd> — комментарий (серый текст, пробелы ок); <kbd>Esc</kbd> — снова формула</li>
         <li>Буквенные шорткаты — только на EN-раскладке; на русской <kbd>.</kbd>/<kbd>,</kbd> не становятся дробью</li>
         <li>Пустой текстовый блок + <kbd>Backspace</kbd> — удалить</li>
@@ -740,8 +929,13 @@
       return authState?.user?.id || authState?.user?.username || '';
     }
 
-    function documentStorageKey(userId = currentUserId()) {
-      return userId ? `${STORAGE_KEY}.${userId}` : STORAGE_KEY;
+    function documentStorageKey(
+      userId = currentUserId(),
+      notebookId = authState?.notebookId
+    ) {
+      if (userId && notebookId) return `${STORAGE_KEY}.${userId}.${notebookId}`;
+      if (userId) return `${STORAGE_KEY}.${userId}`;
+      return STORAGE_KEY;
     }
 
     function uid() {
@@ -1264,6 +1458,27 @@
       return typeof offset === 'number' && setMathSelection(mf, offset, offset);
     }
 
+    /** Сразу справа от каретки — закрывающая скобка ( ) ] } ). */
+    function closingFenceToTheRight(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return null;
+        const atom = model.at(model.position);
+        if (!atom) return null;
+        if (atom.type === 'mclose') return atom;
+        const next = atom.rightSibling;
+        if (next?.type === 'mclose') return next;
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
+    function handleEnterOutOfParens(mf) {
+      const fence = closingFenceToTheRight(mf);
+      return !!fence && moveCaretAfterAtom(mf, fence);
+    }
+
     /** В \lim_{x→0}: первый Enter — к 0, второй — из подстрочника вперёд. */
     function handleEnterInLimit(mf) {
       try {
@@ -1285,6 +1500,383 @@
       } catch {
         return false;
       }
+    }
+
+    function atomCommandName(atom) {
+      if (!atom) return '';
+      const raw = [atom.command, atom.value, atom.symbol, atom.verbatimLatex]
+        .map((item) => String(item ?? '').replace(/^\\/, '').trim())
+        .find(Boolean);
+      return raw || '';
+    }
+
+    function isSurdAtom(atom) {
+      return !!atom && (atom.type === 'surd' || /^sqrt/i.test(atomCommandName(atom)));
+    }
+
+    function isIntOperatorAtom(atom) {
+      if (!atom) return false;
+      const name = atomCommandName(atom);
+      if (/^(int|oint|iint|iiint|sum)$/i.test(name)) return true;
+      const raw = `${atom.value ?? ''} ${atom.command ?? ''} ${atom.symbol ?? ''}`;
+      return raw.includes('∑') || raw.includes('\\sum');
+    }
+
+    function isSpacingAtom(atom) {
+      if (!atom) return false;
+      if (atom.type === 'spacing') return true;
+      const raw = `${atom.value ?? ''} ${atom.command ?? ''} ${atom.verbatimLatex ?? ''}`;
+      return /\\(:|,|;|quad|qquad)\b/.test(raw) || raw.includes('\\ ') || atom.value === ' ';
+    }
+
+    function findAncestorAtom(atom, predicate) {
+      let walk = atom;
+      while (walk) {
+        if (predicate(walk)) return walk;
+        walk = walk.parent;
+      }
+      return null;
+    }
+
+    function caretBranchOf(parent, atom) {
+      let walk = atom;
+      while (walk && walk !== parent) {
+        if (walk.parent === parent) return walk.parentBranch;
+        walk = walk.parent;
+      }
+      return null;
+    }
+
+    function atomBranchKids(atom, branch) {
+      const kids = atom?.[branch];
+      if (Array.isArray(kids)) return kids;
+      if (kids) return [kids];
+      return [];
+    }
+
+    function moveCaretIntoBranch(mf, parent, branch) {
+      const model = mf?._mathfield?.model;
+      const kids = atomBranchKids(parent, branch);
+      if (model && kids.length) {
+        const first = kids[0];
+        const pos = model.offsetOf(first);
+        if (typeof pos === 'number') return setMathSelection(mf, pos, pos);
+      }
+      if (branch === 'subscript') {
+        const before = mathCaretKey(mf);
+        moveCaretAfterAtom(mf, parent);
+        try {
+          mf.executeCommand(['insert', '_{#?}']);
+        } catch {
+          return false;
+        }
+        return mathCaretKey(mf) !== before;
+      }
+      return false;
+    }
+
+    function deleteAtomsInclusive(mf, startAtom, endAtom) {
+      const model = mf?._mathfield?.model;
+      if (!model || !startAtom || !endAtom) return false;
+      const left = startAtom.leftSibling;
+      let startOff = left ? model.offsetOf(left) : null;
+      const endOff = model.offsetOf(endAtom);
+      if (typeof endOff !== 'number') return false;
+      if (typeof startOff !== 'number') {
+        let first = startAtom;
+        while (first.leftSibling) first = first.leftSibling;
+        startOff = model.offsetOf(first);
+      }
+      if (typeof startOff !== 'number' || endOff <= startOff) return false;
+      if (!setMathSelection(mf, startOff, endOff)) return false;
+      try {
+        mf.executeCommand('deleteBackward');
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function findMatchingOpen(closeAtom) {
+      if (!closeAtom) return null;
+      const pairs = { ')': '(', ']': '[', '}': '{', '\\rangle': '\\langle' };
+      const openVal = pairs[closeAtom.value] || '(';
+      let depth = 1;
+      let atom = closeAtom.leftSibling;
+      while (atom) {
+        if (atom.type === 'mclose' && (atom.value === closeAtom.value || !pairs[atom.value])) {
+          depth += 1;
+        }
+        if (atom.type === 'mopen' && atom.value === openVal) {
+          depth -= 1;
+          if (depth === 0) return atom;
+        }
+        if (atom.isFirstSibling) break;
+        atom = atom.leftSibling;
+      }
+      return null;
+    }
+
+    function findMatchingClose(openAtom) {
+      if (!openAtom) return null;
+      const pairs = { '(': ')', '[': ']', '{': '}', '\\langle': '\\rangle' };
+      const closeVal = pairs[openAtom.value] || ')';
+      let depth = 0;
+      let atom = openAtom;
+      while (atom) {
+        if (atom.type === 'mopen' && atom.value === openAtom.value) depth += 1;
+        if (atom.type === 'mclose' && atom.value === closeVal) {
+          depth -= 1;
+          if (depth === 0) return atom;
+        }
+        if (atom.isLastSibling) break;
+        atom = atom.rightSibling;
+      }
+      return null;
+    }
+
+    function siblingParenGroupContaining(atom) {
+      if (!atom) return null;
+      if (atom.type === 'mclose') {
+        const open = findMatchingOpen(atom);
+        return open ? { start: open, end: atom } : null;
+      }
+      if (atom.type === 'mopen') {
+        const close = findMatchingClose(atom);
+        return close ? { start: atom, end: close } : null;
+      }
+      let extraCloses = 0;
+      let walk = atom;
+      while (walk) {
+        if (walk.type === 'mclose') extraCloses += 1;
+        if (walk.type === 'mopen') {
+          if (extraCloses > 0) extraCloses -= 1;
+          else {
+            const close = findMatchingClose(walk);
+            return close ? { start: walk, end: close } : null;
+          }
+        }
+        if (walk.isFirstSibling) break;
+        walk = walk.leftSibling;
+      }
+      return null;
+    }
+
+    function specialMathUnitContaining(atom) {
+      const leftright = findAncestorAtom(atom, (item) => item.type === 'leftright');
+      if (leftright) return { start: leftright, end: leftright };
+      const parens = siblingParenGroupContaining(atom);
+      if (parens) return parens;
+      const frac = findAncestorAtom(atom, (item) => item.type === 'genfrac');
+      if (frac) return { start: frac, end: frac };
+      const surd = findAncestorAtom(atom, isSurdAtom);
+      if (surd) return { start: surd, end: surd };
+      return null;
+    }
+
+    function expandSpecialUnit(atom) {
+      if (!atom) return null;
+      if (atom.type === 'leftright' || atom.type === 'genfrac' || isSurdAtom(atom)) {
+        return { start: atom, end: atom };
+      }
+      if (atom.type === 'mclose' || atom.type === 'mopen') {
+        return siblingParenGroupContaining(atom);
+      }
+      return null;
+    }
+
+    function rootAtCaret(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const atom = model?.at(model.position);
+        const surd = findAncestorAtom(atom, isSurdAtom);
+        if (!surd || !model) return null;
+        if (surd === atom && model.offsetOf(surd) === model.position) return null;
+        return surd;
+      } catch {
+        return null;
+      }
+    }
+
+    function handleEnterInRoot(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const surd = rootAtCaret(mf);
+        if (!model || !surd) return false;
+        const branch = caretBranchOf(surd, model.at(model.position));
+        if (branch === 'index' || branch === 'above') {
+          return (
+            moveCaretIntoBranch(mf, surd, 'body') ||
+            moveCaretAfterAtom(mf, surd)
+          );
+        }
+        if (branch === 'body') return moveCaretAfterAtom(mf, surd);
+        if (!atomBranchKids(surd, 'body').length) {
+          return moveCaretIntoBranch(mf, surd, 'body');
+        }
+        return moveCaretAfterAtom(mf, surd);
+      } catch {
+        return false;
+      }
+    }
+
+    function integralAtCaret(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const atom = model?.at(model.position);
+        if (!model || !atom) return null;
+        const inside = findAncestorAtom(atom, isIntOperatorAtom);
+        if (inside && !(inside === atom && model.offsetOf(inside) === model.position)) {
+          return { integ: inside, after: false };
+        }
+        if (isIntOperatorAtom(atom) && model.offsetOf(atom) === model.position) {
+          return { integ: atom, after: true };
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
+    function handleEnterInIntegral(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const found = integralAtCaret(mf);
+        if (!model || !found) return false;
+        const { integ, after } = found;
+        if (after) return moveCaretIntoBranch(mf, integ, 'subscript');
+        const branch = caretBranchOf(integ, model.at(model.position));
+        if (branch === 'superscript' || branch === 'above') {
+          return moveCaretIntoBranch(mf, integ, 'subscript');
+        }
+        if (branch === 'subscript' || branch === 'below') {
+          return moveCaretAfterAtom(mf, integ);
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    }
+
+    function branchLooksEmpty(parent, branch) {
+      const kids = atomBranchKids(parent, branch).filter(
+        (item) => item && item.type !== 'first'
+      );
+      return !kids.length;
+    }
+
+    function handleBackspaceIntegral(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const atom = model?.at(model.position);
+        if (!model || !atom) return false;
+        if (isIntOperatorAtom(atom) && model.offsetOf(atom) === model.position) {
+          return deleteAtomsInclusive(mf, atom, atom);
+        }
+        const parent = findAncestorAtom(atom, isIntOperatorAtom);
+        if (
+          parent &&
+          (atom.parentBranch === 'subscript' ||
+            atom.parentBranch === 'superscript' ||
+            atom.parentBranch === 'below' ||
+            atom.parentBranch === 'above') &&
+          branchLooksEmpty(parent, atom.parentBranch)
+        ) {
+          return deleteAtomsInclusive(mf, parent, parent);
+        }
+        if (isIntOperatorAtom(atom.leftSibling) && atom.type === 'first') {
+          return deleteAtomsInclusive(mf, atom.leftSibling, atom.leftSibling);
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    }
+
+    function deletePreviousMathChunk(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        if (!model.selectionIsCollapsed) {
+          mf.executeCommand('deleteBackward');
+          return true;
+        }
+        const atom = model.at(model.position);
+        if (!atom || atom.type === 'first') return false;
+        if (isSpacingAtom(atom) && atom.leftSibling && atom.leftSibling.type !== 'first') {
+          return deletePreviousMathChunkFrom(mf, atom.leftSibling);
+        }
+        return deletePreviousMathChunkFrom(mf, atom);
+      } catch {
+        return false;
+      }
+    }
+
+    function deletePreviousMathChunkFrom(mf, endAtom) {
+      const inside = specialMathUnitContaining(endAtom);
+      let start = inside ? inside.start : endAtom;
+      let end = inside ? inside.end : endAtom;
+      const trailing = expandSpecialUnit(endAtom);
+      if (!inside && trailing) {
+        start = trailing.start;
+        end = trailing.end;
+      }
+      while (start.leftSibling && !start.leftSibling.isFirstSibling) {
+        const left = start.leftSibling;
+        if (isSpacingAtom(left)) break;
+        const leftUnit = expandSpecialUnit(left) || specialMathUnitContaining(left);
+        start = leftUnit ? leftUnit.start : left;
+      }
+      return deleteAtomsInclusive(mf, start, end);
+    }
+
+    function latexCommandBuffer(mf) {
+      try {
+        const field = mf?._mathfield;
+        const candidates = [
+          field?.modeController?.value,
+          field?.keyboardDelegate?._value,
+          field?.keyboardDelegate?.value,
+          field?.latexMode?.value,
+        ];
+        for (const item of candidates) {
+          if (typeof item === 'string' && item.trim()) return item.trim();
+        }
+      } catch {
+        /* ignore */
+      }
+      return '';
+    }
+
+    function completeSpecialLatexCommand(mf) {
+      const raw = latexCommandBuffer(mf).replace(/^\\/, '').toLowerCase();
+      if (raw === 'sqrt') {
+        try {
+          mf.executeCommand(['switchMode', 'math']);
+        } catch {
+          /* ignore */
+        }
+        mf.insert('\\sqrt[#?]{#0}', {
+          format: 'latex',
+          selectionMode: 'placeholder',
+        });
+        return true;
+      }
+      if (raw === 'int' || raw === 'oint' || raw === 'sum') {
+        try {
+          mf.executeCommand(['switchMode', 'math']);
+        } catch {
+          /* ignore */
+        }
+        const latex =
+          raw === 'oint' ? '\\oint_{#?}' : raw === 'sum' ? '\\sum_{#?}' : '\\int_{#?}';
+        mf.insert(latex, {
+          format: 'latex',
+          selectionMode: 'placeholder',
+        });
+        return true;
+      }
+      return false;
     }
 
     function collectMathAtomTree(atom, result) {
@@ -2113,6 +2705,16 @@
       mf.setAttribute('smart-mode', '');
       // сами делаем () как в VS Code; smartFence даёт \\left...\\right
       mf.smartFence = false;
+      try {
+        mf.inlineShortcuts = {
+          ...(mf.inlineShortcuts || {}),
+          sqrt: '\\sqrt[#?]{#0}',
+          int: '\\int_{#?}',
+          sum: '\\sum_{#?}',
+        };
+      } catch {
+        /* ignore */
+      }
       // Space вставляет матв пробел (по умолчанию MathLive его игнорирует)
       mf.mathModeSpace = '\\:';
       mf.value = block.content || '';
@@ -2659,7 +3261,7 @@
     function scheduleSave() {
       clearTimeout(saveTimer);
       statusEl.textContent = 'сохранение…';
-      saveTimer = setTimeout(save, 400);
+      saveTimer = setTimeout(save, 15_000);
     }
 
     function save({ remote = true } = {}) {
@@ -2739,10 +3341,21 @@
       if (message) openAuthDialog(message);
     }
 
+    const API_MESSAGES = {
+      'Notebook limit reached': 'Лимит: не больше 100 листов',
+      'Section limit reached': 'Лимит: не больше 30 разделов',
+      'Cannot delete the last notebook': 'Нельзя удалить последний лист',
+      'Section name already exists': 'Такое имя раздела уже есть',
+      'Invalid patch': 'Нечего менять',
+      'Invalid notebook': 'Некорректные данные листа',
+    };
+
     async function responseMessage(response) {
       try {
         const data = await response.clone().json();
-        if (typeof data.detail === 'string') return data.detail;
+        if (typeof data.detail === 'string') {
+          return API_MESSAGES[data.detail] || data.detail;
+        }
         if (Array.isArray(data.detail)) {
           return data.detail.map((item) => item.msg).filter(Boolean).join('; ');
         }
@@ -2804,9 +3417,21 @@
       const response = await apiRequest(
         `/api/notebooks/${encodeURIComponent(authState.notebookId)}`
       );
+      if (response.status === 404) {
+        authState.notebookId = null;
+        persistAuthState(authState);
+        const listResponse = await apiRequest('/api/notebooks');
+        if (!listResponse.ok) throw new Error(await responseMessage(listResponse));
+        const notebooks = await listResponse.json();
+        if (!notebooks.length) throw new Error('У аккаунта нет доступных листов');
+        authState.notebookId = notebooks[0].id;
+        persistAuthState(authState);
+        return loadRemoteNotebook();
+      }
       if (!response.ok) throw new Error(await responseMessage(response));
       applyRemoteNotebook(await response.json());
       setStatus('лист загружен с сервера');
+      void refreshLibrary();
       return true;
     }
 
@@ -2897,6 +3522,9 @@
       let raw = null;
       try {
         raw = localStorage.getItem(documentStorageKey(userId));
+        if (!raw && userId && authState?.notebookId) {
+          raw = localStorage.getItem(`${STORAGE_KEY}.${userId}`);
+        }
       } catch {
         setStatus('localStorage недоступен', false);
       }
@@ -2976,6 +3604,7 @@
           await loadRemoteNotebook();
           focusBlock(blocks[0]?.id);
         }
+        await refreshLibrary();
       } catch (error) {
         ignoreEditorEvents = false;
         if (authState && !notebookReady) {
@@ -3010,6 +3639,10 @@
     logoutBtn.addEventListener('click', () => {
       save({ remote: false });
       clearAuthState();
+      setLibraryOpen(false);
+      librarySections = [];
+      libraryNotebooks = [];
+      renderLibrary();
       setStatus('выполнен выход — лист сохранён локально');
     });
     deleteAccountBtn.addEventListener('click', () => {
@@ -3635,6 +4268,21 @@
         if (handleMathUndoRedoKey(e, mf, block.id)) return;
 
         if (
+          e.key === 'Tab' &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          mf.mode === 'latex' &&
+          completeSpecialLatexCommand(mf)
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          saveMathField(mf, block.id);
+          return;
+        }
+
+        if (
           (e.key === 'PageDown' || e.key === 'ArrowDown') &&
           !e.ctrlKey &&
           !e.metaKey &&
@@ -3736,7 +4384,7 @@
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'c')) latex = '\\ni'; // ∋
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'i')) latex = '\\cap'; // ∩
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'u')) latex = '\\cup'; // ∪
-            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'r')) latex = '\\sqrt{#0}'; // √
+            else if (e.altKey && !e.shiftKey && isEnLetter(e, 'r')) latex = '\\sqrt[#?]{#0}'; // √
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 's')) latex = '\\begin{cases}#0\\end{cases}'; // система
             else if (e.shiftKey && !e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\in'; // ∈
             else if (e.shiftKey && e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\notin'; // ∉
@@ -3852,7 +4500,7 @@
         if (e.repeat) return;
 
         try {
-          deleteCurrentMathLine(mf);
+          deletePreviousMathChunk(mf);
           const after = mf.value ?? '';
           if (isVisuallyEmptyMath(after)) {
             clearMathBlockIfEmpty(mf, block.id);
@@ -3920,6 +4568,14 @@
             saveMathField(mf, block.id);
             return;
           }
+          if (handleEnterInRoot(mf)) {
+            saveMathField(mf, block.id);
+            return;
+          }
+          if (handleEnterInIntegral(mf)) {
+            saveMathField(mf, block.id);
+            return;
+          }
           // если курсор в степени / индексе / основании лога — выйти вправо на основную линию
           const before = mathCaretKey(mf);
           mf.executeCommand('moveAfterParent');
@@ -3930,6 +4586,8 @@
               mf.executeCommand('moveAfterParent');
               if (mathCaretKey(mf) === p) break;
             }
+          } else if (handleEnterOutOfParens(mf)) {
+            // справа скобка — курсор за неё, не новая строка
           } else {
             // уже на основной линии — новая строка
             mf.executeCommand('addRowAfter');
@@ -3951,6 +4609,23 @@
         insertBlock(block.type === 'heading' ? 'text' : block.type === 'draw' ? 'math' : block.type, block.id);
         return;
       }
+      if (e.key === 'Backspace' && block.type === 'math' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const mf = e.currentTarget;
+        const mode = mf.mode;
+        if (mode !== 'latex' && mode !== 'text' && handleBackspaceIntegral(mf)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          const after = mf.value ?? '';
+          if (isVisuallyEmptyMath(after)) {
+            clearMathBlockIfEmpty(mf, block.id);
+          } else {
+            saveMathField(mf, block.id);
+          }
+          return;
+        }
+      }
+
       if (e.key === 'Backspace' || e.key === 'Delete') {
         if (block.type === 'math' && !e.repeat) {
           const mf = e.currentTarget;
@@ -4237,6 +4912,389 @@
       );
     };
 
+    const libraryTab = document.getElementById('library-tab');
+    const libraryEl = document.getElementById('library');
+    const libraryTree = document.getElementById('library-tree');
+    const libraryHint = document.getElementById('library-hint');
+    const libraryActions = document.getElementById('library-actions');
+    /** @type {{ id: string, title: string, position: number }[]} */
+    let librarySections = [];
+    /** @type {{ id: string, title: string, sectionId: string | null, position: number }[]} */
+    let libraryNotebooks = [];
+
+    function setLibraryOpen(open) {
+      document.body.classList.toggle('library-open', open);
+      libraryTab.setAttribute('aria-expanded', open ? 'true' : 'false');
+      libraryEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+
+    function byShelfOrder(a, b) {
+      if (a.position !== b.position) return a.position - b.position;
+      return String(a.id).localeCompare(String(b.id));
+    }
+
+    function notebooksInSection(sectionId) {
+      return libraryNotebooks
+        .filter((note) => (note.sectionId || null) === (sectionId || null))
+        .slice()
+        .sort(byShelfOrder);
+    }
+
+    function sortedSections() {
+      return librarySections.slice().sort(byShelfOrder);
+    }
+
+    function dragKind(event) {
+      const raw = event.dataTransfer.getData('text/plain') || '';
+      if (raw.startsWith('notebook:')) return { type: 'notebook', id: raw.slice(9) };
+      if (raw.startsWith('section:')) return { type: 'section', id: raw.slice(8) };
+      return { type: '', id: '' };
+    }
+
+    function renderLibrary() {
+      const loggedIn = !!authState?.token;
+      libraryActions.hidden = !loggedIn;
+      libraryHint.textContent = loggedIn
+        ? 'Перетащи раздел или лист — порядок сохранится на сервере.'
+        : 'Войди, чтобы создавать разделы и несколько листов. Сейчас доступен только локальный черновик.';
+
+      libraryTree.replaceChildren();
+      if (!loggedIn) {
+        const local = document.createElement('div');
+        local.className = 'library-note active';
+        local.style.cursor = 'default';
+        local.innerHTML = `<span class="note-title">${escapeHtml(titleEl.value || 'Лист 1')}</span>`;
+        libraryTree.append(local);
+        return;
+      }
+
+      const groups = [{ id: null, title: 'Без раздела' }, ...sortedSections()];
+
+      for (const group of groups) {
+        const box = document.createElement('section');
+        box.className = 'library-group';
+        box.dataset.sectionId = group.id || '';
+        const head = document.createElement('div');
+        head.className = 'library-group-head';
+        if (group.id) {
+          const grip = document.createElement('span');
+          grip.className = 'drag-grip';
+          grip.textContent = '⋮⋮';
+          head.append(grip);
+          head.draggable = true;
+          head.addEventListener('dragstart', (event) => {
+            event.dataTransfer.setData('text/plain', `section:${group.id}`);
+            event.dataTransfer.effectAllowed = 'move';
+          });
+        }
+        const name = document.createElement('strong');
+        name.textContent = group.title;
+        head.append(name);
+        if (group.id) {
+          head.append(
+            actionButton('Переименовать', () => void renameSection(group.id, group.title)),
+            actionButton('Удалить', () => void deleteSection(group.id), true)
+          );
+        }
+        const notes = document.createElement('div');
+        notes.className = 'library-notes';
+        const items = notebooksInSection(group.id);
+        if (!items.length) {
+          const empty = document.createElement('p');
+          empty.className = 'library-hint';
+          empty.textContent = 'Пусто — перетащи сюда лист или создай новый.';
+          notes.append(empty);
+        }
+        for (const note of items) {
+          notes.append(renderLibraryNote(note));
+        }
+        box.append(head, notes);
+        box.addEventListener('dragover', onLibraryDragOver);
+        box.addEventListener('dragleave', onLibraryDragLeave);
+        box.addEventListener('drop', (event) => {
+          void onLibraryDrop(event, group.id, null);
+        });
+        libraryTree.append(box);
+      }
+    }
+
+    function renderLibraryNote(note) {
+      const row = document.createElement('div');
+      row.className =
+        'library-note' + (note.id === authState?.notebookId ? ' active' : '');
+      row.draggable = true;
+      row.dataset.notebookId = note.id;
+      const grip = document.createElement('span');
+      grip.className = 'drag-grip';
+      grip.textContent = '⋮⋮';
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'note-open';
+      open.innerHTML = `<span class="note-title">${escapeHtml(note.title || 'Без названия')}</span>`;
+      open.addEventListener('click', () => void switchNotebook(note.id));
+      row.append(grip, open);
+      const canDelete = libraryNotebooks.length > 1;
+      row.append(
+        actionButton('Переименовать', () => void renameNotebook(note.id, note.title))
+      );
+      if (canDelete) {
+        row.append(actionButton('Удалить', () => void deleteNotebook(note.id), true));
+      }
+      row.addEventListener('dragstart', (event) => {
+        event.dataTransfer.setData('text/plain', `notebook:${note.id}`);
+        event.dataTransfer.effectAllowed = 'move';
+      });
+      row.addEventListener('dragover', onLibraryDragOver);
+      row.addEventListener('dragleave', onLibraryDragLeave);
+      row.addEventListener('drop', (event) => {
+        void onLibraryDrop(event, note.sectionId, note.id);
+      });
+      return row;
+    }
+
+    function actionButton(label, onClick, danger = false) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = danger ? 'note-meta danger' : 'note-meta';
+      button.textContent = label;
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        onClick();
+      });
+      return button;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    function onLibraryDragOver(event) {
+      event.preventDefault();
+      event.currentTarget.classList.add('drag-over');
+    }
+
+    function onLibraryDragLeave(event) {
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        event.currentTarget.classList.remove('drag-over');
+      }
+    }
+
+    async function onLibraryDrop(event, sectionId, beforeNotebookId) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.classList.remove('drag-over');
+      if (!authState?.token) return;
+      const dragged = dragKind(event);
+      if (dragged.type === 'section') {
+        if (!sectionId) return;
+        const group = sortedSections().filter((item) => item.id !== dragged.id);
+        let position = group.length;
+        const index = group.findIndex((item) => item.id === sectionId);
+        if (index >= 0) position = index;
+        const response = await apiRequest(
+          `/api/sections/${encodeURIComponent(dragged.id)}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ position }),
+          }
+        );
+        if (!response.ok) {
+          setStatus(await responseMessage(response), false);
+          return;
+        }
+        await refreshLibrary();
+        return;
+      }
+      if (dragged.type !== 'notebook' || !dragged.id) return;
+      const group = notebooksInSection(sectionId).filter((note) => note.id !== dragged.id);
+      let position = group.length;
+      if (beforeNotebookId) {
+        const index = group.findIndex((note) => note.id === beforeNotebookId);
+        if (index >= 0) position = index;
+      }
+      const response = await apiRequest(
+        `/api/notebooks/${encodeURIComponent(dragged.id)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ sectionId, position }),
+        }
+      );
+      if (!response.ok) {
+        setStatus(await responseMessage(response), false);
+        return;
+      }
+      await refreshLibrary();
+    }
+
+    async function refreshLibrary() {
+      if (!authState?.token) {
+        renderLibrary();
+        return;
+      }
+      const [sectionsResponse, notebooksResponse] = await Promise.all([
+        apiRequest('/api/sections'),
+        apiRequest('/api/notebooks'),
+      ]);
+      if (!sectionsResponse.ok || !notebooksResponse.ok) {
+        libraryHint.textContent = 'Не удалось загрузить список листов.';
+        return;
+      }
+      librarySections = await sectionsResponse.json();
+      libraryNotebooks = await notebooksResponse.json();
+      renderLibrary();
+    }
+
+    async function flushOpenNotebook() {
+      if (saveTimer) save();
+      let waits = 0;
+      while (remoteSaveInFlight && waits < 40) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        waits += 1;
+      }
+    }
+
+    async function switchNotebook(notebookId) {
+      if (!authState?.token || notebookId === authState.notebookId) {
+        setLibraryOpen(false);
+        return;
+      }
+      await flushOpenNotebook();
+      authState.notebookId = notebookId;
+      persistAuthState(authState);
+      await loadRemoteNotebook();
+      setLibraryOpen(false);
+      focusBlock(blocks[0]?.id);
+    }
+
+    async function createLibrarySection() {
+      const title = prompt('Название раздела');
+      if (!title || !title.trim()) return;
+      const response = await apiRequest('/api/sections', {
+        method: 'POST',
+        body: JSON.stringify({ title: title.trim() }),
+      });
+      if (!response.ok) {
+        setStatus(await responseMessage(response), false);
+        return;
+      }
+      await refreshLibrary();
+    }
+
+    async function createLibraryNotebook() {
+      const title = prompt('Название листа', 'Лист');
+      if (!title || !title.trim()) return;
+      const current = libraryNotebooks.find((note) => note.id === authState?.notebookId);
+      const response = await apiRequest('/api/notebooks', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: title.trim(),
+          sectionId: current?.sectionId ?? null,
+        }),
+      });
+      if (!response.ok) {
+        setStatus(await responseMessage(response), false);
+        return;
+      }
+      const created = await response.json();
+      await flushOpenNotebook();
+      authState.notebookId = created.id;
+      persistAuthState(authState);
+      applyRemoteNotebook(created);
+      await refreshLibrary();
+      setLibraryOpen(false);
+    }
+
+    async function renameSection(sectionId, currentTitle) {
+      const title = prompt('Новое имя раздела', currentTitle);
+      if (!title || !title.trim()) return;
+      const response = await apiRequest(`/api/sections/${encodeURIComponent(sectionId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title: title.trim() }),
+      });
+      if (!response.ok) {
+        setStatus(await responseMessage(response), false);
+        return;
+      }
+      await refreshLibrary();
+    }
+
+    async function deleteSection(sectionId) {
+      if (!confirm('Удалить раздел? Листы останутся в «Без раздела».')) return;
+      const response = await apiRequest(`/api/sections/${encodeURIComponent(sectionId)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        setStatus(await responseMessage(response), false);
+        return;
+      }
+      await refreshLibrary();
+    }
+
+    async function renameNotebook(notebookId, currentTitle) {
+      const title = prompt('Новое имя листа', currentTitle);
+      if (!title || !title.trim()) return;
+      const response = await apiRequest(
+        `/api/notebooks/${encodeURIComponent(notebookId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ title: title.trim() }),
+        }
+      );
+      if (!response.ok) {
+        setStatus(await responseMessage(response), false);
+        return;
+      }
+      if (notebookId === authState?.notebookId) titleEl.value = title.trim();
+      await refreshLibrary();
+    }
+
+    async function deleteNotebook(notebookId) {
+      if (!confirm('Удалить лист на сервере?')) return;
+      const response = await apiRequest(
+        `/api/notebooks/${encodeURIComponent(notebookId)}`,
+        { method: 'DELETE' }
+      );
+      if (!response.ok) {
+        setStatus(await responseMessage(response), false);
+        return;
+      }
+      if (notebookId === authState?.notebookId) {
+        authState.notebookId = null;
+        persistAuthState(authState);
+        await loadRemoteNotebook();
+      } else {
+        await refreshLibrary();
+      }
+    }
+
+    libraryTab.addEventListener('click', () => {
+      const open = !document.body.classList.contains('library-open');
+      setLibraryOpen(open);
+      if (open) void refreshLibrary();
+    });
+    document.getElementById('library-close').addEventListener('click', () => {
+      setLibraryOpen(false);
+    });
+    document.getElementById('library-new-section').addEventListener('click', () => {
+      void createLibrarySection();
+    });
+    document.getElementById('library-new-note').addEventListener('click', () => {
+      void createLibraryNotebook();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (
+        event.key === 'Escape' &&
+        document.body.classList.contains('library-open') &&
+        !authDialog.open
+      ) {
+        setLibraryOpen(false);
+      }
+    });
+
     async function initialize() {
       authState = readAuthState();
       updateAuthUI();
@@ -4261,6 +5319,7 @@
         queueMicrotask(() => openAuthDialog());
       }
       focusBlock(blocks[0]?.id);
+      void refreshLibrary();
     }
 
     void initialize();
