@@ -110,7 +110,7 @@
       align-items: center;
     }
 
-    button, .file-btn {
+    button, .file-btn, a#btn-guide {
       font: inherit;
       font-size: 0.85rem;
       border: 1px solid var(--line);
@@ -120,7 +120,7 @@
       padding: 0.4rem 0.7rem;
       cursor: pointer;
     }
-    button:hover, .file-btn:hover { border-color: var(--hover-line); }
+    button:hover, .file-btn:hover, a#btn-guide:hover { border-color: var(--hover-line); }
     button.primary {
       background: var(--accent);
       border-color: var(--accent);
@@ -128,10 +128,17 @@
     }
     html[data-theme="dark"] button.primary { color: #042f2e; }
     button.danger:hover { color: var(--danger); border-color: var(--danger); }
-    button#btn-theme {
+    button#btn-theme,
+    a#btn-guide {
       min-width: 2.4rem;
       padding-left: 0.55rem;
       padding-right: 0.55rem;
+    }
+    a#btn-guide {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
     }
     .file-btn { display: inline-block; }
     .file-btn input { display: none; }
@@ -682,6 +689,7 @@
     <header>
       <div class="brand">math<span>Note</span></div>
       <div class="toolbar">
+        <a href="guide.html" id="btn-guide" title="Краткий гайд" aria-label="Краткий гайд">?</a>
         <button type="button" id="btn-theme" title="Светлая / тёмная тема" aria-label="Переключить тему">☾</button>
         <button type="button" id="btn-heading">Заголовок</button>
         <button type="button" id="btn-text">Текст</button>
@@ -735,8 +743,9 @@
       <ul>
         <li><kbd>Ctrl</kbd>+<kbd>M</kbd> — новый блок формулы</li>
         <li>В формуле <kbd>Enter</kbd> — из степени/индекса или системы выйти вправо; корень: степень → внутрь → за корень; интеграл и сумма: верх → низ → на знак; если справа скобка — за скобку; в пределе — сначала к значению (<code>0</code>), ещё раз — из предела вперёд; <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе — новая строка</li>
-        <li>В формуле <kbd>↓</kbd> — выйти из дроби/степени или перейти в конец строки; из конца — на следующую строку</li>
+        <li>В формуле <kbd>↓</kbd> / <kbd>PageDown</kbd> — выйти из дроби/степени или перейти в конец строки; из конца — на следующую строку</li>
         <li><kbd>Ctrl</kbd>+<kbd>Backspace</kbd> — стереть до пробела; скобки и дробь целиком</li>
+        <li><kbd>Ctrl</kbd>+<kbd>S</kbd> — сохранить сразу</li>
         <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
         <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — новый текстовый блок</li>
@@ -751,10 +760,10 @@
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>&lt;</kbd> / <kbd>&gt;</kbd> — ≤ / ≥</li>
-        <li><kbd>\lim</kbd>, <kbd>\sqrt</kbd>, <kbd>\int</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab</li>
-        <li>В формуле <kbd>#</kbd> — комментарий (серый текст, пробелы ок); <kbd>Esc</kbd> — снова формула</li>
+        <li><kbd>\lim</kbd>, <kbd>\sqrt</kbd>, <kbd>\int</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab · <kbd>\</kbd>+пробел — обычный \\</li>
+        <li>В формуле <kbd>#</kbd> — комментарий (серый текст, пробелы ок); <kbd>Esc</kbd> — снова формула; ещё <kbd>Esc</kbd> закрывает бар листов и меню символов</li>
         <li>Буквенные шорткаты — только на EN-раскладке; на русской <kbd>.</kbd>/<kbd>,</kbd> не становятся дробью</li>
-        <li>Пустой текстовый блок + <kbd>Backspace</kbd> — удалить</li>
+        <li>Пустой текстовый или формульный блок + <kbd>Backspace</kbd> — удалить</li>
         <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> — отменить · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> — вернуть</li>
       </ul>
     </details>
@@ -1846,6 +1855,122 @@
         /* ignore */
       }
       return '';
+    }
+
+    /** Только что нажали `\` — ещё не начали имя команды. */
+    const bareLatexBackslash = new WeakSet();
+
+    function noteLatexBackslashKey(mf, e) {
+      if (!mf || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === '\\') {
+        bareLatexBackslash.add(mf);
+        return;
+      }
+      if (e.key === ' ' || e.code === 'Space') return;
+      if (
+        e.key === 'Shift' ||
+        e.key === 'Control' ||
+        e.key === 'Alt' ||
+        e.key === 'Meta'
+      ) {
+        return;
+      }
+      bareLatexBackslash.delete(mf);
+    }
+
+    function isBareLatexBackslash(mf) {
+      if (!mf || mf.mode !== 'latex') return false;
+      const raw = latexCommandBuffer(mf);
+      const name = raw.replace(/^\\/, '').trim();
+      if (name) return false;
+      return raw ? true : bareLatexBackslash.has(mf);
+    }
+
+    function clearLatexCommandBuffer(mf) {
+      try {
+        const field = mf?._mathfield;
+        const kd = field?.keyboardDelegate;
+        kd?.setValue?.('');
+        if (kd && 'value' in kd) kd.value = '';
+        if (kd && '_value' in kd) kd._value = '';
+        if (field?.modeController && 'value' in field.modeController) {
+          field.modeController.value = '';
+        }
+        if (field?.latexMode && 'value' in field.latexMode) {
+          field.latexMode.value = '';
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    function atomLooksLikeBackslash(atom) {
+      if (!atom) return false;
+      const bits = [atom.command, atom.value, atom.latex, atom.verbatimLatex];
+      return bits.some((item) => {
+        const s = String(item ?? '');
+        return (
+          s === '\\backslash' ||
+          s === 'backslash' ||
+          s === '\\' ||
+          s === '＼'
+        );
+      });
+    }
+
+    function caretAlreadyHasBackslash(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const pos = model?.position;
+        if (typeof pos === 'number') {
+          for (let i = pos; i >= 0 && i >= pos - 2; i--) {
+            const atom = model.at(i);
+            if (atom && atom.type && atom.type !== 'first') {
+              return atomLooksLikeBackslash(atom);
+            }
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      const v = String(mf?.value ?? '').trim();
+      return /(?:\\backslash|\\\\)$/.test(v);
+    }
+
+    function insertLiteralBackslash(mf, blockId) {
+      if (!mf || mf._literalBackslashLock) return;
+      mf._literalBackslashLock = true;
+      try {
+        clearLatexCommandBuffer(mf);
+        try {
+          mf.executeCommand(['switchMode', 'math']);
+        } catch {
+          /* ignore */
+        }
+        try {
+          mf.mode = 'math';
+        } catch {
+          /* ignore */
+        }
+        // switchMode оставляет сырой `\`, MathLive рисует его как \\
+        for (let i = 0; i < 2 && caretAlreadyHasBackslash(mf); i++) {
+          try {
+            mf.executeCommand('deleteBackward');
+          } catch {
+            break;
+          }
+        }
+        mf.insert('\\backslash\\:', {
+          format: 'latex',
+          selectionMode: 'after',
+        });
+      } finally {
+        bareLatexBackslash.delete(mf);
+        queueMicrotask(() => {
+          mf._literalBackslashLock = false;
+        });
+        if (blockId) saveMathField(mf, blockId);
+      }
     }
 
     function completeSpecialLatexCommand(mf) {
@@ -3261,7 +3386,7 @@
     function scheduleSave() {
       clearTimeout(saveTimer);
       statusEl.textContent = 'сохранение…';
-      saveTimer = setTimeout(save, 15_000);
+      saveTimer = setTimeout(save, 7_000);
     }
 
     function save({ remote = true } = {}) {
@@ -4267,6 +4392,21 @@
         // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y — снимки LaTeX (см. mathHistory)
         if (handleMathUndoRedoKey(e, mf, block.id)) return;
 
+        noteLatexBackslashKey(mf, e);
+        if (
+          (e.key === ' ' || e.code === 'Space') &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          isBareLatexBackslash(mf)
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          insertLiteralBackslash(mf, block.id);
+          return;
+        }
+
         if (
           e.key === 'Tab' &&
           !e.ctrlKey &&
@@ -4697,6 +4837,24 @@
 
         // Сессия комментария — до проверки mode (там как раз text)
         if (handleCommentTyping(e, mf, blockId)) return;
+
+        noteLatexBackslashKey(mf, e);
+        if (
+          (e.key === ' ' || e.code === 'Space') &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          isBareLatexBackslash(mf)
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            insertLiteralBackslash(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
 
         const mode = mf.mode;
         if (mode === 'latex' || mode === 'text') return;
