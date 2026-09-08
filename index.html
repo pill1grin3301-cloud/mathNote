@@ -74,7 +74,7 @@
     }
 
     .app {
-      max-width: 1254px; /* лист шире на 10% */
+      max-width: 1379px; /* лист ещё на 10% шире */
       margin: 0 auto;
       padding: 1.25rem 1.25rem 4rem;
       transition: margin 0.28s ease, max-width 0.28s ease;
@@ -398,7 +398,7 @@
       background: var(--paper);
       border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 1.5rem 1.5rem 2.25rem;
+      padding: 1.5rem 1.15rem 2.25rem 1rem;
       box-shadow: 0 10px 30px var(--shadow);
       transition: background 0.2s ease, border-color 0.2s ease;
     }
@@ -430,8 +430,8 @@
 
     .block {
       display: grid;
-      grid-template-columns: 3rem 1fr auto;
-      gap: 0.45rem;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.25rem;
       align-items: start;
       padding: 0.45rem;
       border-radius: 10px;
@@ -444,11 +444,13 @@
 
     .num {
       font-family: var(--mono);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       color: var(--muted);
-      padding-top: 0.7rem;
+      min-width: 1.45rem;
+      padding-top: 0.75rem;
       text-align: right;
       user-select: none;
+      letter-spacing: -0.02em;
     }
     .block.heading .num { visibility: hidden; }
 
@@ -767,9 +769,8 @@
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
         <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — новый текстовый блок</li>
         <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь (после <code>x^2</code> числитель — вся степень), <kbd>(</kbd> <kbd>{</kbd> — сразу пара с курсором внутри, закрывающая — просто скобка, <kbd>Space</kbd> — пробел</li>
-        <li><kbd>Alt</kbd>+цифра — степень слева от курсора (<code>x</code> → <code>x²</code>)</li>
-        <li><kbd>Ctrl</kbd>+цифра/буква — нижний индекс (<code>a</code> → <code>a₂</code>); буквы A/C/V/M/S/Z/Y/H заняты</li>
-        <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠</li>
+        <li><kbd>Alt</kbd>+цифра — степень слева (<code>x</code> → <code>x²</code>); <kbd>Alt</kbd>+<kbd>-</kbd> — отрицательная (<code>x</code> → <code>x^{-□}</code>)</li>
+        <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠ · клавиша <kbd>~</kbd> без Shift (EN) — ∼</li>
         <li><kbd>Alt</kbd>+<kbd>A</kbd> — ∀ · <kbd>Alt</kbd>+<kbd>E</kbd> — ∃ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> — ∄</li>
         <li><kbd>Shift</kbd>+<kbd>'</kbd> — ∈ · <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>'</kbd> — ∉</li>
         <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪ · <kbd>Alt</kbd>+<kbd>X</kbd> — × · <kbd>Alt</kbd>+<kbd>R</kbd> — √ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
@@ -857,14 +858,11 @@
 
     /** Множества — Ctrl+Alt+C */
     const SET_OP_PICKER = [
-      { latex: '\\subseteq', sym: '⊆', name: 'подмножество' },
-      { latex: '\\nsubseteq', sym: '⊈', name: 'не подмножество' },
       { latex: '\\subset', sym: '⊂', name: 'подмножество (строго)' },
-      { latex: '\\nsubset', sym: '⊄', name: 'не подмножество (строго)' },
-      { latex: '\\triangle', sym: 'Δ', name: 'симм. разность' },
       { latex: '\\emptyset', sym: '∅', name: 'пустое множество' },
-      { latex: '\\subsetneq', sym: '⊊', name: 'подмножество ≠' },
-      { latex: '\\subseteqq', sym: '⫅', name: '⊆ (жирное)' },
+      { latex: '\\subseteq', sym: '⊆', name: 'подмножество' },
+      { latex: '\\nsubset', sym: '⊄', name: 'не подмножество (строго)' },
+      { latex: '\\nsubseteq', sym: '⊈', name: 'не подмножество' },
     ];
 
     /** Равенства / эквивалентности — Ctrl+Alt+= */
@@ -4425,7 +4423,7 @@
     }
 
     function onFieldKey(e, block) {
-      // Alt+Digit → степень; Ctrl+Digit → нижний индекс (Shift свободен для () и т.п.)
+      // Alt+Digit → степень (Shift свободен для () и т.п.)
       if (block.type === 'math') {
         const mf = e.currentTarget;
 
@@ -4567,6 +4565,12 @@
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'r')) latex = '\\sqrt[#?]{#0}'; // √
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 's')) latex = '\\begin{cases}#0\\end{cases}'; // система
             else if (e.altKey && !e.shiftKey && e.code === 'KeyX') latex = '\\times'; // ×
+            else if (
+              !e.altKey &&
+              !e.shiftKey &&
+              isEnKey(e, 'Backquote', ['`', '~', 'Dead'])
+            )
+              latex = '\\sim'; // ∼
             else if (e.shiftKey && !e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\in'; // ∈
             else if (e.shiftKey && e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\notin'; // ∉
             else if (e.shiftKey && e.altKey && isEnLetter(e, 'n')) latex = '\\mathbb{N}'; // ℕ
@@ -4601,43 +4605,31 @@
         }
 
         const digit = /^Digit([0-9])$/.exec(e.code)?.[1];
-        // Ctrl+A/C/V/M/S/Z/Y/H — системные; индекс только на EN (латиница)
-        const letterRaw = /^Key([A-Z])$/.exec(e.code)?.[1]?.toLowerCase();
-        const letter =
-          letterRaw &&
-          e.key.toLowerCase() === letterRaw &&
-          !['a', 'c', 'v', 'm', 's', 'z', 'y', 'h'].includes(letterRaw)
-            ? letterRaw
-            : null;
-        if (digit != null || letter != null) {
-          // Alt+цифра → степень; Ctrl+цифра/буква → индекс
-          const power =
-            digit != null &&
-            e.altKey &&
-            !e.ctrlKey &&
-            !e.metaKey &&
-            !e.shiftKey;
-          const index =
-            (e.ctrlKey || e.metaKey) &&
-            !e.altKey &&
-            !e.shiftKey &&
-            (digit != null || letter != null);
-          if (power || index) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation?.();
-            const mf = e.currentTarget;
-            try {
-              const sym = digit ?? letter;
-              // без {#@}: иначе group+отдельный subsup → / ломает числитель
-              const latex = power ? `#@^{${sym}}` : `#@_{${sym}}`;
-              mf.executeCommand(['insert', latex]);
-              saveMathField(mf, block.id);
-            } catch {
-              /* ignore */
-            }
-            return;
+        const powerMinus =
+          e.altKey &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.shiftKey &&
+          (e.code === 'Minus' || e.code === 'NumpadSubtract');
+        const powerDigit =
+          digit != null &&
+          e.altKey &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.shiftKey;
+        if (powerDigit || powerMinus) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          const mf = e.currentTarget;
+          try {
+            const latex = powerMinus ? '#@^{-#?}' : `#@^{${digit}}`;
+            mf.executeCommand(['insert', latex]);
+            saveMathField(mf, block.id);
+          } catch {
+            /* ignore */
           }
+          return;
         }
       }
 
