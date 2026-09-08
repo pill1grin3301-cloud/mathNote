@@ -266,7 +266,7 @@
     }
     .library-group-head strong,
     .library-note .note-title {
-      color: var(--muted);
+      color: var(--ink);
       font-weight: 500;
     }
     .library button:not(.primary) {
@@ -749,13 +749,13 @@
         <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
         <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — новый текстовый блок</li>
-        <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь (после <code>x^2</code> числитель — вся степень), <kbd>(</kbd> → <code>()</code> с курсором внутри, <kbd>)</kbd> — просто скобка, <kbd>Space</kbd> — пробел</li>
+        <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь (после <code>x^2</code> числитель — вся степень), <kbd>(</kbd> <kbd>{</kbd> — сразу пара с курсором внутри, закрывающая — просто скобка, <kbd>Space</kbd> — пробел</li>
         <li><kbd>Alt</kbd>+цифра — степень слева от курсора (<code>x</code> → <code>x²</code>)</li>
         <li><kbd>Ctrl</kbd>+цифра/буква — нижний индекс (<code>a</code> → <code>a₂</code>); буквы A/C/V/M/S/Z/Y/H заняты</li>
         <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠</li>
         <li><kbd>Alt</kbd>+<kbd>A</kbd> — ∀ · <kbd>Alt</kbd>+<kbd>E</kbd> — ∃ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> — ∄</li>
         <li><kbd>Shift</kbd>+<kbd>'</kbd> — ∈ · <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>'</kbd> — ∉</li>
-        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪ · <kbd>Alt</kbd>+<kbd>R</kbd> — √ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
+        <li><kbd>Alt</kbd>+<kbd>C</kbd> — ∋ · <kbd>Alt</kbd>+<kbd>I</kbd> — ∩ · <kbd>Alt</kbd>+<kbd>U</kbd> — ∪ · <kbd>Alt</kbd>+<kbd>X</kbd> — × · <kbd>Alt</kbd>+<kbd>R</kbd> — √ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> — индекс Δ (например <code>x_Δ</code>)</li>
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
@@ -1295,19 +1295,30 @@
       return e.code === code && allowedKeys.includes(e.key);
     }
 
-    /** Как в VS Code: `(` → `()` с курсором между; выделение оборачивается. */
-    function insertAutoParens(mf) {
+    /** Как в VS Code: `( [ {` → пара с курсором между; выделение оборачивается. */
+    function insertAutoFence(mf, open, close) {
       const model = mf._mathfield?.model;
       if (model && !model.selectionIsCollapsed) {
-        mf.insert('(#0)', {
+        mf.insert(`${open}#0${close}`, {
           insertionMode: 'replaceSelection',
           format: 'latex',
           smartFence: false,
         });
         return;
       }
-      mf.insert('()', { format: 'latex', smartFence: false });
+      mf.insert(`${open}${close}`, { format: 'latex', smartFence: false });
       mf.executeCommand('moveToPreviousChar');
+    }
+
+    function insertAutoParens(mf) {
+      insertAutoFence(mf, '(', ')');
+    }
+
+    function autoFencePair(e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return null;
+      if (e.key === '(') return ['(', ')'];
+      if (e.key === '{') return ['\\{', '\\}'];
+      return null;
     }
 
     function mathSelectionCollapsed(mf) {
@@ -1608,7 +1619,13 @@
 
     function findMatchingOpen(closeAtom) {
       if (!closeAtom) return null;
-      const pairs = { ')': '(', ']': '[', '}': '{', '\\rangle': '\\langle' };
+      const pairs = {
+        ')': '(',
+        ']': '[',
+        '}': '{',
+        '\\}': '\\{',
+        '\\rangle': '\\langle',
+      };
       const openVal = pairs[closeAtom.value] || '(';
       let depth = 1;
       let atom = closeAtom.leftSibling;
@@ -1628,7 +1645,13 @@
 
     function findMatchingClose(openAtom) {
       if (!openAtom) return null;
-      const pairs = { '(': ')', '[': ']', '{': '}', '\\langle': '\\rangle' };
+      const pairs = {
+        '(': ')',
+        '[': ']',
+        '{': '}',
+        '\\{': '\\}',
+        '\\langle': '\\rangle',
+      };
       const closeVal = pairs[openAtom.value] || ')';
       let depth = 0;
       let atom = openAtom;
@@ -4526,6 +4549,7 @@
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'u')) latex = '\\cup'; // ∪
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 'r')) latex = '\\sqrt[#?]{#0}'; // √
             else if (e.altKey && !e.shiftKey && isEnLetter(e, 's')) latex = '\\begin{cases}#0\\end{cases}'; // система
+            else if (e.altKey && !e.shiftKey && e.code === 'KeyX') latex = '\\times'; // ×
             else if (e.shiftKey && !e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\in'; // ∈
             else if (e.shiftKey && e.altKey && isEnKey(e, 'Quote', ['"', "'"])) latex = '\\notin'; // ∉
             else if (e.shiftKey && e.altKey && isEnLetter(e, 'n')) latex = '\\mathbb{N}'; // ℕ
@@ -4856,6 +4880,25 @@
           return;
         }
 
+        if (
+          e.altKey &&
+          !e.shiftKey &&
+          e.code === 'KeyX' &&
+          mf.mode !== 'latex' &&
+          mf.mode !== 'text'
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            mf.executeCommand(['insert', '\\times']);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
         const mode = mf.mode;
         if (mode === 'latex' || mode === 'text') return;
 
@@ -4872,12 +4915,13 @@
           return;
         }
 
-        if (e.key === '(' && !e.altKey) {
+        const fence = autoFencePair(e);
+        if (fence) {
           e.preventDefault();
           e.stopImmediatePropagation?.();
           e.stopPropagation();
           try {
-            insertAutoParens(mf);
+            insertAutoFence(mf, fence[0], fence[1]);
             saveMathField(mf, blockId);
           } catch {
             /* ignore */
