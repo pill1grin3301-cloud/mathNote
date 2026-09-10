@@ -787,7 +787,7 @@
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>&lt;</kbd> / <kbd>&gt;</kbd> — ≤ / ≥</li>
-        <li>Автозамены слов — блок ниже. Короткие сразу, длиннее 3 букв — <kbd>Enter</kbd></li>
+        <li>Автозамены слов — блок ниже. Короче 3 символов — сразу, от 3 — <kbd>Enter</kbd></li>
         <li>В формуле <kbd>#</kbd> — комментарий (серый текст, пробелы ок); <kbd>Esc</kbd> — снова формула; ещё <kbd>Esc</kbd> закрывает бар листов и меню символов</li>
         <li>Буквенные шорткаты — только на EN-раскладке; на русской <kbd>.</kbd>/<kbd>,</kbd> не становятся дробью</li>
         <li>Пустой текстовый или формульный блок + <kbd>Backspace</kbd> — удалить</li>
@@ -797,35 +797,34 @@
 
     <details class="help">
       <summary>Автозамены</summary>
-      <p class="sc">До 3 символов — сразу. Длиннее — <kbd>Enter</kbd>. <kbd>deg</kbd> ° и <kbd>xin</kbd> x∈ — сразу. <kbd>*</kbd> — ∗.</p>
+      <p class="sc">Короче 3 символов — сразу. От 3 символов — <kbd>Enter</kbd>. Исключения: <kbd>deg</kbd> ° и <kbd>xin</kbd> x∈ — сразу. <kbd>*</kbd> — ∗.</p>
       <details>
         <summary><kbd>alp</kbd> греческие</summary>
         <p class="sc"><kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>zeta</kbd> ζ · <kbd>eta</kbd> η · <kbd>io</kbd> ι · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>nu</kbd> ν · <kbd>xi</kbd> ξ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>tau</kbd> τ · <kbd>ups</kbd> υ · <kbd>phi</kbd> φ · <kbd>chi</kbd> χ · <kbd>psi</kbd> ψ · <kbd>ome</kbd> ω. Капсом — заглавные. Полные имена: <kbd>alpha</kbd> · <kbd>gamma</kbd>/<kbd>Gamma</kbd> · <kbd>delta</kbd>/<kbd>Delta</kbd> · <kbd>epsilon</kbd> · <kbd>varepsilon</kbd> · <kbd>theta</kbd>/<kbd>Theta</kbd> · <kbd>vartheta</kbd> · <kbd>iota</kbd> · <kbd>kappa</kbd> · <kbd>lambda</kbd>/<kbd>Lambda</kbd> · <kbd>sigma</kbd>/<kbd>Sigma</kbd> · <kbd>upsilon</kbd> · <kbd>varphi</kbd> · <kbd>omega</kbd>/<kbd>Omega</kbd> · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇</p>
       </details>
       <details>
         <summary><kbd>sin</kbd> функции</summary>
-        <p class="sc">сразу: <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> <kbd>csc</kbd> <kbd>sec</kbd> · <kbd>ctg</kbd> <kbd>tg</kbd> <kbd>sh</kbd> <kbd>ch</kbd> <kbd>th</kbd> <kbd>cth</kbd> · <kbd>log</kbd> <kbd>ln</kbd> <kbd>lg</kbd> <kbd>lb</kbd> <kbd>exp</kbd> <kbd>arg</kbd> · <kbd>lim</kbd> · <kbd>max</kbd> <kbd>min</kbd> <kbd>det</kbd> <kbd>mod</kbd> <kbd>gcd</kbd> <kbd>lcm</kbd> <kbd>erf</kbd> <kbd>fft</kbd> · <kbd>Re</kbd> <kbd>Im</kbd></p>
-        <p class="sc">Enter: <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd> <kbd>arctg</kbd> <kbd>arcsec</kbd> <kbd>arccsc</kbd> <kbd>arsinh</kbd> <kbd>arccosh</kbd> <kbd>arcosh</kbd> <kbd>artanh</kbd> <kbd>arctanh</kbd> <kbd>arcsech</kbd> <kbd>arccsch</kbd> · <kbd>cosh</kbd> <kbd>sinh</kbd> <kbd>tanh</kbd> <kbd>coth</kbd> <kbd>sech</kbd> <kbd>cosec</kbd> <kbd>cotg</kbd> · <kbd>liminf</kbd> <kbd>limsup</kbd> <kbd>argmin</kbd> <kbd>argmax</kbd> · <kbd>erfc</kbd> <kbd>mean</kbd> <kbd>median</kbd> <kbd>bessel</kbd> <kbd>randomReal</kbd> <kbd>randomInteger</kbd> · <kbd>sint</kbd></p>
+        <p class="sc">сразу: <kbd>tg</kbd> <kbd>sh</kbd> <kbd>ch</kbd> <kbd>th</kbd> · <kbd>ln</kbd> <kbd>lg</kbd> <kbd>lb</kbd> · <kbd>Re</kbd> <kbd>Im</kbd></p>
+        <p class="sc">Enter: <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> <kbd>csc</kbd> <kbd>sec</kbd> <kbd>ctg</kbd> <kbd>cth</kbd> · <kbd>log</kbd> <kbd>exp</kbd> <kbd>arg</kbd> <kbd>lim</kbd> · <kbd>max</kbd> <kbd>min</kbd> <kbd>det</kbd> <kbd>mod</kbd> <kbd>gcd</kbd> <kbd>lcm</kbd> <kbd>erf</kbd> <kbd>fft</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd> <kbd>arctg</kbd> <kbd>arcsec</kbd> <kbd>arccsc</kbd> <kbd>arsinh</kbd> <kbd>arccosh</kbd> <kbd>arcosh</kbd> <kbd>artanh</kbd> <kbd>arctanh</kbd> <kbd>arcsech</kbd> <kbd>arccsch</kbd> · <kbd>cosh</kbd> <kbd>sinh</kbd> <kbd>tanh</kbd> <kbd>coth</kbd> <kbd>sech</kbd> <kbd>cosec</kbd> <kbd>cotg</kbd> · <kbd>liminf</kbd> <kbd>limsup</kbd> <kbd>argmin</kbd> <kbd>argmax</kbd> · <kbd>erfc</kbd> <kbd>mean</kbd> <kbd>median</kbd> <kbd>bessel</kbd> <kbd>randomReal</kbd> <kbd>randomInteger</kbd> · <kbd>sint</kbd></p>
       </details>
       <details>
         <summary><kbd>int</kbd> корень / сумма</summary>
-        <p class="sc">сразу: <kbd>sum</kbd> ∑ · <kbd>int</kbd> ∫</p>
-        <p class="sc">Enter: <kbd>sqrt</kbd> · <kbd>cbrt</kbd> · <kbd>nthroot</kbd> · <kbd>prod</kbd> ∏ · <kbd>frac</kbd> · <kbd>defint</kbd> · <kbd>ceil</kbd> ⌈⌉ · <kbd>floor</kbd> ⌊⌋</p>
+        <p class="sc">Enter: <kbd>sum</kbd> ∑ · <kbd>int</kbd> ∫ · <kbd>sqrt</kbd> · <kbd>cbrt</kbd> · <kbd>nthroot</kbd> · <kbd>prod</kbd> ∏ · <kbd>frac</kbd> · <kbd>defint</kbd> · <kbd>ceil</kbd> ⌈⌉ · <kbd>floor</kbd> ⌊⌋</p>
       </details>
       <details>
         <summary><kbd>and</kbd> логика / множества</summary>
-        <p class="sc">сразу: <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA</kbd> ∀ · <kbd>EE</kbd> ∃ · <kbd>!EE</kbd> ∄ · <kbd>&amp;&amp;</kbd> ∧ · <kbd>in</kbd> ∈ · <kbd>!in</kbd> ∉ · <kbd>sub</kbd> ⊂ · <kbd>sup</kbd> ⊃ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>QQ</kbd> ℚ · <kbd>RR</kbd> ℝ · <kbd>CC</kbd> ℂ · <kbd>_|_</kbd> ⊥ · <kbd>TT</kbd> ⊤ · <kbd>|--</kbd> ⊢ · <kbd>|==</kbd> ⊨</p>
-        <p class="sc">Enter: <kbd>forall</kbd> ∀ · <kbd>exists</kbd> ∃ · <kbd>!exists</kbd> ∄ · <kbd>sube</kbd> ⊆ · <kbd>supe</kbd> ⊇ · <kbd>union</kbd> ∪ · <kbd>aleph</kbd> ℵ · <kbd>(mod</kbd></p>
+        <p class="sc">сразу: <kbd>or</kbd> ∨ · <kbd>AA</kbd> ∀ · <kbd>EE</kbd> ∃ · <kbd>&amp;&amp;</kbd> ∧ · <kbd>in</kbd> ∈ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>QQ</kbd> ℚ · <kbd>RR</kbd> ℝ · <kbd>CC</kbd> ℂ · <kbd>TT</kbd> ⊤</p>
+        <p class="sc">Enter: <kbd>and</kbd> ∧ · <kbd>not</kbd> ¬ · <kbd>!EE</kbd> ∄ · <kbd>!in</kbd> ∉ · <kbd>sub</kbd> ⊂ · <kbd>sup</kbd> ⊃ · <kbd>_|_</kbd> ⊥ · <kbd>|--</kbd> ⊢ · <kbd>|==</kbd> ⊨ · <kbd>forall</kbd> ∀ · <kbd>exists</kbd> ∃ · <kbd>!exists</kbd> ∄ · <kbd>sube</kbd> ⊆ · <kbd>supe</kbd> ⊇ · <kbd>union</kbd> ∪ · <kbd>aleph</kbd> ℵ · <kbd>(mod</kbd></p>
       </details>
       <details>
         <summary><kbd>-&gt;</kbd> стрелки / сравнение</summary>
-        <p class="sc">сразу: <kbd>-&gt;</kbd> → · <kbd>--&gt;</kbd> ⟶ · <kbd>&lt;--</kbd> ⟵ · <kbd>=&gt;</kbd> ⇒ · <kbd>==&gt;</kbd> ⟹ · <kbd>&lt;=&gt;</kbd> ⇔ · <kbd>&lt;-&gt;</kbd> ↔ · <kbd>|-&gt;</kbd> ↦ · <kbd>le</kbd> ≤ · <kbd>ge</kbd> ≥ · <kbd>&gt;=</kbd> ≥ · <kbd>&lt;=</kbd> ≤ · <kbd>!=</kbd> ≠ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>~~</kbd> ≈ · <kbd>?=</kbd> ≟ · <kbd>+-</kbd> ± · <kbd>-=</kbd> ≡ · <kbd>~=</kbd> ≅ · <kbd>lt</kbd>/<kbd>gt</kbd> · <kbd>lt=</kbd>/<kbd>gt=</kbd> · <kbd>-&lt;</kbd> ≺ · <kbd>iff</kbd> ⇔</p>
-        <p class="sc">Enter: <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓ · <kbd>rarr</kbd>/<kbd>rArr</kbd> →/⇒ · <kbd>larr</kbd>/<kbd>lArr</kbd> ←/⇐ · <kbd>harr</kbd>/<kbd>hArr</kbd> ↔/⇔ · <kbd>prop</kbd> ∝ · <kbd>times</kbd> × · <kbd>&gt;-&gt;&gt;</kbd> ⤖ · <kbd>|><|</kbd> ⋈</p>
+        <p class="sc">сразу: <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>le</kbd>/<kbd>&lt;=</kbd> ≤ · <kbd>ge</kbd>/<kbd>&gt;=</kbd> ≥ · <kbd>!=</kbd> ≠ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>~~</kbd> ≈ · <kbd>?=</kbd> ≟ · <kbd>+-</kbd> ± · <kbd>-=</kbd> ≡ · <kbd>~=</kbd> ≅ · <kbd>lt</kbd>/<kbd>gt</kbd> · <kbd>-&lt;</kbd> ≺</p>
+        <p class="sc">Enter: <kbd>--&gt;</kbd> ⟶ · <kbd>&lt;--</kbd> ⟵ · <kbd>==&gt;</kbd> ⟹ · <kbd>&lt;=&gt;</kbd> ⇔ · <kbd>&lt;-&gt;</kbd> ↔ · <kbd>|-&gt;</kbd> ↦ · <kbd>lt=</kbd>/<kbd>gt=</kbd> · <kbd>iff</kbd> ⇔ · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓ · <kbd>rarr</kbd>/<kbd>rArr</kbd> →/⇒ · <kbd>larr</kbd>/<kbd>lArr</kbd> ←/⇐ · <kbd>harr</kbd>/<kbd>hArr</kbd> ↔/⇔ · <kbd>prop</kbd> ∝ · <kbd>times</kbd> × · <kbd>&gt;-&gt;&gt;</kbd> ⤖ · <kbd>|><|</kbd> ⋈</p>
       </details>
       <details>
         <summary><kbd>xx</kbd> операции / символы</summary>
-        <p class="sc"><kbd>xx</kbd> × · <kbd>*</kbd> ∗ · <kbd>**</kbd> ⋆ · <kbd>***</kbd> ∗ · <kbd>oo</kbd> ∞ · <kbd>nn</kbd> ∩ · <kbd>nnn</kbd> ⋂ · <kbd>uu</kbd> ∪ · <kbd>uuu</kbd> ⋃ · <kbd>|><</kbd> ⋉ · <kbd>><|</kbd> ⋊ · <kbd>&amp;</kbd> · <kbd>%</kbd> · <kbd>$</kbd> · <kbd>''</kbd> ″ · <kbd>'''</kbd> ‴ · <kbd>:=</kbd> ≔ · <kbd>::</kbd> ∷ · <kbd>(:</kbd> ⟨ · <kbd>:)</kbd> ⟩ · <kbd>:.</kbd> ∴ · <kbd>|__</kbd> ⌊ · <kbd>__|</kbd> ⌋ · <kbd>|~</kbd> ⌈ · <kbd>~|</kbd> ⌉ · <kbd>&gt;-&gt;</kbd> ↣ · <kbd>-&gt;&gt;</kbd> ↠ · <kbd>...</kbd> …</p>
-        <p class="sc">Enter: <kbd>infty</kbd>/<kbd>infinity</kbd> ∞ · <kbd>approaches</kbd> → · <kbd>+...</kbd>/<kbd>-...</kbd> ⋯ · <kbd>-&gt;...</kbd> · <kbd>''''</kbd> ⁗</p>
+        <p class="sc">сразу: <kbd>xx</kbd> × · <kbd>*</kbd> ∗ · <kbd>**</kbd> ⋆ · <kbd>oo</kbd> ∞ · <kbd>nn</kbd> ∩ · <kbd>uu</kbd> ∪ · <kbd>&amp;</kbd> · <kbd>%</kbd> · <kbd>$</kbd> · <kbd>''</kbd> ″ · <kbd>:=</kbd> ≔ · <kbd>::</kbd> ∷ · <kbd>(:</kbd> ⟨ · <kbd>:)</kbd> ⟩ · <kbd>:.</kbd> ∴ · <kbd>|~</kbd> ⌈ · <kbd>~|</kbd> ⌉</p>
+        <p class="sc">Enter: <kbd>***</kbd> ∗ · <kbd>nnn</kbd> ⋂ · <kbd>uuu</kbd> ⋃ · <kbd>|><</kbd> ⋉ · <kbd>><|</kbd> ⋊ · <kbd>'''</kbd> ‴ · <kbd>|__</kbd> ⌊ · <kbd>__|</kbd> ⌋ · <kbd>&gt;-&gt;</kbd> ↣ · <kbd>-&gt;&gt;</kbd> ↠ · <kbd>...</kbd> … · <kbd>infty</kbd>/<kbd>infinity</kbd> ∞ · <kbd>approaches</kbd> → · <kbd>+...</kbd>/<kbd>-...</kbd> ⋯ · <kbd>-&gt;...</kbd> · <kbd>''''</kbd> ⁗</p>
       </details>
       <details>
         <summary><kbd>deg</kbd> прочее</summary>
@@ -2233,8 +2232,35 @@
       ome: ['\\omega', '\\Omega'],
     };
 
-    /** MathLive-слова длиннее 3 символов — только по Enter (кроме deg, xin). */
+    /** MathLive-сокращения от 3 символов — только по Enter (кроме deg, xin). */
     const ENTER_INLINE_ABBREV = {
+      sum: '\\sum_{#?}^{#?}',
+      int: '\\int_{#?}^{#?}',
+      sin: '\\sin',
+      cos: '\\cos',
+      tan: '\\tan',
+      cot: '\\cot',
+      csc: '\\csc',
+      ctg: '\\operatorname{ctg}',
+      cth: '\\operatorname{cth}',
+      sec: '\\sec',
+      arg: '\\arg',
+      log: '\\log_{#?}',
+      exp: '\\exp',
+      lim: '\\lim_{#?\\to#?}',
+      det: '\\det',
+      mod: '\\bmod{#?}',
+      max: '\\max',
+      min: '\\min',
+      erf: '\\operatorname{erf}',
+      fft: '\\operatorname{fft}',
+      lcm: '\\operatorname{lcm}',
+      gcd: '\\gcd',
+      and: '\\land',
+      not: '\\neg',
+      iff: '\\iff',
+      sub: '\\subset',
+      sup: '\\supset',
       alpha: '\\alpha',
       delta: '\\delta',
       Delta: '\\Delta',
@@ -2324,6 +2350,40 @@
       frac: '\\frac{#?}{#?}',
       cbrt: '\\sqrt[3]{#?}',
       nthroot: '\\sqrt[#?]{#?}',
+      '!EE': '\\nexists',
+      '!in': '\\notin',
+      '...': '\\ldots',
+      '|->': '\\mapsto',
+      '-->': '\\longrightarrow',
+      '<--': '\\longleftarrow',
+      '==>': '\\Longrightarrow',
+      '<=>': '\\iff',
+      '<->': '\\leftrightarrow',
+      '(.)': '\\odot',
+      '(+)': '\\oplus',
+      '(/)': '\\oslash',
+      '(*)': '\\otimes',
+      '(-)': '\\ominus',
+      '***': '\\ast',
+      '|><': '\\ltimes',
+      '><|': '\\rtimes',
+      '^^^': '\\bigwedge',
+      vvv: '\\bigvee',
+      nnn: '\\bigcap',
+      uuu: '\\bigcup',
+      'lt=': '\\leq',
+      'gt=': '\\geq',
+      '-lt': '\\prec',
+      '-<=': '\\preceq',
+      '>-=': '\\succeq',
+      '_|_': '\\bot',
+      '|--': '\\vdash',
+      '|==': '\\models',
+      '|__': '\\lfloor',
+      '__|': '\\rfloor',
+      '>->': '\\rightarrowtail',
+      '->>': '\\twoheadrightarrow',
+      "'''": '^{\\prime\\prime\\prime}',
       '(mod': '\\pmod{#?}',
       '+...': '+\\cdots',
       '-...': '-\\cdots',
@@ -2373,6 +2433,8 @@
       } catch {
         /* ignore */
       }
+      const command = String(atom.command ?? '').trim();
+      if (/^[\x21-\x7e]$/.test(command)) return command;
       const raw = String(
         atom.value ?? atom.command ?? atom.verbatimLatex ?? ''
       ).trim();
@@ -2454,16 +2516,13 @@
         }
       }
       if (!latex) {
-        const raw = charsBeforeCaret(model, 8);
-        const punctKeys = [
-          '-->...',
-          '->...',
-          '+...',
-          '-...',
-          '|><|',
-          '>->>',
-          "''''",
-        ];
+        const punctKeys = Object.keys(ENTER_INLINE_ABBREV)
+          .filter((key) => !/^[A-Za-z]+$/.test(key))
+          .sort((a, b) => b.length - a.length);
+        const raw = charsBeforeCaret(
+          model,
+          Math.max(0, ...punctKeys.map((key) => key.length))
+        );
         for (const key of punctKeys) {
           if (raw.endsWith(key) && ENTER_INLINE_ABBREV[key]) {
             latex = ENTER_INLINE_ABBREV[key];
@@ -3658,9 +3717,9 @@
         const applyInlineShortcuts = () => {
           try {
             const shortcuts = { ...(mf.inlineShortcuts || {}) };
-            // Слова длиннее 3 символов — только по Enter (кроме deg, xin).
+            // Сокращения от 3 символов — только по Enter (кроме deg, xin).
             for (const key of Object.keys(shortcuts)) {
-              if (key.length > 3 && key !== 'deg' && key !== 'xin') {
+              if (key.length >= 3 && key !== 'deg' && key !== 'xin') {
                 shortcuts[key] = null;
               }
             }
@@ -3673,8 +3732,6 @@
             shortcuts['*'] = '\\ast';
             shortcuts.le = '\\le';
             shortcuts.ge = '\\ge';
-            shortcuts.int = '\\int_{#?}^{#?}';
-            shortcuts.sum = '\\sum_{#?}^{#?}';
             mf.inlineShortcuts = shortcuts;
           } catch {
             /* ignore */
