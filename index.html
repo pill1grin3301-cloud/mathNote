@@ -525,6 +525,7 @@
       color: var(--muted);
       font-size: 0.85rem;
     }
+    details.help + details.help { margin-top: 0.4rem; }
     details.help summary { cursor: pointer; color: var(--ink); }
     details.help ul {
       margin: 0.5rem 0 0;
@@ -532,6 +533,14 @@
       line-height: 1.55;
     }
     details.help li + li { margin-top: 0.45em; }
+    details.help details {
+      margin-top: 0.4rem;
+    }
+    details.help details summary { color: var(--muted); }
+    details.help .sc {
+      margin: 0.35rem 0 0;
+      line-height: 1.5;
+    }
     kbd {
       font-family: var(--mono);
       font-size: 0.78em;
@@ -778,12 +787,50 @@
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>&lt;</kbd> / <kbd>&gt;</kbd> — ≤ / ≥</li>
-        <li>Греческие в формуле + <kbd>Enter</kbd>: <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>zeta</kbd> ζ · <kbd>eta</kbd> η · <kbd>io</kbd> ι · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>nu</kbd> ν · <kbd>xi</kbd> ξ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>tau</kbd> τ · <kbd>ups</kbd> υ · <kbd>phi</kbd> φ · <kbd>chi</kbd> χ · <kbd>psi</kbd> ψ · <kbd>ome</kbd> ω. Капсом (<kbd>PSI</kbd>, <kbd>DEL</kbd>…) — те же, но заглавные. Ещё <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬</li>
+        <li>Автозамены слов — блок ниже. Короткие сразу, длиннее 3 букв — <kbd>Enter</kbd></li>
         <li>В формуле <kbd>#</kbd> — комментарий (серый текст, пробелы ок); <kbd>Esc</kbd> — снова формула; ещё <kbd>Esc</kbd> закрывает бар листов и меню символов</li>
         <li>Буквенные шорткаты — только на EN-раскладке; на русской <kbd>.</kbd>/<kbd>,</kbd> не становятся дробью</li>
         <li>Пустой текстовый или формульный блок + <kbd>Backspace</kbd> — удалить</li>
         <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> — отменить · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> — вернуть</li>
       </ul>
+    </details>
+
+    <details class="help">
+      <summary>Автозамены</summary>
+      <p class="sc">До 3 символов — сразу. Длиннее — <kbd>Enter</kbd>. <kbd>deg</kbd> ° и <kbd>xin</kbd> x∈ — сразу. <kbd>*</kbd> — ∗.</p>
+      <details>
+        <summary><kbd>alp</kbd> греческие</summary>
+        <p class="sc"><kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>zeta</kbd> ζ · <kbd>eta</kbd> η · <kbd>io</kbd> ι · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>nu</kbd> ν · <kbd>xi</kbd> ξ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>tau</kbd> τ · <kbd>ups</kbd> υ · <kbd>phi</kbd> φ · <kbd>chi</kbd> χ · <kbd>psi</kbd> ψ · <kbd>ome</kbd> ω. Капсом — заглавные. Полные имена: <kbd>alpha</kbd> · <kbd>gamma</kbd>/<kbd>Gamma</kbd> · <kbd>delta</kbd>/<kbd>Delta</kbd> · <kbd>epsilon</kbd> · <kbd>varepsilon</kbd> · <kbd>theta</kbd>/<kbd>Theta</kbd> · <kbd>vartheta</kbd> · <kbd>iota</kbd> · <kbd>kappa</kbd> · <kbd>lambda</kbd>/<kbd>Lambda</kbd> · <kbd>sigma</kbd>/<kbd>Sigma</kbd> · <kbd>upsilon</kbd> · <kbd>varphi</kbd> · <kbd>omega</kbd>/<kbd>Omega</kbd> · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇</p>
+      </details>
+      <details>
+        <summary><kbd>sin</kbd> функции</summary>
+        <p class="sc">сразу: <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> <kbd>csc</kbd> <kbd>sec</kbd> · <kbd>ctg</kbd> <kbd>tg</kbd> <kbd>sh</kbd> <kbd>ch</kbd> <kbd>th</kbd> <kbd>cth</kbd> · <kbd>log</kbd> <kbd>ln</kbd> <kbd>lg</kbd> <kbd>lb</kbd> <kbd>exp</kbd> <kbd>arg</kbd> · <kbd>lim</kbd> · <kbd>max</kbd> <kbd>min</kbd> <kbd>det</kbd> <kbd>mod</kbd> <kbd>gcd</kbd> <kbd>lcm</kbd> <kbd>erf</kbd> <kbd>fft</kbd> · <kbd>Re</kbd> <kbd>Im</kbd></p>
+        <p class="sc">Enter: <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd> <kbd>arctg</kbd> <kbd>arcsec</kbd> <kbd>arccsc</kbd> <kbd>arsinh</kbd> <kbd>arccosh</kbd> <kbd>arcosh</kbd> <kbd>artanh</kbd> <kbd>arctanh</kbd> <kbd>arcsech</kbd> <kbd>arccsch</kbd> · <kbd>cosh</kbd> <kbd>sinh</kbd> <kbd>tanh</kbd> <kbd>coth</kbd> <kbd>sech</kbd> <kbd>cosec</kbd> <kbd>cotg</kbd> · <kbd>liminf</kbd> <kbd>limsup</kbd> <kbd>argmin</kbd> <kbd>argmax</kbd> · <kbd>erfc</kbd> <kbd>mean</kbd> <kbd>median</kbd> <kbd>bessel</kbd> <kbd>randomReal</kbd> <kbd>randomInteger</kbd> · <kbd>sint</kbd></p>
+      </details>
+      <details>
+        <summary><kbd>int</kbd> корень / сумма</summary>
+        <p class="sc">сразу: <kbd>sum</kbd> ∑ · <kbd>int</kbd> ∫</p>
+        <p class="sc">Enter: <kbd>sqrt</kbd> · <kbd>cbrt</kbd> · <kbd>nthroot</kbd> · <kbd>prod</kbd> ∏ · <kbd>frac</kbd> · <kbd>defint</kbd> · <kbd>ceil</kbd> ⌈⌉ · <kbd>floor</kbd> ⌊⌋</p>
+      </details>
+      <details>
+        <summary><kbd>and</kbd> логика / множества</summary>
+        <p class="sc">сразу: <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA</kbd> ∀ · <kbd>EE</kbd> ∃ · <kbd>!EE</kbd> ∄ · <kbd>&amp;&amp;</kbd> ∧ · <kbd>in</kbd> ∈ · <kbd>!in</kbd> ∉ · <kbd>sub</kbd> ⊂ · <kbd>sup</kbd> ⊃ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>QQ</kbd> ℚ · <kbd>RR</kbd> ℝ · <kbd>CC</kbd> ℂ · <kbd>_|_</kbd> ⊥ · <kbd>TT</kbd> ⊤ · <kbd>|--</kbd> ⊢ · <kbd>|==</kbd> ⊨</p>
+        <p class="sc">Enter: <kbd>forall</kbd> ∀ · <kbd>exists</kbd> ∃ · <kbd>!exists</kbd> ∄ · <kbd>sube</kbd> ⊆ · <kbd>supe</kbd> ⊇ · <kbd>union</kbd> ∪ · <kbd>aleph</kbd> ℵ · <kbd>(mod</kbd></p>
+      </details>
+      <details>
+        <summary><kbd>-&gt;</kbd> стрелки / сравнение</summary>
+        <p class="sc">сразу: <kbd>-&gt;</kbd> → · <kbd>--&gt;</kbd> ⟶ · <kbd>&lt;--</kbd> ⟵ · <kbd>=&gt;</kbd> ⇒ · <kbd>==&gt;</kbd> ⟹ · <kbd>&lt;=&gt;</kbd> ⇔ · <kbd>&lt;-&gt;</kbd> ↔ · <kbd>|-&gt;</kbd> ↦ · <kbd>le</kbd> ≤ · <kbd>ge</kbd> ≥ · <kbd>&gt;=</kbd> ≥ · <kbd>&lt;=</kbd> ≤ · <kbd>!=</kbd> ≠ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>~~</kbd> ≈ · <kbd>?=</kbd> ≟ · <kbd>+-</kbd> ± · <kbd>-=</kbd> ≡ · <kbd>~=</kbd> ≅ · <kbd>lt</kbd>/<kbd>gt</kbd> · <kbd>lt=</kbd>/<kbd>gt=</kbd> · <kbd>-&lt;</kbd> ≺ · <kbd>iff</kbd> ⇔</p>
+        <p class="sc">Enter: <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓ · <kbd>rarr</kbd>/<kbd>rArr</kbd> →/⇒ · <kbd>larr</kbd>/<kbd>lArr</kbd> ←/⇐ · <kbd>harr</kbd>/<kbd>hArr</kbd> ↔/⇔ · <kbd>prop</kbd> ∝ · <kbd>times</kbd> × · <kbd>&gt;-&gt;&gt;</kbd> ⤖ · <kbd>|><|</kbd> ⋈</p>
+      </details>
+      <details>
+        <summary><kbd>xx</kbd> операции / символы</summary>
+        <p class="sc"><kbd>xx</kbd> × · <kbd>*</kbd> ∗ · <kbd>**</kbd> ⋆ · <kbd>***</kbd> ∗ · <kbd>oo</kbd> ∞ · <kbd>nn</kbd> ∩ · <kbd>nnn</kbd> ⋂ · <kbd>uu</kbd> ∪ · <kbd>uuu</kbd> ⋃ · <kbd>|><</kbd> ⋉ · <kbd>><|</kbd> ⋊ · <kbd>&amp;</kbd> · <kbd>%</kbd> · <kbd>$</kbd> · <kbd>''</kbd> ″ · <kbd>'''</kbd> ‴ · <kbd>:=</kbd> ≔ · <kbd>::</kbd> ∷ · <kbd>(:</kbd> ⟨ · <kbd>:)</kbd> ⟩ · <kbd>:.</kbd> ∴ · <kbd>|__</kbd> ⌊ · <kbd>__|</kbd> ⌋ · <kbd>|~</kbd> ⌈ · <kbd>~|</kbd> ⌉ · <kbd>&gt;-&gt;</kbd> ↣ · <kbd>-&gt;&gt;</kbd> ↠ · <kbd>...</kbd> …</p>
+        <p class="sc">Enter: <kbd>infty</kbd>/<kbd>infinity</kbd> ∞ · <kbd>approaches</kbd> → · <kbd>+...</kbd>/<kbd>-...</kbd> ⋯ · <kbd>-&gt;...</kbd> · <kbd>''''</kbd> ⁗</p>
+      </details>
+      <details>
+        <summary><kbd>deg</kbd> прочее</summary>
+        <p class="sc">не всегда: <kbd>ii</kbd> 𝑖 · <kbd>jj</kbd> 𝑗 · <kbd>ee</kbd> 𝑒 · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> · <kbd>deg</kbd> ° · <kbd>xin</kbd> x∈ · <kbd>mm</kbd> <kbd>cm</kbd> <kbd>km</kbd> <kbd>kg</kbd> <kbd>ft</kbd> <kbd>mi</kbd> · Enter: <kbd>inch</kbd> <kbd>sint</kbd></p>
+      </details>
     </details>
   </div>
 
@@ -2184,10 +2231,155 @@
       chi: ['\\chi', '\\Chi'],
       psi: ['\\psi', '\\Psi'],
       ome: ['\\omega', '\\Omega'],
-      and: ['\\land', '\\land'],
-      or: ['\\lor', '\\lor'],
-      not: ['\\neg', '\\neg'],
     };
+
+    /** MathLive-слова длиннее 3 символов — только по Enter (кроме deg, xin). */
+    const ENTER_INLINE_ABBREV = {
+      alpha: '\\alpha',
+      delta: '\\delta',
+      Delta: '\\Delta',
+      theta: '\\theta',
+      Theta: '\\Theta',
+      nabla: '\\nabla',
+      grad: '\\nabla',
+      infty: '\\infty',
+      prod: '\\prod_{#?}^{#?}',
+      sqrt: '\\sqrt[#?]{#0}',
+      arccos: '\\arccos',
+      arcsin: '\\arcsin',
+      arctan: '\\arctan',
+      arctg: '\\operatorname{arctg}',
+      arcsec: '\\operatorname{arcsec}',
+      arccsc: '\\operatorname{arccsc}',
+      arsinh: '\\operatorname{arsinh}',
+      arccosh: '\\operatorname{arccosh}',
+      arcosh: '\\operatorname{arcosh}',
+      artanh: '\\operatorname{artanh}',
+      arctanh: '\\operatorname{arctanh}',
+      arcsech: '\\operatorname{arcsech}',
+      arccsch: '\\operatorname{arccsch}',
+      cosec: '\\operatorname{cosec}',
+      cosh: '\\cosh',
+      cotg: '\\operatorname{cotg}',
+      coth: '\\coth',
+      sech: '\\operatorname{sech}',
+      sinh: '\\sinh',
+      tanh: '\\tanh',
+      sint: '\\sin t',
+      beta: '\\beta',
+      epsilon: '\\epsilon',
+      varepsilon: '\\varepsilon',
+      gamma: '\\gamma',
+      Gamma: '\\Gamma',
+      iota: '\\iota',
+      kappa: '\\kappa',
+      lambda: '\\lambda',
+      Lambda: '\\Lambda',
+      varphi: '\\varphi',
+      sigma: '\\sigma',
+      Sigma: '\\Sigma',
+      vartheta: '\\vartheta',
+      upsilon: '\\upsilon',
+      zeta: '\\zeta',
+      omega: '\\omega',
+      Omega: '\\Omega',
+      forall: '\\forall',
+      exists: '\\exists',
+      '!exists': '\\nexists',
+      liminf: '\\liminf_{#?}',
+      limsup: '\\limsup_{#?}',
+      argmin: '\\operatorname*{arg~min}_{#?}',
+      argmax: '\\operatorname*{arg~max}_{#?}',
+      erfc: '\\operatorname{erfc}',
+      bessel: '\\operatorname{bessel}',
+      mean: '\\operatorname{mean}',
+      median: '\\operatorname{median}',
+      randomReal: '\\operatorname{randomReal}',
+      randomInteger: '\\operatorname{randomInteger}',
+      inch: '\\operatorname{inch}',
+      setminus: '\\backslash',
+      divide: '\\div',
+      prop: '\\propto',
+      diamond: '\\diamond',
+      square: '\\square',
+      sube: '\\subseteq',
+      supe: '\\supseteq',
+      uarr: '\\uparrow',
+      darr: '\\downarrow',
+      rarr: '\\rightarrow',
+      rArr: '\\Rightarrow',
+      larr: '\\leftarrow',
+      lArr: '\\Leftarrow',
+      harr: '\\leftrightarrow',
+      hArr: '\\Leftrightarrow',
+      aleph: '\\aleph',
+      times: '\\times',
+      infinity: '\\infty',
+      defint: '\\int_{#?}^{#?}',
+      approaches: '\\to',
+      ceil: '\\left\\lceil#?\\right\\rceil',
+      floor: '\\left\\lfloor#?\\right\\rfloor',
+      union: '\\cup',
+      asterisk: '\\ast',
+      frac: '\\frac{#?}{#?}',
+      cbrt: '\\sqrt[3]{#?}',
+      nthroot: '\\sqrt[#?]{#?}',
+      '(mod': '\\pmod{#?}',
+      '+...': '+\\cdots',
+      '-...': '-\\cdots',
+      '->...': '\\to\\cdots',
+      '-->...': '\\longrightarrow\\cdots',
+      '|><|': '\\bowtie',
+      '>->>': '\\twoheadrightarrowtail',
+      "''''": '^{\\prime\\prime\\prime\\prime}',
+    };
+
+    function lookupEnterInline(token) {
+      if (!token) return '';
+      if (Object.prototype.hasOwnProperty.call(ENTER_INLINE_ABBREV, token)) {
+        return ENTER_INLINE_ABBREV[token];
+      }
+      if (token.length > 1 && token === token.toUpperCase()) {
+        const titled =
+          token.charAt(0) === '!'
+            ? '!' + token.charAt(1) + token.slice(2).toLowerCase()
+            : token.charAt(0) + token.slice(1).toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(ENTER_INLINE_ABBREV, titled)) {
+          return ENTER_INLINE_ABBREV[titled];
+        }
+      }
+      const lower = token.toLowerCase();
+      if (
+        lower !== token &&
+        Object.prototype.hasOwnProperty.call(ENTER_INLINE_ABBREV, lower)
+      ) {
+        return ENTER_INLINE_ABBREV[lower];
+      }
+      return '';
+    }
+
+    function insertAbbrevLatex(mf, latex) {
+      const placeholder = /#\?|#0/.test(latex);
+      mf.insert(latex, {
+        format: 'latex',
+        selectionMode: placeholder ? 'placeholder' : 'after',
+      });
+    }
+
+    function atomPlainChar(atom) {
+      if (!atom || atom.type === 'first' || atom.type === 'leftright') return '';
+      try {
+        if (atom.superscript?.length || atom.subscript?.length) return '';
+      } catch {
+        /* ignore */
+      }
+      const raw = String(
+        atom.value ?? atom.command ?? atom.verbatimLatex ?? ''
+      ).trim();
+      if (!raw) return '';
+      const plain = (raw.normalize?.('NFKC') || raw).replace(/^\\/, '');
+      return plain.length === 1 ? plain : '';
+    }
 
     function latinLetterOfAtom(atom) {
       if (!atom || atom.type === 'first' || atom.type === 'leftright') return '';
@@ -2205,7 +2397,9 @@
     }
 
     function greekAbbrevLettersBeforeCaret(model) {
-      if (!model || model.selectionIsCollapsed === false) return [];
+      if (!model || model.selectionIsCollapsed === false) {
+        return { letters: [], before: null };
+      }
       let atom = model.at(model.position);
       if (!latinLetterOfAtom(atom) && atom?.leftSibling) atom = atom.leftSibling;
       const letters = [];
@@ -2215,25 +2409,83 @@
         letters.unshift(ch);
         atom = atom.isFirstSibling ? null : atom.leftSibling;
       }
-      return letters;
+      return { letters, before: atom };
+    }
+
+    function charsBeforeCaret(model, maxLen) {
+      if (!model || model.selectionIsCollapsed === false) return '';
+      let atom = model.at(model.position);
+      const asChar = (a) => latinLetterOfAtom(a) || atomPlainChar(a);
+      if (!asChar(atom) && atom?.leftSibling) atom = atom.leftSibling;
+      const chars = [];
+      while (atom && atom.type !== 'first' && chars.length < maxLen) {
+        const ch = asChar(atom);
+        if (!ch) break;
+        chars.unshift(ch);
+        atom = atom.isFirstSibling ? null : atom.leftSibling;
+      }
+      return chars.join('');
     }
 
     function tryCompleteGreekAbbrev(mf) {
       if (!mf || mf.mode === 'latex' || mf.mode === 'text') return false;
       const model = mf._mathfield?.model;
       if (!model) return false;
-      const letters = greekAbbrevLettersBeforeCaret(model);
-      if (!letters.length) return false;
-      const token = letters.join('');
-      const pair = GREEK_ABBREV[token.toLowerCase()];
-      if (!pair) return false;
-      const caps = token === token.toUpperCase();
-      const latex = caps ? pair[1] : pair[0];
+      const { letters, before } = greekAbbrevLettersBeforeCaret(model);
+      let token = letters.join('');
+      let extra = 0;
+      const beforeCh = atomPlainChar(before);
+      if (letters.length) {
+        if (beforeCh === '!') {
+          token = '!' + token;
+          extra = 1;
+        } else if (beforeCh === '(' && token.toLowerCase() === 'mod') {
+          token = '(mod';
+          extra = 1;
+        }
+      }
+      let latex = '';
+      if (token) {
+        const pair = GREEK_ABBREV[token.toLowerCase()];
+        if (pair) {
+          latex = token === token.toUpperCase() ? pair[1] : pair[0];
+        } else {
+          latex = lookupEnterInline(token);
+        }
+      }
+      if (!latex) {
+        const raw = charsBeforeCaret(model, 8);
+        const punctKeys = [
+          '-->...',
+          '->...',
+          '+...',
+          '-...',
+          '|><|',
+          '>->>',
+          "''''",
+        ];
+        for (const key of punctKeys) {
+          if (raw.endsWith(key) && ENTER_INLINE_ABBREV[key]) {
+            latex = ENTER_INLINE_ABBREV[key];
+            extra = 0;
+            try {
+              for (let i = 0; i < key.length; i++) {
+                mf.executeCommand('deleteBackward');
+              }
+              insertAbbrevLatex(mf, latex);
+              return true;
+            } catch {
+              return false;
+            }
+          }
+        }
+      }
+      if (!latex || !letters.length) return false;
       try {
-        for (let i = 0; i < letters.length; i++) {
+        for (let i = 0; i < letters.length + extra; i++) {
           mf.executeCommand('deleteBackward');
         }
-        mf.insert(latex, { format: 'latex', selectionMode: 'after' });
+        insertAbbrevLatex(mf, latex);
         return true;
       } catch {
         return false;
@@ -3406,33 +3658,21 @@
         const applyInlineShortcuts = () => {
           try {
             const shortcuts = { ...(mf.inlineShortcuts || {}) };
-            // Греческие — только по Enter (tryCompleteGreekAbbrev), не на лету.
+            // Слова длиннее 3 символов — только по Enter (кроме deg, xin).
+            for (const key of Object.keys(shortcuts)) {
+              if (key.length > 3 && key !== 'deg' && key !== 'xin') {
+                shortcuts[key] = null;
+              }
+            }
+            // Греческие короткие — только по Enter (tryCompleteGreekAbbrev), не на лету.
             for (const key of Object.keys(GREEK_ABBREV)) {
               shortcuts[key] = null;
               shortcuts[key.toUpperCase()] = null;
               shortcuts[key[0].toUpperCase() + key.slice(1)] = null;
             }
-            for (const key of [
-              'alpha',
-              'gamma',
-              'delta',
-              'epsilon',
-              'varepsilon',
-              'iota',
-              'lambda',
-              'sigma',
-              'omega',
-              'upsilon',
-              'varphi',
-              'kappa',
-              'theta',
-              'vartheta',
-            ]) {
-              shortcuts[key] = null;
-              shortcuts[key[0].toUpperCase() + key.slice(1)] = null;
-            }
             shortcuts['*'] = '\\ast';
-            shortcuts.sqrt = '\\sqrt[#?]{#0}';
+            shortcuts.le = '\\le';
+            shortcuts.ge = '\\ge';
             shortcuts.int = '\\int_{#?}^{#?}';
             shortcuts.sum = '\\sum_{#?}^{#?}';
             mf.inlineShortcuts = shortcuts;
