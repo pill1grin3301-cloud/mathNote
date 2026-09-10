@@ -768,7 +768,7 @@
         <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый блок-шаг</li>
         <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — блок рисовалки</li>
         <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — новый текстовый блок</li>
-        <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь (после <code>x^2</code> числитель — вся степень), <kbd>(</kbd> <kbd>{</kbd> — сразу пара с курсором внутри, закрывающая — просто скобка, <kbd>Space</kbd> — пробел</li>
+        <li>В формуле: <kbd>^</kbd> степень, <kbd>_</kbd> индекс, <kbd>/</kbd> дробь (после <code>x^2</code> числитель — вся степень), <kbd>(</kbd> <kbd>{</kbd> — сразу пара с курсором внутри, закрывающая — просто скобка, <kbd>Space</kbd> — пробел, <kbd>Shift</kbd>+<kbd>8</kbd> / <kbd>*</kbd> — звёздочка <code>*</code> (не ·)</li>
         <li><kbd>Alt</kbd>+цифра — степень слева (<code>x</code> → <code>x²</code>); <kbd>Alt</kbd>+<kbd>-</kbd> — отрицательная (<code>x</code> → <code>x^{-□}</code>)</li>
         <li><kbd>Alt</kbd>+<kbd>=</kbd> — ⇔ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> — ≠ · клавиша <kbd>~</kbd> без Shift (EN) — ∼ · <kbd>Shift</kbd>+<kbd>~</kbd> — меню <kbd>^</kbd> <kbd>−</kbd> <kbd>~</kbd> над символом слева (<kbd>~</kbd> листать, отпустить Shift — нарисовать)</li>
         <li><kbd>Alt</kbd>+<kbd>A</kbd> — ∀ · <kbd>Alt</kbd>+<kbd>E</kbd> — ∃ · <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> — ∄</li>
@@ -778,7 +778,7 @@
         <li><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> — меню множеств (<kbd>U</kbd> листать) · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>=</kbd> — меню равенств (<kbd>=</kbd> листать)</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>N/Z/R/Q/C</kbd> — ℕ ℤ ℝ ℚ ℂ</li>
         <li><kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>&lt;</kbd> / <kbd>&gt;</kbd> — ≤ / ≥</li>
-        <li><kbd>\lim</kbd>, <kbd>\sqrt</kbd>, <kbd>\int</kbd>, <kbd>\sum</kbd>, <kbd>\log</kbd>, <kbd>\infty</kbd>, <kbd>\to</kbd> + Tab · <kbd>\</kbd>+пробел — обычный \\</li>
+        <li>Греческие в формуле + <kbd>Enter</kbd>: <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>zeta</kbd> ζ · <kbd>eta</kbd> η · <kbd>io</kbd> ι · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>nu</kbd> ν · <kbd>xi</kbd> ξ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>tau</kbd> τ · <kbd>ups</kbd> υ · <kbd>phi</kbd> φ · <kbd>chi</kbd> χ · <kbd>psi</kbd> ψ · <kbd>ome</kbd> ω. Капсом (<kbd>PSI</kbd>, <kbd>DEL</kbd>…) — те же, но заглавные. Ещё <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬</li>
         <li>В формуле <kbd>#</kbd> — комментарий (серый текст, пробелы ок); <kbd>Esc</kbd> — снова формула; ещё <kbd>Esc</kbd> закрывает бар листов и меню символов</li>
         <li>Буквенные шорткаты — только на EN-раскладке; на русской <kbd>.</kbd>/<kbd>,</kbd> не становятся дробью</li>
         <li>Пустой текстовый или формульный блок + <kbd>Backspace</kbd> — удалить</li>
@@ -842,6 +842,7 @@
     let notebookVersion = null;
     let notebookReady = false;
     let remoteSaveInFlight = false;
+    let remoteSaveTask = null;
     let remoteSaveQueued = false;
     let remoteConflict = false;
     let hasLocalDocument = false;
@@ -1434,6 +1435,12 @@
         openSymbolPicker(mf, blockId, ACCENT_PICKER);
       }
       return true;
+    }
+
+    function isAsteriskKey(e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return false;
+      if (e.key === '*' || e.code === 'NumpadMultiply') return true;
+      return e.shiftKey && e.code === 'Digit8';
     }
 
     function isFractionSlashKey(e) {
@@ -2154,6 +2161,85 @@
       }
     }
 
+    /** Сокращения греческих: psi + Enter → ψ, PSI + Enter → Ψ. */
+    const GREEK_ABBREV = {
+      alp: ['\\alpha', '\\Alpha'],
+      beta: ['\\beta', '\\Beta'],
+      gam: ['\\gamma', '\\Gamma'],
+      del: ['\\delta', '\\Delta'],
+      eps: ['\\varepsilon', '\\Epsilon'],
+      zeta: ['\\zeta', '\\Zeta'],
+      eta: ['\\eta', '\\Eta'],
+      io: ['\\iota', '\\Iota'],
+      lam: ['\\lambda', '\\Lambda'],
+      mu: ['\\mu', '\\Mu'],
+      nu: ['\\nu', '\\Nu'],
+      xi: ['\\xi', '\\Xi'],
+      pi: ['\\pi', '\\Pi'],
+      rho: ['\\rho', '\\Rho'],
+      sig: ['\\sigma', '\\Sigma'],
+      tau: ['\\tau', '\\Tau'],
+      ups: ['\\upsilon', '\\Upsilon'],
+      phi: ['\\varphi', '\\Phi'],
+      chi: ['\\chi', '\\Chi'],
+      psi: ['\\psi', '\\Psi'],
+      ome: ['\\omega', '\\Omega'],
+      and: ['\\land', '\\land'],
+      or: ['\\lor', '\\lor'],
+      not: ['\\neg', '\\neg'],
+    };
+
+    function latinLetterOfAtom(atom) {
+      if (!atom || atom.type === 'first' || atom.type === 'leftright') return '';
+      try {
+        if (atom.superscript?.length || atom.subscript?.length) return '';
+      } catch {
+        /* ignore */
+      }
+      const raw = String(
+        atom.value ?? atom.command ?? atom.verbatimLatex ?? ''
+      ).trim();
+      if (!raw) return '';
+      const plain = (raw.normalize?.('NFKC') || raw).replace(/^\\/, '');
+      return /^[A-Za-z]$/.test(plain) ? plain : '';
+    }
+
+    function greekAbbrevLettersBeforeCaret(model) {
+      if (!model || model.selectionIsCollapsed === false) return [];
+      let atom = model.at(model.position);
+      if (!latinLetterOfAtom(atom) && atom?.leftSibling) atom = atom.leftSibling;
+      const letters = [];
+      while (atom && atom.type !== 'first') {
+        const ch = latinLetterOfAtom(atom);
+        if (!ch) break;
+        letters.unshift(ch);
+        atom = atom.isFirstSibling ? null : atom.leftSibling;
+      }
+      return letters;
+    }
+
+    function tryCompleteGreekAbbrev(mf) {
+      if (!mf || mf.mode === 'latex' || mf.mode === 'text') return false;
+      const model = mf._mathfield?.model;
+      if (!model) return false;
+      const letters = greekAbbrevLettersBeforeCaret(model);
+      if (!letters.length) return false;
+      const token = letters.join('');
+      const pair = GREEK_ABBREV[token.toLowerCase()];
+      if (!pair) return false;
+      const caps = token === token.toUpperCase();
+      const latex = caps ? pair[1] : pair[0];
+      try {
+        for (let i = 0; i < letters.length; i++) {
+          mf.executeCommand('deleteBackward');
+        }
+        mf.insert(latex, { format: 'latex', selectionMode: 'after' });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     function completeSpecialLatexCommand(mf) {
       const raw = latexCommandBuffer(mf).replace(/^\\/, '').toLowerCase();
       if (raw === 'sqrt') {
@@ -2175,7 +2261,11 @@
           /* ignore */
         }
         const latex =
-          raw === 'oint' ? '\\oint_{#?}' : raw === 'sum' ? '\\sum_{#?}' : '\\int_{#?}';
+          raw === 'oint'
+            ? '\\oint_{#?}^{#?}'
+            : raw === 'sum'
+              ? '\\sum_{#?}^{#?}'
+              : '\\int_{#?}^{#?}';
         mf.insert(latex, {
           format: 'latex',
           selectionMode: 'placeholder',
@@ -2230,15 +2320,178 @@
       return { left, right, top, bottom };
     }
 
+    function isPlaceholderMathAtom(atom) {
+      if (!atom) return false;
+      if (atom.type === 'placeholder') return true;
+      const cmd = String(atom.command || atom.value || '');
+      return cmd === '\\placeholder' || cmd.startsWith('\\placeholder');
+    }
+
+    function isEmptyMathRowAtoms(atoms) {
+      return !atoms.some(
+        (atom) => atom && atom.type !== 'first' && !isPlaceholderMathAtom(atom)
+      );
+    }
+
+    function multilineCellAtoms(parent, rowIndex, colIndex) {
+      const cell =
+        typeof parent.getCell === 'function'
+          ? parent.getCell(rowIndex, colIndex)
+          : parent._rows?.[rowIndex]?.[colIndex];
+      return Array.isArray(cell) ? cell : [];
+    }
+
+    function multilineRowAtoms(parent, rowIndex) {
+      const cols = parent._rows?.[rowIndex];
+      const n = Array.isArray(cols) ? cols.length : 1;
+      const atoms = [];
+      for (let colIndex = 0; colIndex < n; colIndex++) {
+        atoms.push(...multilineCellAtoms(parent, rowIndex, colIndex));
+      }
+      return atoms;
+    }
+
+    function rowDomBounds(mf, atoms, parent, rowIndex) {
+      const root = mf?.shadowRoot;
+      if (!root) return null;
+      for (const atom of atoms) {
+        if (!atom?.id) continue;
+        const el = root.querySelector(`[data-atom-id="${atom.id}"]`);
+        const rowEl = el?.closest?.('tr, .ML__row');
+        if (!rowEl) continue;
+        const r = rowEl.getBoundingClientRect();
+        if (r.height >= 0.5) {
+          return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+        }
+      }
+      if (!parent?.id) return null;
+      const parentEl = root.querySelector(`[data-atom-id="${parent.id}"]`);
+      const rowEls = parentEl?.querySelectorAll?.('tr, .ML__row');
+      const rowEl = rowEls?.[rowIndex];
+      if (!rowEl) return null;
+      const r = rowEl.getBoundingClientRect();
+      if (r.height < 0.5) return null;
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    }
+
+    function fillEmptyMathRowBounds(mf, rows) {
+      const known = rows.filter((row) => row.bounds);
+      if (!known.length) return;
+      const avgH =
+        known.reduce((sum, row) => sum + (row.bounds.bottom - row.bounds.top), 0) /
+        known.length;
+      const left = Math.min(...known.map((row) => row.bounds.left));
+      const fieldRight = mf.getBoundingClientRect().right - 8;
+      const right = Math.max(fieldRight, ...known.map((row) => row.bounds.right));
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.bounds) {
+          if (row.empty) {
+            row.bounds = { ...row.bounds, left, right };
+          }
+          continue;
+        }
+        let above = null;
+        let below = null;
+        for (let j = i - 1; j >= 0; j--) {
+          if (rows[j].bounds) {
+            above = rows[j];
+            break;
+          }
+        }
+        for (let j = i + 1; j < rows.length; j++) {
+          if (rows[j].bounds) {
+            below = rows[j];
+            break;
+          }
+        }
+        let top;
+        let bottom;
+        if (above && below) {
+          const missing = rows.filter(
+            (item) =>
+              item.rowIndex > above.rowIndex &&
+              item.rowIndex < below.rowIndex &&
+              !item.bounds
+          );
+          const gap = below.bounds.top - above.bounds.bottom;
+          const slot = Math.max(
+            0,
+            missing.findIndex((item) => item.rowIndex === row.rowIndex)
+          );
+          const count = Math.max(missing.length, 1);
+          if (gap >= count * 6) {
+            const h = gap / count;
+            top = above.bounds.bottom + slot * h;
+            bottom = top + h;
+          } else {
+            top = above.bounds.bottom;
+            bottom = Math.max(top + Math.min(avgH, 22), below.bounds.top);
+          }
+        } else if (above) {
+          top = above.bounds.bottom + (row.rowIndex - above.rowIndex - 1) * avgH;
+          bottom = top + avgH;
+        } else if (below) {
+          bottom = below.bounds.top - (below.rowIndex - row.rowIndex - 1) * avgH;
+          top = bottom - avgH;
+        } else {
+          continue;
+        }
+        if (bottom - top < 8) {
+          const mid = (top + bottom) / 2;
+          top = mid - 8;
+          bottom = mid + 8;
+        }
+        row.bounds = { left, right, top, bottom };
+      }
+
+      const content = rows.filter((row) => row.bounds && !row.empty);
+      for (const row of rows) {
+        if (!row.empty || !row.bounds) continue;
+        for (const other of content) {
+          const overlap =
+            Math.min(row.bounds.bottom, other.bounds.bottom) -
+            Math.max(row.bounds.top, other.bounds.top);
+          if (overlap <= 0) continue;
+          if (row.rowIndex < other.rowIndex) {
+            row.bounds.bottom = Math.min(row.bounds.bottom, other.bounds.top);
+          } else {
+            row.bounds.top = Math.max(row.bounds.top, other.bounds.bottom);
+          }
+        }
+      }
+
+      const field = mf.getBoundingClientRect();
+      const last = rows[rows.length - 1];
+      if (last?.empty && last.bounds && last.bounds.bottom < field.bottom) {
+        last.bounds = { ...last.bounds, bottom: field.bottom };
+      }
+    }
+
     /**
      * Строки displaylines вместе с экранными Y-границами.
-     * Нужны для двойного клика по пустому месту справа от формулы:
-     * там MathLive не даёт atom и оставляет position на старой строке.
+     * Пустые ряды тоже включаем: MathLive не даёт atom на клик, и каретка
+     * иначе остаётся на соседней формуле.
      */
     function renderedMathRows(mf) {
       const model = mf?._mathfield?.model;
       if (!model) return [];
       const parents = new Map();
+      const register = (parent, rowIndex, colIndex) => {
+        let rows = parents.get(parent);
+        if (!rows) {
+          rows = new Map();
+          parents.set(parent, rows);
+        }
+        let cells = rows.get(rowIndex);
+        if (!cells) {
+          cells = new Map();
+          rows.set(rowIndex, cells);
+        }
+        cells.set(colIndex, true);
+      };
+
       for (let i = 0; i <= model.lastOffset; i++) {
         let atom = model.at(i);
         while (atom) {
@@ -2250,38 +2503,68 @@
             typeof branch[0] === 'number' &&
             isMultilineMathParent(parent)
           ) {
-            let rows = parents.get(parent);
-            if (!rows) {
-              rows = new Map();
-              parents.set(parent, rows);
-            }
-            let cells = rows.get(branch[0]);
-            if (!cells) {
-              cells = new Map();
-              rows.set(branch[0], cells);
-            }
-            cells.set(branch[1] ?? 0, true);
+            register(parent, branch[0], branch[1] ?? 0);
             break;
           }
           atom = parent;
         }
       }
 
+      for (let i = 0; i <= model.lastOffset; i++) {
+        let atom = model.at(i);
+        while (atom) {
+          if (isMultilineMathParent(atom) && Array.isArray(atom._rows)) {
+            atom._rows.forEach((cols, rowIndex) => {
+              const n = Array.isArray(cols) ? cols.length : 1;
+              for (let colIndex = 0; colIndex < n; colIndex++) {
+                register(atom, rowIndex, colIndex);
+              }
+            });
+          }
+          atom = atom.parent;
+        }
+      }
+
       const result = [];
       for (const [parent, rows] of parents) {
-        for (const [rowIndex, columns] of rows) {
+        const group = [];
+        const indices = [...rows.keys()].sort((a, b) => a - b);
+        if (Array.isArray(parent._rows)) {
+          for (let rowIndex = 0; rowIndex < parent._rows.length; rowIndex++) {
+            if (!rows.has(rowIndex)) rows.set(rowIndex, new Map([[0, true]]));
+          }
+          indices.length = 0;
+          indices.push(...rows.keys());
+          indices.sort((a, b) => a - b);
+        }
+        for (const rowIndex of indices) {
+          const columns = rows.get(rowIndex);
           const atoms = [];
-          for (const colIndex of columns.keys()) {
-            const cell =
-              typeof parent.getCell === 'function'
-                ? parent.getCell(rowIndex, colIndex)
-                : parent._rows?.[rowIndex]?.[colIndex];
-            if (Array.isArray(cell)) atoms.push(...cell);
+          if (columns && columns.size) {
+            for (const colIndex of columns.keys()) {
+              atoms.push(...multilineCellAtoms(parent, rowIndex, colIndex));
+            }
+          } else {
+            atoms.push(...multilineRowAtoms(parent, rowIndex));
           }
           const range = rangeOfAtomList(model, atoms);
-          const bounds = renderedBoundsForAtoms(mf, atoms);
-          if (range && bounds) result.push({ range, bounds });
+          const visible = atoms.filter(
+            (atom) => atom && atom.type !== 'first' && !isPlaceholderMathAtom(atom)
+          );
+          const bounds =
+            renderedBoundsForAtoms(mf, visible) ||
+            rowDomBounds(mf, atoms, parent, rowIndex);
+          if (!range) continue;
+          group.push({
+            range,
+            bounds,
+            empty: isEmptyMathRowAtoms(atoms),
+            parent,
+            rowIndex,
+          });
         }
+        fillEmptyMathRowBounds(mf, group);
+        result.push(...group);
       }
       if (!result.length && model.lastOffset > 0) {
         const atoms = [];
@@ -2291,14 +2574,33 @@
         }
         const bounds = renderedBoundsForAtoms(mf, atoms);
         if (bounds) {
-          result.push({ range: [0, model.lastOffset], bounds });
+          result.push({
+            range: [0, model.lastOffset],
+            bounds,
+            empty: isEmptyMathRowAtoms(atoms),
+            parent: null,
+            rowIndex: 0,
+          });
         }
       }
       return result;
     }
 
     function renderedMathRowAtY(mf, clientY) {
-      const rows = renderedMathRows(mf);
+      const rows = renderedMathRows(mf).filter((row) => row.bounds);
+      const inside = rows.filter(
+        (row) => clientY >= row.bounds.top && clientY <= row.bounds.bottom
+      );
+      if (inside.length === 1) return inside[0];
+      if (inside.length > 1) {
+        const content = inside.filter((row) => !row.empty);
+        const pool = content.length ? content : inside;
+        return pool.reduce((best, row) => {
+          const height = row.bounds.bottom - row.bounds.top;
+          const bestHeight = best.bounds.bottom - best.bounds.top;
+          return height < bestHeight ? row : best;
+        });
+      }
       let best = null;
       let bestDistance = Infinity;
       for (const row of rows) {
@@ -2321,6 +2623,69 @@
         }
       }
       return best && bestDistance <= 24 ? best : null;
+    }
+
+    function emptyMathRowAtY(mf, clientY) {
+      const rows = renderedMathRows(mf);
+      const hit = renderedMathRowAtY(mf, clientY);
+      if (hit?.empty) return hit;
+
+      const content = rows
+        .filter((row) => row.bounds && !row.empty)
+        .sort((a, b) => a.bounds.top - b.bounds.top);
+      for (let i = 0; i < content.length - 1; i++) {
+        const top = content[i].bounds.bottom;
+        const bottom = content[i + 1].bounds.top;
+        if (clientY <= top || clientY >= bottom) continue;
+        const between = rows
+          .filter(
+            (row) =>
+              row.empty &&
+              row.parent === content[i].parent &&
+              row.rowIndex > content[i].rowIndex &&
+              row.rowIndex < content[i + 1].rowIndex
+          )
+          .sort((a, b) => a.rowIndex - b.rowIndex);
+        if (!between.length) continue;
+        const t = (clientY - top) / Math.max(bottom - top, 1);
+        return between[Math.min(between.length - 1, Math.floor(t * between.length))];
+      }
+
+      const lastContent = content[content.length - 1];
+      if (lastContent) {
+        const trailing = rows
+          .filter(
+            (row) =>
+              row.empty &&
+              row.parent === lastContent.parent &&
+              row.rowIndex > lastContent.rowIndex
+          )
+          .sort((a, b) => a.rowIndex - b.rowIndex);
+        if (trailing.length && clientY > lastContent.bounds.bottom) {
+          const lineH = Math.max(
+            20,
+            lastContent.bounds.bottom - lastContent.bounds.top
+          );
+          const slot = Math.floor((clientY - lastContent.bounds.bottom) / lineH);
+          return trailing[Math.min(Math.max(slot, 0), trailing.length - 1)];
+        }
+      }
+
+      const firstContent = content[0];
+      if (firstContent) {
+        const leading = rows
+          .filter(
+            (row) =>
+              row.empty &&
+              row.parent === firstContent.parent &&
+              row.rowIndex < firstContent.rowIndex
+          )
+          .sort((a, b) => a.rowIndex - b.rowIndex);
+        if (leading.length && clientY < firstContent.bounds.top) {
+          return leading[leading.length - 1];
+        }
+      }
+      return null;
     }
 
     function selectMathLineAtPoint(mf, clientX, clientY) {
@@ -2690,6 +3055,7 @@
           }
         }
         if (!best || bestScore > 48 * 48) return null;
+        if (emptyMathRowAtY(mf, clientY)) return null;
         const after = model.offsetOf(best.atom);
         const before = best.atom.leftSibling
           ? model.offsetOf(best.atom.leftSibling)
@@ -2799,8 +3165,24 @@
       return { atom: null, position: row.range[1] };
     }
 
+    function emptyRowAnchor(mf, clientX, clientY) {
+      if (
+        !mf ||
+        selectionHold.has(mf) ||
+        !mathSelectionCollapsed(mf) ||
+        mf.mode === 'latex' ||
+        mf.mode === 'text'
+      ) {
+        return null;
+      }
+      const row = emptyMathRowAtY(mf, clientY);
+      if (!row?.range) return null;
+      return { atom: null, position: row.range[1] ?? row.range[0] };
+    }
+
     function caretAnchorAtPoint(mf, clientX, clientY) {
       return (
+        emptyRowAnchor(mf, clientX, clientY) ||
         rowEndAnchor(mf, clientX, clientY) ||
         trailingScriptAnchor(mf, clientX, clientY)
       );
@@ -2812,6 +3194,8 @@
         placeCaretAfterAtom(mf, anchor.atom);
         return;
       }
+      if (typeof anchor.position !== 'number') return;
+      if (setMathSelection(mf, anchor.position, anchor.position)) return;
       try {
         mf._mathfield.model.position = anchor.position;
       } catch {
@@ -2969,10 +3353,17 @@
       e.clipboardData.setData('text/plain', `$$${latex}$$`);
       if (cut) {
         try {
-          mf.executeCommand('deleteBackward');
+          if (!mf.executeCommand('deleteSelection')) {
+            mf.executeCommand('deleteBackward');
+          }
           saveMathField(mf, blockId);
         } catch {
-          /* ignore */
+          try {
+            mf.executeCommand('deleteBackward');
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
         }
       }
       return true;
@@ -3012,12 +3403,46 @@
       // сами делаем () как в VS Code; smartFence даёт \\left...\\right
       mf.smartFence = false;
       try {
-        mf.inlineShortcuts = {
-          ...(mf.inlineShortcuts || {}),
-          sqrt: '\\sqrt[#?]{#0}',
-          int: '\\int_{#?}',
-          sum: '\\sum_{#?}',
+        const applyInlineShortcuts = () => {
+          try {
+            const shortcuts = { ...(mf.inlineShortcuts || {}) };
+            // Греческие — только по Enter (tryCompleteGreekAbbrev), не на лету.
+            for (const key of Object.keys(GREEK_ABBREV)) {
+              shortcuts[key] = null;
+              shortcuts[key.toUpperCase()] = null;
+              shortcuts[key[0].toUpperCase() + key.slice(1)] = null;
+            }
+            for (const key of [
+              'alpha',
+              'gamma',
+              'delta',
+              'epsilon',
+              'varepsilon',
+              'iota',
+              'lambda',
+              'sigma',
+              'omega',
+              'upsilon',
+              'varphi',
+              'kappa',
+              'theta',
+              'vartheta',
+            ]) {
+              shortcuts[key] = null;
+              shortcuts[key[0].toUpperCase() + key.slice(1)] = null;
+            }
+            shortcuts['*'] = '\\ast';
+            shortcuts.sqrt = '\\sqrt[#?]{#0}';
+            shortcuts.int = '\\int_{#?}^{#?}';
+            shortcuts.sum = '\\sum_{#?}^{#?}';
+            mf.inlineShortcuts = shortcuts;
+          } catch {
+            /* ignore */
+          }
         };
+        applyInlineShortcuts();
+        mf.addEventListener('mount', applyInlineShortcuts, { once: true });
+        queueMicrotask(applyInlineShortcuts);
       } catch {
         /* ignore */
       }
@@ -3042,9 +3467,15 @@
         try {
           const kb = mf.keybindings;
           if (Array.isArray(kb)) {
-            mf.keybindings = kb.filter(
-              (k) => k.key !== '/' && k.key !== '[NumpadDivide]'
-            );
+            const filtered = kb.filter((k) => {
+              const key = String(k.key || '').toLowerCase();
+              if (k.key === '/' || k.key === '[NumpadDivide]') return false;
+              if (k.key === '*' || k.key === '[NumpadMultiply]') return false;
+              if (key.includes('backspace') && key.includes('shift')) return false;
+              return true;
+            });
+            filtered.push({ key: 'shift+[Backspace]', command: 'deleteBackward' });
+            mf.keybindings = filtered;
           }
         } catch {
           /* ignore */
@@ -3600,7 +4031,7 @@
         if (
           state &&
           typeof state.token === 'string' &&
-          typeof state.notebookId === 'string' &&
+          (state.notebookId == null || typeof state.notebookId === 'string') &&
           typeof state.user?.username === 'string'
         ) {
           return state;
@@ -3741,6 +4172,22 @@
       return true;
     }
 
+    async function resumeRemoteSyncWithoutReload() {
+      if (notebookReady || !authState?.token || !authState.notebookId) return;
+      try {
+        const response = await apiRequest(
+          `/api/notebooks/${encodeURIComponent(authState.notebookId)}`
+        );
+        if (!response.ok) return;
+        const notebook = await response.json();
+        notebookVersion = Number(notebook.version) || 1;
+        notebookReady = true;
+        queueRemoteSave();
+      } catch {
+        /* остаёмся на локальной копии */
+      }
+    }
+
     function queueRemoteSave() {
       if (
         !notebookReady ||
@@ -3752,11 +4199,11 @@
         return;
       }
       remoteSaveQueued = true;
-      if (!remoteSaveInFlight) void flushRemoteSaves();
+      if (!remoteSaveInFlight) remoteSaveTask = flushRemoteSaves();
     }
 
     async function flushRemoteSaves() {
-      if (remoteSaveInFlight) return;
+      if (remoteSaveInFlight) return remoteSaveTask;
       remoteSaveInFlight = true;
       try {
         while (
@@ -3820,7 +4267,8 @@
         }
       } finally {
         remoteSaveInFlight = false;
-        if (remoteSaveQueued && !remoteConflict) void flushRemoteSaves();
+        remoteSaveTask = null;
+        if (remoteSaveQueued && !remoteConflict) remoteSaveTask = flushRemoteSaves();
       }
     }
 
@@ -3916,6 +4364,7 @@
         if (authState && !notebookReady) {
           load(currentUserId());
           render();
+          setTimeout(() => void resumeRemoteSyncWithoutReload(), 12_000);
         }
         authErrorEl.textContent =
           error?.message === 'Failed to fetch'
@@ -3945,6 +4394,7 @@
     logoutBtn.addEventListener('click', () => {
       save({ remote: false });
       clearAuthState();
+      save({ remote: false });
       setLibraryOpen(false);
       librarySections = [];
       libraryNotebooks = [];
@@ -3971,6 +4421,7 @@
         }
         save({ remote: false });
         clearAuthState();
+        save({ remote: false });
         setStatus('аккаунт удалён — лист сохранён локально');
       } catch (error) {
         setStatus(error?.message || 'не удалось удалить аккаунт', false);
@@ -4221,6 +4672,9 @@
       }
 
       if (e.key === 'Enter' && !e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
         endCommentSession(mf);
         commentExitGuard.delete(mf);
         try {
@@ -4228,7 +4682,8 @@
         } catch {
           mf.executeCommand(['switchMode', 'math']);
         }
-        return false;
+        saveMathField(mf, blockId);
+        return true;
       }
 
       if (e.altKey) return false;
@@ -4487,6 +4942,7 @@
     }
 
     function render() {
+      clearingMath = false;
       closeSymbolPicker();
       drawPadEpoch += 1;
       mathFieldEpoch += 1;
@@ -4616,7 +5072,7 @@
           // В конце строки обычную ↓ не перехватываем: MathLive сам
           // переводит каретку на следующую визуальную строку.
           if (
-            e.key === 'ArrowDown' &&
+            (e.key === 'ArrowDown' || e.key === 'PageDown') &&
             !nested &&
             caretIsAtCurrentMathLineEnd(mf)
           ) {
@@ -4725,6 +5181,7 @@
             else if (e.shiftKey && e.altKey && isEnLetter(e, 'c')) latex = '\\mathbb{C}'; // ℂ
             else if (e.shiftKey && e.altKey && isEnKey(e, 'Comma', [',', '<'])) latex = '\\leq'; // ≤
             else if (e.shiftKey && e.altKey && isEnKey(e, 'Period', ['.', '>'])) latex = '\\geq'; // ≥
+            else if (!e.altKey && isAsteriskKey(e)) latex = '\\ast'; // *
           }
           if (
             (e.ctrlKey || e.metaKey) &&
@@ -4872,6 +5329,10 @@
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         try {
+          if (tryCompleteGreekAbbrev(mf)) {
+            saveMathField(mf, block.id);
+            return;
+          }
           const cases = mathEnvironmentAtCaret(mf, 'cases');
           const model = mf._mathfield?.model;
           if (cases && model) {
@@ -4930,6 +5391,43 @@
       if (e.key === 'Backspace' && block.type === 'math' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const mf = e.currentTarget;
         const mode = mf.mode;
+        // Shift+Backspace MathLive часто игнорирует — стираем сами.
+        if (e.shiftKey && mode !== 'latex') {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          if (mode === 'text') {
+            try {
+              mf.executeCommand('deleteBackward');
+              saveMathField(mf, block.id);
+            } catch {
+              /* ignore */
+            }
+            return;
+          }
+          try {
+            if (!handleBackspaceIntegral(mf)) {
+              mf.executeCommand('deleteBackward');
+            }
+          } catch {
+            /* ignore */
+          }
+          const after = mf.value ?? '';
+          if (isVisuallyEmptyMath(after)) {
+            if (after !== '' || /\\displaylines|\\\\/.test(after)) {
+              clearMathBlockIfEmpty(mf, block.id);
+            }
+            if (!e.repeat && isVisuallyEmptyMath(mf.value ?? '')) {
+              const otherSteps = blocks.filter(
+                (b) => b.id !== block.id && b.type !== 'heading'
+              );
+              if (otherSteps.length) removeBlock(block.id);
+            }
+          } else {
+            saveMathField(mf, block.id);
+          }
+          return;
+        }
         if (mode !== 'latex' && mode !== 'text' && handleBackspaceIntegral(mf)) {
           e.preventDefault();
           e.stopPropagation();
@@ -5058,6 +5556,19 @@
 
         if (handleAccentPickerShortcut(e, mf, blockId)) return;
 
+        if (isAsteriskKey(e)) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            mf.executeCommand(['insert', '\\ast']);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
         if (isFractionSlashKey(e)) {
           e.preventDefault();
           e.stopImmediatePropagation?.();
@@ -5135,11 +5646,24 @@
             e.stopPropagation();
             e.stopImmediatePropagation?.();
             confirmSymbolPicker();
-          } else if (e.key === 'Escape') {
+          } else if (e.key === 'Escape' || e.key === 'Backspace') {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation?.();
+            const mf = symbolPicker.mf;
+            const blockId = symbolPicker.blockId;
+            const erase = e.key === 'Backspace';
             closeSymbolPicker();
+            if (erase) {
+              try {
+                if (mf && mf.mode !== 'latex') {
+                  mf.executeCommand('deleteBackward');
+                  if (blockId) saveMathField(mf, blockId);
+                }
+              } catch {
+                /* ignore */
+              }
+            }
           }
           return;
         }
@@ -5181,6 +5705,18 @@
 
     document.addEventListener('keydown', (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
+      if (authDialog.open) return;
+      if (
+        e.target === titleEl ||
+        (e.target?.closest?.('input, textarea, select') &&
+          !e.target?.closest?.('.block'))
+      ) {
+        if (e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          save();
+        }
+        return;
+      }
       const active = document.activeElement?.closest?.('.block')?.dataset?.id;
       const after = active ?? blocks.at(-1)?.id ?? null;
 
@@ -5552,11 +6088,12 @@
 
     async function flushOpenNotebook() {
       if (saveTimer) save();
-      let waits = 0;
-      while (remoteSaveInFlight && waits < 40) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        waits += 1;
-      }
+      if (remoteSaveQueued && !remoteSaveTask) remoteSaveTask = flushRemoteSaves();
+      if (!remoteSaveTask) return;
+      await Promise.race([
+        remoteSaveTask,
+        new Promise((resolve) => setTimeout(resolve, 8000)),
+      ]);
     }
 
     async function switchNotebook(notebookId) {
@@ -5712,6 +6249,7 @@
               `локальная копия — ${error?.message || 'сервер недоступен'}`,
               false
             );
+            setTimeout(() => void resumeRemoteSyncWithoutReload(), 12_000);
           }
         }
       } else {
