@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Гайд — mathNote</title>
+  <script>
+    try {
+      if (localStorage.getItem('mathNote.theme') === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    } catch {}
+  </script>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --bg-glow: #d1fae5;
+      --paper: #ffffff;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #e7e5e4;
+      --hover-line: #a8a29e;
+      --accent: #0f766e;
+      --kbd-bg: #f5f5f4;
+      --shadow: rgba(28, 25, 23, 0.04);
+      --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      --mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+    }
+    html[data-theme="dark"] {
+      --bg: #121416;
+      --bg-glow: #134e4a;
+      --paper: #1c1f24;
+      --ink: #e7e5e4;
+      --muted: #a8a29e;
+      --line: #2f343c;
+      --hover-line: #57534e;
+      --accent: #2dd4bf;
+      --kbd-bg: #252a31;
+      --shadow: rgba(0, 0, 0, 0.35);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 130%; color-scheme: light; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--bg-glow) 0%, transparent 50%),
+        var(--bg);
+    }
+    .wrap {
+      max-width: 1254px;
+      margin: 0 auto;
+      padding: 1.25rem 1.25rem 4rem;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .brand {
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      font-size: 1.1rem;
+      color: inherit;
+      text-decoration: none;
+    }
+    .brand span { color: var(--accent); }
+    a.back {
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 550;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 0.5rem 1.05rem;
+      text-decoration: none;
+    }
+    a.back:hover { border-color: var(--hover-line); }
+    .sheet {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.5rem 1.5rem 2.25rem;
+      box-shadow: 0 10px 30px var(--shadow);
+    }
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.45rem;
+    }
+    .lead {
+      margin: 0 0 1.4rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    h2 {
+      margin: 1.35rem 0 0.4rem;
+      font-size: 1.05rem;
+    }
+    p, li { line-height: 1.5; }
+    p { margin: 0 0 0.7rem; }
+    ul, ol {
+      margin: 0 0 0.7rem;
+      padding-left: 1.2rem;
+    }
+    li + li { margin-top: 0.35em; }
+    .ab {
+      list-style: none;
+      padding-left: 0;
+    }
+    .ab > li { margin-top: 0.7em; }
+    .ab > li > p { margin-bottom: 0.4rem; }
+    .ab ul { margin: 0.25rem 0 0 1.2rem; }
+    .section-example {
+      margin-top: 0.25rem;
+      border-left: 2px solid var(--line);
+      padding-left: 1.25rem;
+    }
+    .section-example ul {
+      margin: 0.25rem 0 0.15rem;
+    }
+    kbd {
+      font-family: var(--mono);
+      font-size: 0.78em;
+      border: 1px solid var(--line);
+      background: var(--kbd-bg);
+      border-radius: 5px;
+      padding: 0.05em 0.35em;
+    }
+    /* ∩ в UI-шрифтах рисуется мельче ∪; Noto/DejaVu выравнивают пару */
+    .math-sym {
+      font-family: "Noto Sans Math", "DejaVu Sans", "Segoe UI Symbol", "Apple Symbols", sans-serif;
+      font-size: 1.25em;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: -0.12em;
+    }
+    .sc {
+      font-size: 0.92rem;
+      margin: 0.35rem 0 0;
+      line-height: 1.5;
+    }
+    details.help {
+      margin: 0.55rem 0 0;
+      color: var(--muted);
+    }
+    details.help > summary {
+      cursor: pointer;
+      color: var(--ink);
+      font-weight: 650;
+    }
+    details.help details {
+      margin-top: 0.4rem;
+    }
+    details.help details summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-weight: 550;
+    }
+    .full-doc {
+      margin: 1.5rem 0 0;
+    }
+    .full-doc a {
+      display: inline-block;
+      color: var(--accent);
+      font-weight: 650;
+      text-underline-offset: 0.18em;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="index.html">Назад</a>
+      <a class="brand" href="index.html">math<span>Note</span></a>
+    </header>
+    <div class="sheet">
+      <h1>Всем привет :)</h1>
+      <p class="lead">Краткий гайд по инструменту — надеюсь, будет полезно.</p>
+
+      <p>Видео-гайд: <a href="ССЫЛКА_НА_ВК_ВИДЕО">вк видео</a> / <a href="ССЫЛКА_НА_ЮТУБ">ютуб</a></p>
+
+      <h2>Общее описание</h2>
+      <p>Сервис задумывался как дополнение к рабочим тетрадям с конспектами — для студентов младших и средних курсов инженерных, айтишных и математических специальностей. (возможно кому то, как и мне, будет проще тут)</p>
+      <p>Да, чтобы пользоваться им было реально удобно, нужна слепая печать. Но:</p>
+      <ul class="ab">
+        <li>
+          <p>А) Навык слепой печати — это имба: хотя бы те же промпты к нейронке писать. Получить его несложно, а профита много.</p>
+        </li>
+        <li>
+          <p>Б) Если навык уже есть, к шорткатам привыкнуть довольно легко.</p>
+        </li>
+      </ul>
+
+      <h2>Лист</h2>
+      <p>Сверху название, ниже блоки. В тулбаре — заголовок, текст, формула, рисовалка; тему тоже можно сменить.</p>
+      <ul>
+        <li><kbd>Ctrl</kbd>+<kbd>M</kbd> — формула</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг</li>
+        <li><kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
+        <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> — рисовалка</li>
+      </ul>
+
+      <h2>Аккаунт</h2>
+      <p>Можно писать локально — копия остаётся в браузере. После входа листы уходят на сервер (автосейв примерно раз в 7 секунд паузы).</p>
+
+      <h2>Разделы</h2>
+      <p>Ярлычок <strong>+</strong> слева по центру открывает бар «Разделы и листы».</p>
+      <p>У меня, например, так:</p>
+      <ul class="section-example">
+        <li>
+          <strong>Раздел: Матан</strong>
+          <ul>
+            <li>Лекция 1 — что-то о лекции 1</li>
+            <li>Лекция 2 — что-то о лекции 2</li>
+            <li>И т. д.</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>Формулы</h2>
+      <p>Некоторые шорткаты, как мне кажется самые частые, могут работать без enter, сложные или спорные(которые мешают вводить другие, например sin и in, sin - нормально не напишешь, если in сам рисуется), надо подтверждать через enter
+      </p>
+      <ul>
+        <li><kbd>^</kbd> / <kbd>Alt</kbd>+<kbd>цифра</kbd> / <kbd>Alt</kbd>+<kbd>-</kbd> — степень; <kbd>_</kbd> — индекс; <kbd>/</kbd> / <kbd>frac</kbd> — дробь; <kbd>(</kbd> — сразу пара скобок</li>
+        <li><kbd>Enter</kbd> перемещает курсор: в дроби — числитель → знаменатель → наружу; в корне — степень → внутрь → наружу; в интеграле и сумме — верх → низ → на знак; из степени и скобок — вправо</li>
+        <li><kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>\sqrt</kbd>+<kbd>Tab</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень; пустой показатель исчезает при переходе внутрь</li>
+        <li><kbd>\int</kbd>/<kbd>\sum</kbd>+<kbd>Tab</kbd> / <kbd>int</kbd>/<kbd>sum</kbd> — интеграл / сумма</li>
+        <li><kbd>Alt</kbd>+<kbd>S</kbd> — система; <kbd>\lim</kbd>+<kbd>Tab</kbd> / <kbd>lim</kbd> сразу — предел</li>
+        <li><kbd>#</kbd> — комментарий в формуле, <kbd>Enter</kbd> — новая строка, <kbd>Esc</kbd> — снова формула</li>
+      </ul>
+      <p>Пока что, я оставлю и полный вариант LaTeX/mathlive - (\int, \sum) и свой, укороченный, не знаю какой приживется, мне проще без лишних телодвижений, но мало ли, кто то уже привык.</p>
+      <p>Главные команды собраны в свёрнутом блоке «маст хэв шорткаты» под листом; расширенный список автозамен — здесь ниже.</p>
+
+      <details class="help">
+        <summary>Автозамены</summary>
+        <p class="sc">Большинство команд от 3 символов — через <kbd>Enter</kbd>. Сразу: <kbd>sum</kbd>, <kbd>int</kbd>, <kbd>frac</kbd>, <kbd>lim</kbd>, <kbd>iff</kbd> и основные функции. <kbd>in</kbd> — через <kbd>Enter</kbd>; <kbd>!in</kbd>, <kbd>!EE</kbd>, <kbd>deg</kbd> и <kbd>xin</kbd> — сразу.</p>
+        <details>
+          <summary><kbd>alp</kbd> греческие</summary>
+          <p class="sc"><kbd>alp</kbd>/<kbd>alpha</kbd> α · <kbd>gam</kbd>/<kbd>gamma</kbd> γ · <kbd>del</kbd>/<kbd>delta</kbd> δ · <kbd>eps</kbd>/<kbd>varepsilon</kbd> ε, <kbd>epsilon</kbd> ϵ · <kbd>io</kbd>/<kbd>iota</kbd> ι · <kbd>lam</kbd>/<kbd>lambda</kbd> λ · <kbd>sig</kbd>/<kbd>sigma</kbd> σ · <kbd>ups</kbd>/<kbd>upsilon</kbd> υ · <kbd>phi</kbd>/<kbd>varphi</kbd> φ · <kbd>ome</kbd>/<kbd>omega</kbd> ω · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>beta</kbd> β · <kbd>zeta</kbd> ζ · <kbd>eta</kbd> η · <kbd>theta</kbd> θ · <kbd>vartheta</kbd> ϑ · <kbd>kappa</kbd> κ · <kbd>mu</kbd> μ · <kbd>nu</kbd> ν · <kbd>xi</kbd> ξ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>tau</kbd> τ · <kbd>chi</kbd> χ · <kbd>psi</kbd> ψ. Капсом — заглавные.</p>
+        </details>
+        <details>
+          <summary><kbd>sin</kbd> функции</summary>
+          <p class="sc">сразу: <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd> · <kbd>tg</kbd> <kbd>sh</kbd> <kbd>ch</kbd> <kbd>th</kbd> · <kbd>lg</kbd> <kbd>lb</kbd> · <kbd>Re</kbd> <kbd>Im</kbd></p>
+          <p class="sc">Enter: <kbd>sec</kbd> · <kbd>ctg</kbd>/<kbd>cotg</kbd> · <kbd>csc</kbd>/<kbd>cosec</kbd> · <kbd>coth</kbd>/<kbd>cth</kbd> · <kbd>arctg</kbd> · <kbd>arccosh</kbd>/<kbd>arcosh</kbd> · <kbd>artanh</kbd>/<kbd>arctanh</kbd> · <kbd>arg</kbd> · <kbd>max</kbd> <kbd>min</kbd> <kbd>det</kbd> <kbd>mod</kbd> <kbd>gcd</kbd> <kbd>lcm</kbd> <kbd>erf</kbd> <kbd>fft</kbd> · <kbd>arcsec</kbd> <kbd>arccsc</kbd> <kbd>arsinh</kbd> <kbd>arcsech</kbd> <kbd>arccsch</kbd> · <kbd>cosh</kbd> <kbd>sinh</kbd> <kbd>tanh</kbd> <kbd>sech</kbd> · <kbd>liminf</kbd> <kbd>limsup</kbd> <kbd>argmin</kbd> <kbd>argmax</kbd> · <kbd>erfc</kbd> <kbd>mean</kbd> <kbd>median</kbd> <kbd>bessel</kbd> <kbd>randomReal</kbd> <kbd>randomInteger</kbd> · <kbd>sint</kbd></p>
+        </details>
+        <details>
+          <summary><kbd>prod</kbd> другие конструкции</summary>
+          <p class="sc">Enter: <kbd>cbrt</kbd> ∛ · <kbd>prod</kbd> ∏ · <kbd>ceil</kbd> ⌈⌉ · <kbd>floor</kbd> ⌊⌋</p>
+        </details>
+        <details>
+          <summary><kbd>and</kbd> логика / множества</summary>
+          <p class="sc">∧ <kbd>&amp;&amp;</kbd> сразу / <kbd>and</kbd> Enter · ∀ <kbd>AA</kbd> сразу / <kbd>forall</kbd> Enter · ∃ <kbd>EE</kbd> сразу / <kbd>exists</kbd> Enter · ∄ <kbd>!EE</kbd> сразу / <kbd>!exists</kbd> Enter · ∈ <kbd>in</kbd> Enter · ∉ <kbd>!in</kbd> сразу · ∨ <kbd>or</kbd> сразу</p>
+          <p class="sc">∪ <kbd>uu</kbd> сразу / <kbd>union</kbd> Enter · ∩ <kbd>nn</kbd> сразу · × <kbd>xx</kbd> сразу / <kbd>times</kbd> Enter — умножение / декартово произведение · Enter: <kbd>uuu</kbd> ⋃ · <kbd>nnn</kbd> ⋂</p>
+          <p class="sc">сразу: <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>QQ</kbd> ℚ · <kbd>RR</kbd> ℝ · <kbd>CC</kbd> ℂ · <kbd>TT</kbd> ⊤ · Enter: <kbd>ems</kbd> ∅ · <kbd>not</kbd> ¬ · <kbd>sub</kbd> ⊂ · <kbd>sup</kbd> ⊃ · <kbd>_|_</kbd> ⊥ · <kbd>|--</kbd> ⊢ · <kbd>|==</kbd> ⊨ · <kbd>sube</kbd> ⊆ · <kbd>supe</kbd> ⊇ · <kbd>aleph</kbd> ℵ · <kbd>(mod</kbd></p>
+        </details>
+        <details>
+          <summary><kbd>-&gt;</kbd> стрелки / сравнение</summary>
+          <p class="sc">→ <kbd>-&gt;</kbd> сразу / <kbd>rarr</kbd>/<kbd>approaches</kbd> Enter · ⇒ <kbd>=&gt;</kbd> сразу / <kbd>rArr</kbd> Enter · ⇔ <kbd>Alt</kbd>+<kbd>=</kbd>/<kbd>iff</kbd> сразу / <kbd>&lt;=&gt;</kbd>/<kbd>hArr</kbd> Enter · ↔ <kbd>&lt;-&gt;</kbd>/<kbd>harr</kbd> Enter · ≤ <kbd>le</kbd>/<kbd>&lt;=</kbd> сразу / <kbd>lt=</kbd> Enter · ≥ <kbd>ge</kbd>/<kbd>&gt;=</kbd> сразу / <kbd>gt=</kbd> Enter · ≺ <kbd>-&lt;</kbd> сразу / <kbd>-lt</kbd> Enter</p>
+          <p class="sc">сразу: <kbd>!=</kbd> ≠ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>~~</kbd> ≈ · <kbd>?=</kbd> ≟ · <kbd>+-</kbd> ± · <kbd>-=</kbd> ≡ · <kbd>~=</kbd> ≅ · <kbd>lt</kbd>/<kbd>gt</kbd> · Enter: <kbd>--&gt;</kbd> ⟶ · <kbd>&lt;--</kbd> ⟵ · <kbd>==&gt;</kbd> ⟹ · <kbd>|-&gt;</kbd> ↦ · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓ · <kbd>larr</kbd>/<kbd>lArr</kbd> ←/⇐ · <kbd>prop</kbd> ∝ · <kbd>&gt;-&gt;&gt;</kbd> ⤖ · <kbd>|><|</kbd> ⋈</p>
+        </details>
+        <details>
+          <summary><kbd>*</kbd> операции / символы</summary>
+          <p class="sc">∗ <kbd>*</kbd> сразу / <kbd>***</kbd> Enter · ∞ <kbd>oo</kbd> сразу / <kbd>infty</kbd>/<kbd>infinity</kbd> Enter</p>
+          <p class="sc">сразу: <kbd>**</kbd> ⋆ · <kbd>&amp;</kbd> · <kbd>%</kbd> · <kbd>$</kbd> · <kbd>''</kbd> ″ · <kbd>:=</kbd> ≔ · <kbd>::</kbd> ∷ · <kbd>(:</kbd> ⟨ · <kbd>:)</kbd> ⟩ · <kbd>:.</kbd> ∴ · <kbd>|~</kbd> ⌈ · <kbd>~|</kbd> ⌉</p>
+          <p class="sc">Enter: <kbd>|><</kbd> ⋉ · <kbd>><|</kbd> ⋊ · <kbd>'''</kbd> ‴ · <kbd>|__</kbd> ⌊ · <kbd>__|</kbd> ⌋ · <kbd>&gt;-&gt;</kbd> ↣ · <kbd>-&gt;&gt;</kbd> ↠ · <kbd>...</kbd> … · <kbd>+...</kbd>/<kbd>-...</kbd> ⋯ · <kbd>-&gt;...</kbd> · <kbd>''''</kbd> ⁗</p>
+        </details>
+        <details>
+          <summary><kbd>deg</kbd> прочее</summary>
+          <p class="sc">не всегда: <kbd>ii</kbd> 𝑖 · <kbd>jj</kbd> 𝑗 · <kbd>ee</kbd> 𝑒 · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> · <kbd>deg</kbd> ° · <kbd>xin</kbd> x∈ · <kbd>mm</kbd> <kbd>cm</kbd> <kbd>km</kbd> <kbd>kg</kbd> <kbd>ft</kbd> <kbd>mi</kbd> · Enter: <kbd>inch</kbd> <kbd>sint</kbd></p>
+        </details>
+      </details>
+
+      <h2>Сохранение</h2>
+      <p>Правки пишутся в браузер сразу по смыслу, на сервер — после паузы. JSON ↑ / ↓ — выгрузить или загрузить лист файлом.</p>
+
+      <p class="full-doc"><a href="shortcuts.html">полная документация</a></p>
+    </div>
+  </div>
+</body>
+</html>
