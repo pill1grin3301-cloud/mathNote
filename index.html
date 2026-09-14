@@ -788,6 +788,7 @@
       <p class="sc">Буквенные команды — на EN-раскладке. Большинство автозамен от 3 символов и все греческие подтверждаются <kbd>Enter</kbd>. Команды, отмеченные «сразу», рисуются без него.</p>
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
+        <li><strong>Текст и комментарии:</strong> <kbd>Tab</kbd> — четыре пробела</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> и <kbd>{</kbd> — парные скобки</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
@@ -795,7 +796,7 @@
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
         <li><strong>Сравнения:</strong> <kbd>lt</kbd> &lt; · <kbd>gt</kbd> &gt; · <kbd>le</kbd>/<kbd>&lt;=</kbd> ≤ · <kbd>ge</kbd>/<kbd>&gt;=</kbd> ≥ · <kbd>!=</kbd> ≠ · <kbd>~~</kbd> ≈ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>Alt</kbd>+<kbd>=</kbd> / <kbd>iff</kbd> ⇔ сразу</li>
         <li><strong>Стрелки:</strong> <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>&lt;-&gt;</kbd> ↔ · <kbd>--&gt;</kbd> ⟶ · <kbd>&lt;--</kbd> ⟵ · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓</li>
-        <li><strong>Множества и логика:</strong> <kbd>RR</kbd> ℝ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>ems</kbd> ∅ · <kbd>in</kbd>+<kbd>Enter</kbd> ∈ · <kbd>!in</kbd> ∉ сразу · <kbd>!EE</kbd> ∄ сразу · <kbd>sub</kbd> ⊂ · <kbd>sube</kbd> ⊆ · <kbd>sup</kbd> ⊃ · <kbd>supe</kbd> ⊇ · <kbd>uu</kbd>/<kbd>union</kbd> ∪ · <kbd>nn</kbd> ∩ · <kbd>xx</kbd> × (умножение / декартово произведение) · <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA/forall</kbd> ∀ · <kbd>EE/exists</kbd> ∃</li>
+        <li><strong>Множества и логика:</strong> <kbd>RR</kbd> ℝ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>ems</kbd> ∅ · <kbd>in</kbd>+<kbd>Enter</kbd> ∈ · <kbd>!in</kbd> ∉ сразу · <kbd>!EE</kbd> ∄ сразу · <kbd>sub</kbd> ⊂ · <kbd>!sub</kbd> ⊄ · <kbd>sube</kbd> ⊆ · <kbd>!sube</kbd> ⊈ · <kbd>sup</kbd> ⊃ · <kbd>!sup</kbd> ⊅ · <kbd>supe</kbd> ⊇ · <kbd>!supe</kbd> ⊉ · <kbd>uu</kbd>/<kbd>union</kbd> ∪ · <kbd>nn</kbd> ∩ · <kbd>xx</kbd> × (умножение / декартово произведение) · <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA/forall</kbd> ∀ · <kbd>EE/exists</kbd> ∃</li>
       </ul>
       <p class="sc"><strong>Как работает <kbd>Enter</kbd></strong></p>
       <ul>
@@ -2287,7 +2288,9 @@
       iff: '\\iff',
       in: '\\in',
       sub: '\\subset',
+      '!sub': '\\nsubset',
       sup: '\\supset',
+      '!sup': '\\nsupset',
       ems: '\\varnothing',
       alpha: '\\alpha',
       delta: '\\delta',
@@ -2357,7 +2360,9 @@
       diamond: '\\diamond',
       square: '\\square',
       sube: '\\subseteq',
+      '!sube': '\\nsubseteq',
       supe: '\\supseteq',
+      '!supe': '\\nsupseteq',
       uarr: '\\uparrow',
       darr: '\\downarrow',
       rarr: '\\rightarrow',
@@ -3701,6 +3706,7 @@
     function copyMathSelection(e, mf, blockId, cut = false) {
       const latex = selectedMathLatex(mf);
       if (!latex || !e.clipboardData) return false;
+      const wasHashComment = cut && isInHashComment(mf);
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation?.();
@@ -3712,10 +3718,16 @@
           if (!mf.executeCommand('deleteSelection')) {
             mf.executeCommand('deleteBackward');
           }
+          if (wasHashComment && !isInHashComment(mf)) {
+            leaveFormerCommentRow(mf);
+          }
           saveMathField(mf, blockId);
         } catch {
           try {
             mf.executeCommand('deleteBackward');
+            if (wasHashComment && !isInHashComment(mf)) {
+              leaveFormerCommentRow(mf);
+            }
             saveMathField(mf, blockId);
           } catch {
             /* ignore */
@@ -4918,6 +4930,41 @@
       }
     }
 
+    /** Вернуть бывшей строке комментария обычный математический режим и стиль. */
+    function leaveFormerCommentRow(mf) {
+      endCommentSession(mf);
+      commentExitGuard.delete(mf);
+      try {
+        mf.mode = 'math';
+      } catch {
+        mf.executeCommand(['switchMode', 'math']);
+      }
+
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return;
+        const position = model.position;
+        const range = rangeOfAtomList(model, atomsOfCurrentMathLine(model));
+        if (range && range[1] > range[0]) {
+          mf.applyStyle(
+            {
+              color: 'none',
+              fontFamily: 'none',
+              fontSeries: 'auto',
+              fontShape: 'auto',
+              fontSize: 'auto',
+              variant: 'math',
+            },
+            { range, operation: 'set' }
+          );
+          const nextPosition = Math.min(position, model.lastOffset);
+          setMathSelection(mf, nextPosition, nextPosition);
+        }
+      } catch {
+        /* режим уже переключён, даже если стиль сбросить не удалось */
+      }
+    }
+
     function insertInlineComment(mf) {
       const model = mf._mathfield?.model;
       let selected = '';
@@ -4956,6 +5003,48 @@
     }
 
     /**
+     * Ctrl+Backspace в #-комментарии: удалить фрагмент до предыдущего пробела.
+     * Пробелы в комментариях представлены отдельными math-spacing атомами,
+     * поэтому стандартный deletePreviousWord не всегда видит границу слова.
+     * @returns {boolean | null} null — модель недоступна, нужен fallback MathLive
+     */
+    function deletePreviousCommentWord(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return null;
+        if (!model.selectionIsCollapsed) {
+          mf.executeCommand('deleteBackward');
+          return true;
+        }
+
+        const end = model.at(model.position);
+        if (!end || end.type === 'first') return true;
+
+        // Если каретка стоит после пробелов, удаляем их вместе с предыдущим словом.
+        let wordEnd = end;
+        while (isSpacingAtom(wordEnd)) {
+          const previous = wordEnd.leftSibling;
+          if (!previous || previous.type === 'first') return true;
+          wordEnd = previous;
+        }
+
+        // Не стираем служебный маркер комментария `#`.
+        if (atomPlainChar(wordEnd) === '#') return true;
+
+        let start = wordEnd;
+        while (start.leftSibling && start.leftSibling.type !== 'first') {
+          const previous = start.leftSibling;
+          if (isSpacingAtom(previous) || atomPlainChar(previous) === '#') break;
+          start = previous;
+        }
+
+        return deleteAtomsInclusive(mf, start, end) || null;
+      } catch {
+        return null;
+      }
+    }
+
+    /**
      * Пока сессия комментария — полностью контролируем ввод (пробелы/буквы).
      * @returns {boolean} true если событие обработано
      */
@@ -4963,6 +5052,11 @@
       if (!mf) return false;
       // Ctrl/Cmd всегда пропускаем (undo, redo, Ctrl+Backspace и т.д.)
       if (e.ctrlKey || e.metaKey) return false;
+      const wasHashComment = isInHashComment(mf);
+      const insertsCommentSpacing =
+        e.key === ' ' ||
+        e.code === 'Space' ||
+        (e.key === 'Tab' && !e.shiftKey && !e.altKey);
 
       // Shift+стрелки / Home/End — не трогаем каретку, иначе схлопывается селект
       if (isSelectionNavKey(e)) {
@@ -4986,7 +5080,7 @@
         selectionIsInsideComment(mf) &&
         (e.key === 'Backspace' ||
           e.key === 'Delete' ||
-          e.key === ' ' ||
+          insertsCommentSpacing ||
           (e.key && e.key.length === 1));
 
       if (shouldLeaveMathSelectionAlone(mf) && e.key !== 'Escape' && !replacingCommentSel) {
@@ -4997,7 +5091,7 @@
         tryResumeCommentSession(mf);
         if (!isCommentSession(mf)) return false;
         ensureCommentCaret(mf, {
-          moveCaret: e.key.length === 1 || e.key === ' ',
+          moveCaret: e.key.length === 1 || insertsCommentSpacing,
         });
       } else {
         beginCommentSession(mf);
@@ -5042,18 +5136,22 @@
         return false;
       }
 
-      if (e.key === ' ' || e.code === 'Space') {
+      if (insertsCommentSpacing) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         try {
           // В text-mode обычный пробел MathLive игнорирует, а LaTeX пишет
           // буквально. Вставляем математический пробел и возвращаем text-mode.
+          const count = e.key === 'Tab' ? 4 : 1;
           mf.mode = 'math';
           paintCommentStyle(mf);
-          mf.insert('\\:', { format: 'latex' });
+          mf.insert('\\:'.repeat(count), { format: 'latex' });
           mf.mode = 'text';
           paintCommentStyle(mf);
+          if (wasHashComment && !isInHashComment(mf)) {
+            leaveFormerCommentRow(mf);
+          }
           saveMathField(mf, blockId);
         } catch {
           /* ignore */
@@ -5070,6 +5168,9 @@
           paintCommentStyle(mf);
           mf.executeCommand(['insert', e.key]);
           paintCommentStyle(mf);
+          if (wasHashComment && !isInHashComment(mf)) {
+            leaveFormerCommentRow(mf);
+          }
           saveMathField(mf, blockId);
         } catch {
           /* ignore */
@@ -5077,18 +5178,21 @@
         return true;
       }
 
-      if (e.key === 'Backspace') {
+      if (e.key === 'Backspace' || e.key === 'Delete') {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         try {
           if (mf.mode !== 'text') mf.mode = 'text';
-          mf.executeCommand('deleteBackward');
-          saveMathField(mf, blockId);
-          if (!isInHashComment(mf) && !isMathTextMode(mf)) {
-            endCommentSession(mf);
-            commentExitGuard.delete(mf);
+          mf.executeCommand(
+            e.key === 'Delete' && mathSelectionCollapsed(mf)
+              ? 'deleteForward'
+              : 'deleteBackward'
+          );
+          if (wasHashComment && !isInHashComment(mf)) {
+            leaveFormerCommentRow(mf);
           }
+          saveMathField(mf, blockId);
         } catch {
           /* ignore */
         }
@@ -5372,6 +5476,26 @@
     }
 
     function onFieldKey(e, block) {
+      if (
+        block.type === 'text' &&
+        e.key === 'Tab' &&
+        !e.shiftKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        const input = e.currentTarget;
+        if (input instanceof HTMLTextAreaElement) {
+          e.preventDefault();
+          const start = input.selectionStart;
+          const end = input.selectionEnd;
+          input.setRangeText('    ', start, end, 'end');
+          updateContent(block.id, input.value);
+          autosizeTextarea(input);
+        }
+        return;
+      }
+
       // Alt+Digit → степень (Shift свободен для () и т.п.)
       if (block.type === 'math') {
         const mf = e.currentTarget;
@@ -5592,6 +5716,7 @@
         const mf = e.currentTarget;
         const mode = mf.mode;
         if (mode === 'latex') return;
+        const wasHashComment = isInHashComment(mf);
 
         // комментарий / текстовый режим — стереть слово до пробела
         let inText = mode === 'text';
@@ -5608,7 +5733,13 @@
           e.stopPropagation();
           e.stopImmediatePropagation?.();
           try {
-            mf.executeCommand('deletePreviousWord');
+            const deleted = isInHashComment(mf)
+              ? deletePreviousCommentWord(mf)
+              : null;
+            if (deleted === null) mf.executeCommand('deletePreviousWord');
+            if (wasHashComment && !isInHashComment(mf)) {
+              leaveFormerCommentRow(mf);
+            }
             saveMathField(mf, block.id);
           } catch {
             /* ignore */
