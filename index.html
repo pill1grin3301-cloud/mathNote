@@ -795,7 +795,7 @@
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
         <li><strong>Сравнения:</strong> <kbd>lt</kbd> &lt; · <kbd>gt</kbd> &gt; · <kbd>le</kbd>/<kbd>&lt;=</kbd> ≤ · <kbd>ge</kbd>/<kbd>&gt;=</kbd> ≥ · <kbd>!=</kbd> ≠ · <kbd>~~</kbd> ≈ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>Alt</kbd>+<kbd>=</kbd> / <kbd>iff</kbd> ⇔ сразу</li>
-        <li><strong>Стрелки:</strong> <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>&lt;-&gt;</kbd> ↔ · <kbd>--&gt;</kbd> ⟶ · <kbd>&lt;--</kbd> ⟵ · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓</li>
+        <li><strong>Стрелки:</strong> <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>harr</kbd> ↔ · <kbd>larr</kbd> ← · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓</li>
         <li><strong>Множества и логика:</strong> <kbd>RR</kbd> ℝ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>ems</kbd> ∅ · <kbd>in</kbd>+<kbd>Enter</kbd> ∈ · <kbd>!in</kbd> ∉ сразу · <kbd>!EE</kbd> ∄ сразу · <kbd>sub</kbd> ⊂ · <kbd>!sub</kbd> ⊄ · <kbd>sube</kbd> ⊆ · <kbd>!sube</kbd> ⊈ · <kbd>sup</kbd> ⊃ · <kbd>!sup</kbd> ⊅ · <kbd>supe</kbd> ⊇ · <kbd>!supe</kbd> ⊉ · <kbd>uu</kbd>/<kbd>union</kbd> ∪ · <kbd>nn</kbd> ∩ · <kbd>xx</kbd> × (умножение / декартово произведение) · <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA/forall</kbd> ∀ · <kbd>EE/exists</kbd> ∃</li>
       </ul>
       <p class="sc"><strong>Как работает <kbd>Enter</kbd></strong></p>
@@ -3770,6 +3770,8 @@
       mf.setAttribute('smart-mode', '');
       // сами делаем () как в VS Code; smartFence даёт \\left...\\right
       mf.smartFence = false;
+      // Даже одноцифровую степень завершаем явно по Enter.
+      mf.smartSuperscript = false;
       try {
         const applyInlineShortcuts = () => {
           try {
