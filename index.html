@@ -1118,6 +1118,7 @@
       try {
         mf.value = latex;
         s.last = latex;
+        flushMathInlineShortcutBuffer(mf);
         try {
           mf.resetUndo?.();
         } catch {
@@ -1244,6 +1245,14 @@
      * Дробь: вручную забираем левый аргумент (x^2 целиком), без #@.
      */
     function insertSmartFraction(mf) {
+      try {
+        insertSmartFractionBody(mf);
+      } finally {
+        flushMathInlineShortcutBuffer(mf);
+      }
+    }
+
+    function insertSmartFractionBody(mf) {
       exitScriptBeforeFraction(mf);
 
       const model = mf._mathfield?.model;
@@ -1488,16 +1497,20 @@
     /** Как в VS Code: `( [ {` → пара с курсором между; выделение оборачивается. */
     function insertAutoFence(mf, open, close) {
       const model = mf._mathfield?.model;
-      if (model && !model.selectionIsCollapsed) {
-        mf.insert(`${open}#0${close}`, {
-          insertionMode: 'replaceSelection',
-          format: 'latex',
-          smartFence: false,
-        });
-        return;
+      try {
+        if (model && !model.selectionIsCollapsed) {
+          mf.insert(`${open}#0${close}`, {
+            insertionMode: 'replaceSelection',
+            format: 'latex',
+            smartFence: false,
+          });
+          return;
+        }
+        mf.insert(`${open}${close}`, { format: 'latex', smartFence: false });
+        mf.executeCommand('moveToPreviousChar');
+      } finally {
+        flushMathInlineShortcutBuffer(mf);
       }
-      mf.insert(`${open}${close}`, { format: 'latex', smartFence: false });
-      mf.executeCommand('moveToPreviousChar');
     }
 
     function insertAutoParens(mf) {
@@ -2474,6 +2487,7 @@
         format: 'latex',
         selectionMode: placeholder ? 'placeholder' : 'after',
       });
+      flushMathInlineShortcutBuffer(mf);
     }
 
     function atomPlainChar(atom) {
@@ -2526,7 +2540,7 @@
 
     function charsBeforeCaret(model, maxLen) {
       if (!model || model.selectionIsCollapsed === false) return '';
-      let atom = model.at(model.position);
+      let atom = atomJustBeforeCaret(model);
       const asChar = (a) => latinLetterOfAtom(a) || atomPlainChar(a);
       if (!asChar(atom) && atom?.leftSibling) atom = atom.leftSibling;
       const chars = [];
@@ -2537,6 +2551,68 @@
         atom = atom.isFirstSibling ? null : atom.leftSibling;
       }
       return chars.join('');
+    }
+
+    function atomJustBeforeCaret(model) {
+      if (!model) return null;
+      let atom = null;
+      try {
+        atom = model.at(model.position);
+      } catch {
+        atom = null;
+      }
+      if ((!atom || atom.type === 'first') && atom?.leftSibling) {
+        atom = atom.leftSibling;
+      }
+      if (
+        (!atom || atom.type === 'first') &&
+        typeof model.position === 'number' &&
+        model.position > 0
+      ) {
+        try {
+          atom = model.at(model.position - 1);
+        } catch {
+          /* ignore */
+        }
+      }
+      return atom && atom.type !== 'first' ? atom : null;
+    }
+
+    function flushMathInlineShortcutBuffer(mf) {
+      try {
+        mf?._mathfield?.flushInlineShortcutBuffer?.();
+      } catch {
+        /* ignore */
+      }
+    }
+
+    /**
+     * MathLive после QQ/EE/NN держит буфер клавиш. Backspace снимает только
+     * последний символ, поэтому следующая Q/E снова собирает пару.
+     * Если буквы уже заменены на символ — сбрасываем буфер.
+     */
+    function reconcileInlineShortcutBuffer(mf) {
+      try {
+        const field = mf?._mathfield;
+        if (!field?.flushInlineShortcutBuffer) return;
+        const buf = field.inlineShortcutBuffer;
+        if (!Array.isArray(buf) || !buf.length) return;
+        const keys = buf[buf.length - 1]?.keystrokes;
+        if (!Array.isArray(keys) || !keys.length) {
+          flushMathInlineShortcutBuffer(mf);
+          return;
+        }
+        const model = field.model;
+        if (!model || model.selectionIsCollapsed === false) {
+          flushMathInlineShortcutBuffer(mf);
+          return;
+        }
+        const typed = keys.join('');
+        const raw = charsBeforeCaret(model, typed.length);
+        if (!raw.endsWith(typed)) flushMathInlineShortcutBuffer(mf);
+      } catch {
+        /* ignore */
+      }
     }
 
     function tryCompleteGreekAbbrev(mf) {
@@ -3862,6 +3938,7 @@
       mf.addEventListener('input', () => {
         if (ignoreEditorEvents || clearingMath) return;
         if (fieldEpoch !== mathFieldEpoch || !mf.isConnected) return;
+        reconcileInlineShortcutBuffer(mf);
         saveMathField(mf, block.id);
       });
       // Клик в существующий #-комментарий — снова серая сессия.
@@ -5019,8 +5096,8 @@
           return true;
         }
 
-        const end = model.at(model.position);
-        if (!end || end.type === 'first') return true;
+        const end = atomJustBeforeCaret(model);
+        if (!end) return true;
 
         // Если каретка стоит после пробелов, удаляем их вместе с предыдущим словом.
         let wordEnd = end;
@@ -5502,6 +5579,15 @@
       if (block.type === 'math') {
         const mf = e.currentTarget;
 
+        if (
+          (e.key === 'Backspace' || e.key === 'Delete') &&
+          !e.altKey &&
+          mf.mode !== 'latex' &&
+          mf.mode !== 'text'
+        ) {
+          reconcileInlineShortcutBuffer(mf);
+        }
+
         // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y — снимки LaTeX (см. mathHistory)
         if (handleMathUndoRedoKey(e, mf, block.id)) return;
 
@@ -5671,6 +5757,7 @@
             e.stopImmediatePropagation?.();
             try {
               mf.executeCommand(['insert', latex]);
+              flushMathInlineShortcutBuffer(mf);
               saveMathField(mf, block.id);
             } catch {
               /* ignore */
@@ -5991,6 +6078,15 @@
         if (!blockId) return;
 
         if (handleMathUndoRedoKey(e, mf, blockId)) return;
+
+        if (
+          (e.key === 'Backspace' || e.key === 'Delete') &&
+          !e.altKey &&
+          mf.mode !== 'latex' &&
+          mf.mode !== 'text'
+        ) {
+          reconcileInlineShortcutBuffer(mf);
+        }
 
         // Остальные Ctrl/Cmd (save, индекс и т.д.) — не перехватывать
         if (e.ctrlKey || e.metaKey) return;
