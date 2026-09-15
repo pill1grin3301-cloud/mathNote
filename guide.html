@@ -165,12 +165,37 @@
     }
     .full-doc {
       margin: 1.5rem 0 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem 1.5rem;
     }
-    .full-doc a {
+    .full-doc > p:first-child {
+      margin: 0;
+    }
+    .full-doc > p:first-child a {
       display: inline-block;
       color: var(--accent);
       font-weight: 650;
       text-underline-offset: 0.18em;
+    }
+    .feedback {
+      margin: 0;
+      text-align: right;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .feedback a {
+      color: inherit;
+      font-weight: 550;
+    }
+    .feedback .ver {
+      display: block;
+      margin-top: 0.2rem;
+      font-family: var(--mono);
+      font-size: 0.82em;
     }
   </style>
 </head>
@@ -184,7 +209,7 @@
       <h1>Всем привет :)</h1>
       <p class="lead">Краткий гайд по инструменту — надеюсь, будет полезно.</p>
 
-      <p>Видео-гайд: <a href="ССЫЛКА_НА_ВК_ВИДЕО">вк видео</a> / <a href="ССЫЛКА_НА_ЮТУБ">ютуб</a></p>
+      <p>Видео-гайд: <a href="https://vkvideo.ru/video-241509119_456239018">вк видео</a> / <a href="https://youtu.be/1VA61Ogswy4?si=pYojrQphFGqVylgg">ютуб</a></p>
 
       <h2>Общее описание</h2>
       <p>Сервис задумывался как дополнение к рабочим тетрадям с конспектами — для студентов младших и средних курсов инженерных, айтишных и математических специальностей. (возможно кому то, как и мне, будет проще тут)</p>
@@ -280,7 +305,15 @@
       <h2>Сохранение</h2>
       <p>Правки пишутся в браузер сразу по смыслу, на сервер — после паузы. JSON ↑ / ↓ — выгрузить или загрузить лист файлом.</p>
 
-      <p class="full-doc"><a href="shortcuts.html">полная документация</a></p>
+      <div class="full-doc">
+        <p><a href="shortcuts.html">полная документация</a></p>
+        <p class="feedback">
+          Обратная связь:<br />
+          мой тг — <a href="https://t.me/piligr1nn">@piligr1nn</a><br />
+          моя почта — <a href="mailto:sashasmolyak1304@gmail.com">sashasmolyak1304@gmail.com</a>
+          <span class="ver">version_1.2</span>
+        </p>
+      </div>
     </div>
   </div>
 </body>
