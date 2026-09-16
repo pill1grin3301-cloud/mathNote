@@ -321,11 +321,29 @@
       flex-wrap: wrap;
       gap: 0.35rem;
       align-items: center;
+      cursor: pointer;
+      list-style: none;
+    }
+    .library-group-head::-webkit-details-marker {
+      display: none;
+    }
+    .library-group-head::before {
+      content: '▸';
+      flex: none;
+      width: 0.9rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1;
+    }
+    .library-group[open] > .library-group-head::before {
+      content: '▾';
+    }
+    .library-group[open] > .library-group-head {
       margin-bottom: 0.4rem;
     }
     .library-group-head strong {
       flex: 1;
-      min-width: 8rem;
+      min-width: 7rem;
     }
     .library-notes {
       display: flex;
@@ -6438,6 +6456,39 @@
       return librarySections.slice().sort(byShelfOrder);
     }
 
+    const LIBRARY_COLLAPSE_KEY = 'mathNote.libraryCollapsed';
+
+    function libraryCollapseStoreKey() {
+      return `${LIBRARY_COLLAPSE_KEY}:${currentUserId() || 'anon'}`;
+    }
+
+    function sectionCollapseId(sectionId) {
+      return sectionId || 'none';
+    }
+
+    function readCollapsedSections() {
+      try {
+        const raw = JSON.parse(
+          localStorage.getItem(libraryCollapseStoreKey()) || '{}'
+        );
+        return raw && typeof raw === 'object' ? raw : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function setSectionCollapsed(sectionId, collapsed) {
+      const map = readCollapsedSections();
+      const id = sectionCollapseId(sectionId);
+      if (collapsed) map[id] = true;
+      else delete map[id];
+      try {
+        localStorage.setItem(libraryCollapseStoreKey(), JSON.stringify(map));
+      } catch {
+        /* ignore */
+      }
+    }
+
     function dragKind(event) {
       const raw = event.dataTransfer.getData('text/plain') || '';
       if (raw.startsWith('notebook:')) return { type: 'notebook', id: raw.slice(9) };
@@ -6463,12 +6514,14 @@
       }
 
       const groups = [{ id: null, title: 'Без раздела' }, ...sortedSections()];
+      const collapsedMap = readCollapsedSections();
 
       for (const group of groups) {
-        const box = document.createElement('section');
+        const box = document.createElement('details');
         box.className = 'library-group';
         box.dataset.sectionId = group.id || '';
-        const head = document.createElement('div');
+        box.open = !collapsedMap[sectionCollapseId(group.id)];
+        const head = document.createElement('summary');
         head.className = 'library-group-head';
         if (group.id) {
           const grip = document.createElement('span');
@@ -6484,6 +6537,9 @@
         const name = document.createElement('strong');
         name.textContent = group.title;
         head.append(name);
+        head.append(
+          actionButton('Добавить лист', () => void createLibraryNotebook(group.id))
+        );
         if (group.id) {
           head.append(
             actionButton('Переименовать', () => void renameSection(group.id, group.title)),
@@ -6496,13 +6552,16 @@
         if (!items.length) {
           const empty = document.createElement('p');
           empty.className = 'library-hint';
-          empty.textContent = 'Пусто — перетащи сюда лист или создай новый.';
+          empty.textContent = 'Пусто — перетащи сюда лист или нажми «+».';
           notes.append(empty);
         }
         for (const note of items) {
           notes.append(renderLibraryNote(note));
         }
         box.append(head, notes);
+        box.addEventListener('toggle', () => {
+          setSectionCollapsed(group.id, !box.open);
+        });
         box.addEventListener('dragover', onLibraryDragOver);
         box.addEventListener('dragleave', onLibraryDragLeave);
         box.addEventListener('drop', (event) => {
@@ -6549,14 +6608,27 @@
     function actionButton(label, onClick, danger = false) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = danger ? 'note-meta icon-btn danger' : 'note-meta icon-btn';
+      button.className = danger
+        ? 'note-meta icon-btn danger'
+        : label === 'Добавить лист'
+          ? 'note-meta icon-btn primary'
+          : 'note-meta icon-btn';
       button.title = label;
       button.setAttribute('aria-label', label);
-      button.innerHTML =
-        label === 'Удалить'
-          ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>'
-          : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+      const icons = {
+        'Удалить':
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>',
+        'Добавить лист':
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+        'Переименовать':
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+      };
+      button.innerHTML = icons[label] || icons['Переименовать'];
+      button.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+      });
       button.addEventListener('click', (event) => {
+        event.preventDefault();
         event.stopPropagation();
         onClick();
       });
@@ -6684,7 +6756,7 @@
       await refreshLibrary();
     }
 
-    async function createLibraryNotebook() {
+    async function createLibraryNotebook(sectionId) {
       const title = prompt('Название листа', 'Лист');
       if (!title || !title.trim()) return;
       const current = libraryNotebooks.find((note) => note.id === authState?.notebookId);
@@ -6692,7 +6764,8 @@
         method: 'POST',
         body: JSON.stringify({
           title: title.trim(),
-          sectionId: current?.sectionId ?? null,
+          sectionId:
+            sectionId === undefined ? current?.sectionId ?? null : sectionId,
         }),
       });
       if (!response.ok) {
@@ -6704,6 +6777,7 @@
       authState.notebookId = created.id;
       persistAuthState(authState);
       applyRemoteNotebook(created);
+      if (sectionId !== undefined) setSectionCollapsed(sectionId, false);
       await refreshLibrary();
       setLibraryOpen(false);
     }
