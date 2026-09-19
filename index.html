@@ -1699,16 +1699,50 @@
       return typeof offset === 'number' && setMathSelection(mf, offset, offset);
     }
 
-    /** Сразу справа от каретки — закрывающая скобка ( ) ] } ). */
-    function closingFenceToTheRight(mf) {
+    /**
+     * Контекст закрывающей скобки у каретки:
+     * before — внутри, перед ')'; after — уже сразу за ')'.
+     */
+    function closingFenceContext(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model || model.selectionIsCollapsed === false) return 'none';
+        const atom = model.at(model.position);
+        if (!atom) return 'none';
+
+        if (atom.leftSibling?.type === 'mclose') return 'after';
+
+        if (atom.type === 'mclose') {
+          const offset = model.offsetOf(atom);
+          if (typeof offset === 'number' && model.position >= offset) {
+            return 'after';
+          }
+          return 'before';
+        }
+
+        if (atom.rightSibling?.type === 'mclose') return 'before';
+
+        const leftright = findAncestorAtom(atom, (item) => item.type === 'leftright');
+        if (leftright) {
+          const offset = model.offsetOf(leftright);
+          if (typeof offset === 'number' && model.position >= offset) {
+            return 'after';
+          }
+        }
+        return 'none';
+      } catch {
+        return 'none';
+      }
+    }
+
+    function closingFenceBeforeCaret(mf) {
       try {
         const model = mf?._mathfield?.model;
         if (!model) return null;
         const atom = model.at(model.position);
         if (!atom) return null;
         if (atom.type === 'mclose') return atom;
-        const next = atom.rightSibling;
-        if (next?.type === 'mclose') return next;
+        if (atom.rightSibling?.type === 'mclose') return atom.rightSibling;
         return null;
       } catch {
         return null;
@@ -1716,7 +1750,7 @@
     }
 
     function handleEnterOutOfParens(mf) {
-      const fence = closingFenceToTheRight(mf);
+      const fence = closingFenceBeforeCaret(mf);
       return !!fence && moveCaretAfterAtom(mf, fence);
     }
 
@@ -3335,6 +3369,58 @@
       }
     }
 
+    function caretIsAtCurrentMathLineStart(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        const range = rangeOfAtomList(model, atomsOfCurrentMathLine(model));
+        return !!range && model.position === range[0];
+      } catch {
+        return false;
+      }
+    }
+
+    function mathFieldHasMultipleLines(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (model) {
+          for (let i = 0; i <= model.lastOffset; i++) {
+            let atom = model.at(i);
+            while (atom) {
+              if (
+                isMultilineMathParent(atom) &&
+                Array.isArray(atom._rows) &&
+                atom._rows.length > 1
+              ) {
+                return true;
+              }
+              atom = atom.parent;
+            }
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      const raw = mf.value ?? '';
+      return /\\\\/.test(raw) || /\\displaylines\{[\s\S]*\\\\/.test(raw);
+    }
+
+    /** Ctrl+Backspace в начале пустой строки — удалить её и перейти на предыдущую. */
+    function deleteEmptyMathLineAtCaretIfAtStart(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model || model.selectionIsCollapsed === false) return false;
+        if (!caretIsAtCurrentMathLineStart(mf)) return false;
+        if (!isEmptyMathRowAtoms(atomsOfCurrentMathLine(model))) return false;
+        if (!mathFieldHasMultipleLines(mf)) return false;
+        deleteCurrentMathLine(mf);
+        moveCaretToCurrentMathLineEnd(mf);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     function caretIsInsideFractionOrScript(mf) {
       try {
         const model = mf?._mathfield?.model;
@@ -3791,6 +3877,74 @@
       return value;
     }
 
+    /** Снимаем корневую обёртку поля — иначе insert заменяет весь блок. */
+    function stripOuterMathWrapper(latex) {
+      let t = unwrapClipboardLatex(latex);
+      for (let i = 0; i < 3; i++) {
+        const displaylines = t.match(/^\\displaylines\{([\s\S]*)\}$/);
+        if (displaylines) {
+          t = displaylines[1].trim();
+          continue;
+        }
+        const env = t.match(
+          /^\\begin\{(lines|gather|gathered)\}\s*([\s\S]*?)\s*\\end\{\1\}$/
+        );
+        if (env) {
+          t = env[2].trim();
+          continue;
+        }
+        break;
+      }
+      return t;
+    }
+
+    function isMultilineMathLatex(latex) {
+      return /\\\\/.test(stripOuterMathWrapper(latex));
+    }
+
+    function asMathFieldValue(latex) {
+      const body = stripOuterMathWrapper(latex);
+      if (!body) return '';
+      if (isMultilineMathLatex(body)) return `\\displaylines{${body}}`;
+      return body;
+    }
+
+    function mergeMathFieldValues(leftRaw, rightRaw) {
+      const left = stripOuterMathWrapper(leftRaw);
+      const right = stripOuterMathWrapper(rightRaw);
+      if (!left) return asMathFieldValue(right);
+      if (!right) return asMathFieldValue(left);
+      if (isMultilineMathLatex(left) || isMultilineMathLatex(right)) {
+        return `\\displaylines{${left} \\\\ ${right}}`;
+      }
+      return `${left}${right}`;
+    }
+
+    function mathFieldSelectionCoversAll(mf) {
+      try {
+        const selected = (selectedMathLatex(mf) || '').trim();
+        const value = (mf.value ?? '').trim();
+        if (
+          selected &&
+          value &&
+          normalizeMathLatex(selected) === normalizeMathLatex(value)
+        ) {
+          return true;
+        }
+        const model = mf?._mathfield?.model;
+        if (!model || model.selectionIsCollapsed) return false;
+        const range = model.selection?.ranges?.[0] || mf.selection?.ranges?.[0];
+        if (!range) return false;
+        const start = Math.min(range[0], range[1]);
+        const end = Math.max(range[0], range[1]);
+        const first = typeof model.firstOffset === 'number' ? model.firstOffset : 0;
+        const last = typeof model.lastOffset === 'number' ? model.lastOffset : 0;
+        return last > first && start <= first && end >= last;
+      } catch {
+        return false;
+      }
+    }
+
     function looksLikeStructuredLatex(value) {
       return /\\(?:d?frac|tfrac|cfrac|sqrt|binom|begin|left|right|overline|underline)\b/.test(
         value
@@ -3805,6 +3959,13 @@
       e.stopPropagation();
       e.stopImmediatePropagation?.();
       e.clipboardData.setData('application/x-latex', latex);
+      e.clipboardData.setData(
+        'application/x-mathnote-copy',
+        JSON.stringify({
+          full: mathFieldSelectionCoversAll(mf),
+          multiline: isMultilineMathLatex(latex),
+        })
+      );
       // Обёртка позволяет распознать LaTeX даже если браузер отбросит custom MIME.
       e.clipboardData.setData('text/plain', `$$${latex}$$`);
       if (cut) {
@@ -3845,8 +4006,49 @@
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation?.();
+
+      let copiedWholeBlock = false;
+      let copiedMultiline = isMultilineMathLatex(latex);
       try {
-        mf.insert(latex, {
+        const meta = e.clipboardData.getData('application/x-mathnote-copy');
+        if (meta) {
+          const parsed = JSON.parse(meta);
+          copiedWholeBlock = !!parsed.full;
+          copiedMultiline = copiedMultiline || !!parsed.multiline;
+        }
+      } catch {
+        /* ignore */
+      }
+      if (!copiedWholeBlock && /^\s*\\displaylines\{/.test(plain || '')) {
+        copiedWholeBlock = true;
+        copiedMultiline = true;
+      }
+
+      const destBefore = mf.value ?? '';
+      const destEmpty = isVisuallyEmptyMath(destBefore);
+      const hadPartialSelection =
+        !mathSelectionCollapsed(mf) && !mathFieldSelectionCoversAll(mf);
+
+      try {
+        if (copiedWholeBlock && !hadPartialSelection) {
+          mf.value = destEmpty
+            ? asMathFieldValue(latex)
+            : mergeMathFieldValues(destBefore, latex);
+          saveMathField(mf, blockId);
+          return true;
+        }
+
+        if (copiedMultiline && destEmpty) {
+          mf.value = asMathFieldValue(latex);
+          saveMathField(mf, blockId);
+          return true;
+        }
+
+        const inlineLatex = stripOuterMathWrapper(latex);
+        if (!destEmpty && mathFieldSelectionCoversAll(mf)) {
+          mf.executeCommand('moveToMathFieldEnd');
+        }
+        mf.insert(inlineLatex, {
           format: 'latex',
           insertionMode: 'replaceSelection',
           selectionMode: 'after',
@@ -4422,8 +4624,10 @@
       const before = mf.value ?? '';
       const removed = mf.executeCommand('removeRow');
       if (!removed || before === (mf.value ?? '')) {
-        mf.value = '';
+        return false;
       }
+      moveCaretToCurrentMathLineEnd(mf);
+      return true;
     }
 
     function setStatus(text, ok = true) {
@@ -5860,6 +6064,10 @@
         if (e.repeat) return;
 
         try {
+          if (deleteEmptyMathLineAtCaretIfAtStart(mf)) {
+            saveMathField(mf, block.id);
+            return;
+          }
           deletePreviousMathChunk(mf);
           const after = mf.value ?? '';
           if (isVisuallyEmptyMath(after)) {
@@ -5954,11 +6162,15 @@
               mf.executeCommand('moveAfterParent');
               if (mathCaretKey(mf) === p) break;
             }
-          } else if (handleEnterOutOfParens(mf)) {
-            // справа скобка — курсор за неё, не новая строка
           } else {
-            // уже на основной линии — новая строка
-            mf.executeCommand('addRowAfter');
+            const fenceCtx = closingFenceContext(mf);
+            if (fenceCtx === 'after') {
+              mf.executeCommand('addRowAfter');
+            } else if (fenceCtx === 'before') {
+              handleEnterOutOfParens(mf);
+            } else {
+              mf.executeCommand('addRowAfter');
+            }
           }
           saveMathField(mf, block.id);
         } catch {
