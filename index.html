@@ -667,22 +667,48 @@
       width: 7rem;
       accent-color: var(--accent);
     }
-    .draw-pad canvas {
+    .draw-tools math-field.draw-graph-input {
+      flex: 1 1 14rem;
+      min-width: 9rem;
+      max-width: 30rem;
+      min-height: 2.15rem;
+      font-size: 1.05rem;
+      padding: 0.15rem 0.4rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--bg);
+    }
+    .draw-tools math-field.draw-graph-input.invalid {
+      border-color: color-mix(in srgb, var(--danger) 65%, var(--line));
+    }
+    .draw-tools math-field.draw-graph-input:focus-within {
+      border-radius: 6px;
+    }
+    .draw-canvas-wrap {
+      position: relative;
+      width: 100%;
+      background: #fff;
+    }
+    html[data-theme="dark"] .draw-canvas-wrap {
+      background: #fafaf9;
+    }
+    .draw-canvas-wrap canvas {
       display: block;
       width: 100%;
       height: var(--draw-h, 280px);
       touch-action: none;
-      cursor: crosshair;
-      background:
-        linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 24px 24px,
-        linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 24px 24px,
-        #fff;
     }
-    html[data-theme="dark"] .draw-pad canvas {
-      background:
-        linear-gradient(#e7e5e4 1px, transparent 1px) 0 0 / 24px 24px,
-        linear-gradient(90deg, #e7e5e4 1px, transparent 1px) 0 0 / 24px 24px,
-        #fafaf9;
+    .draw-canvas-wrap canvas.draw-graph-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      pointer-events: none;
+    }
+    .draw-canvas-wrap canvas.draw-stroke-layer {
+      position: relative;
+      z-index: 1;
+      cursor: crosshair;
+      background: transparent;
     }
 
     .set-picker {
@@ -807,7 +833,7 @@
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
         <li><strong>Текст и комментарии:</strong> <kbd>Tab</kbd> — четыре пробела</li>
-        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> и <kbd>{</kbd> — парные скобки</li>
+        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> и <kbd>{</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
@@ -1214,9 +1240,18 @@
       return true;
     }
 
+    /** @type {WeakMap<HTMLElement, (latex: string) => void>} */
+    const graphFieldSaveHooks = new WeakMap();
+
     /** После программного insert — снимок для Ctrl+Z (input может не прийти). */
     function saveMathField(mf, blockId) {
       if (ignoreEditorEvents) return;
+      const graphHook = graphFieldSaveHooks.get(mf);
+      if (graphHook) {
+        trackMathHistory(mf);
+        graphHook(mf.value ?? '');
+        return;
+      }
       trackMathHistory(mf);
       updateContent(blockId, mf.value ?? '');
     }
@@ -1295,7 +1330,6 @@
 
       const end = model.position;
       let atom = model.at(end);
-      const atCursor = atom;
 
       if (atom?.type === 'mclose') {
         const opens = { ')': '(', ']': '[', '}': '{', '\\rangle': '\\langle' };
@@ -1312,19 +1346,33 @@
         atom = atom.leftSibling;
       }
 
-      while (atom && !atom.isFirstSibling && isFractionLeftAtom(atom)) {
+      while (
+        atom?.leftSibling &&
+        atom.leftSibling.type !== 'first' &&
+        isFractionLeftAtom(atom.leftSibling)
+      ) {
         atom = atom.leftSibling;
       }
 
-      if (!atom || atCursor === atom) {
+      const numeratorIncludesAtom =
+        !!atom &&
+        atom.type !== 'first' &&
+        (isFractionLeftAtom(atom) ||
+          atom.type === 'mopen' ||
+          atom.type === 'leftright');
+      const start = numeratorIncludesAtom
+        ? atom.leftSibling
+          ? model.offsetOf(atom.leftSibling)
+          : 0
+        : model.offsetOf(atom);
+
+      if (!atom || atom.type === 'first' || typeof start !== 'number' || start >= end) {
         mf.insert('\\frac{#?}{#?}', {
           selectionMode: 'placeholder',
           format: 'latex',
         });
         return;
       }
-
-      const start = model.offsetOf(atom);
       let num = (model.getValue(start, end, 'latex') || '').trim();
 
       // На случай если диапазон не захватил степень — расширяем выделение
@@ -1728,6 +1776,7 @@
           if (typeof offset === 'number' && model.position >= offset) {
             return 'after';
           }
+          return 'before';
         }
         return 'none';
       } catch {
@@ -1751,7 +1800,35 @@
 
     function handleEnterOutOfParens(mf) {
       const fence = closingFenceBeforeCaret(mf);
-      return !!fence && moveCaretAfterAtom(mf, fence);
+      if (fence && moveCaretAfterAtom(mf, fence)) return true;
+      try {
+        const model = mf?._mathfield?.model;
+        const atom = model?.at(model.position);
+        const leftright = findAncestorAtom(atom, (item) => item.type === 'leftright');
+        if (!leftright) return false;
+        const offset = model.offsetOf(leftright);
+        if (typeof offset === 'number' && model.position < offset) {
+          return moveCaretAfterAtom(mf, leftright);
+        }
+      } catch {
+        /* ignore */
+      }
+      return false;
+    }
+
+    function insertStretchAngleBrackets(mf) {
+      const model = mf._mathfield?.model;
+      const wrapped = !!(model && !model.selectionIsCollapsed);
+      try {
+        mf.insert(wrapped ? '\\left\\langle#@\\right\\rangle' : '\\left\\langle#?\\right\\rangle', {
+          format: 'latex',
+          insertionMode: wrapped ? 'replaceSelection' : 'insert',
+          selectionMode: 'placeholder',
+          smartFence: false,
+        });
+      } finally {
+        flushMathInlineShortcutBuffer(mf);
+      }
     }
 
     /** В \lim_{x→0}: первый Enter — к 0, второй — из подстрочника вперёд. */
@@ -4159,6 +4236,11 @@
         if (ignoreEditorEvents || clearingMath) return;
         if (fieldEpoch !== mathFieldEpoch || !mf.isConnected) return;
         reconcileInlineShortcutBuffer(mf);
+        if (block.graphField) {
+          trackMathHistory(mf);
+          graphFieldSaveHooks.get(mf)?.(graphFieldLatex(mf));
+          return;
+        }
         saveMathField(mf, block.id);
       });
       // Клик в существующий #-комментарий — снова серая сессия.
@@ -4270,18 +4352,333 @@
       return '';
     }
 
+    const DRAW_GRAPH_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#7c3aed'];
+    const DRAW_GRAPH_X = [-10, 10];
+
+    const DRAW_GRID_STEP = 24;
+
+    function drawPadPaperColor() {
+      return document.documentElement.dataset.theme === 'dark' ? '#fafaf9' : '#fff';
+    }
+
+    function drawPadGridLineColor() {
+      return document.documentElement.dataset.theme === 'dark'
+        ? 'rgba(231,229,228,0.95)'
+        : 'rgba(28,25,23,0.11)';
+    }
+
+    function drawPadAxisColor() {
+      return 'rgba(28,25,23,0.42)';
+    }
+
+    /** Сетка в координатах canvas — одна на слое графика, перерисовывается при ресайзе */
+    function paintDrawPadPaper(ctx, w, h) {
+      ctx.fillStyle = drawPadPaperColor();
+      ctx.fillRect(0, 0, w, h);
+      const step = DRAW_GRID_STEP;
+      ctx.save();
+      ctx.strokeStyle = drawPadGridLineColor();
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= w; x += step) {
+        const px = Math.round(x) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= h; y += step) {
+        const py = Math.round(y) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(w, py);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function splitGraphSpecsLatex(latex) {
+      const plain = latexToGraphPlain(latex);
+      return plain
+        .split(/[;\n]+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+
+    function latexToGraphPlain(latex) {
+      let s = normalizeMathLatex(latex ?? '');
+      if (!s) return '';
+      s = s.replace(/\\begin\{[^}]+\}/g, '');
+      s = s.replace(/\\end\{[^}]+\}/g, '');
+      s = s.replace(/\\displaylines/g, '');
+      s = s.split(/\\\\/)[0] || '';
+      s = s.replace(/\\;/g, ';');
+      return s
+        .split(';')
+        .map((chunk) => latexGraphChunkToPlain(chunk.trim()))
+        .filter(Boolean)
+        .join(';');
+    }
+
+    const GRAPH_CONSTANTS = { g: 9.8, G: 6.6743e-11, c: 2.99792458e8, e: Math.E };
+    const GRAPH_FUNCS = new Set([
+      'sin', 'cos', 'tan', 'cot', 'ln', 'log', 'log10', 'exp', 'sqrt', 'abs', 'pi',
+    ]);
+
+    function latexGraphChunkToPlain(chunk) {
+      if (!chunk) return '';
+      let s = chunk;
+      s = s.replace(/\\placeholder(\[[^\]]*\])?\{[^{}]*\}/g, '');
+      s = s.replace(/\{,\}/g, ',');
+      s = s.replace(/\\mathord\{,\}/g, ',');
+      s = s.replace(/\\,/g, ',');
+      s = s.replace(/\\;/g, ';');
+      s = s.replace(/\\:|\\!|\\ /g, '');
+      s = s.replace(/\\(ast|cdot|times|star)/g, '*');
+      s = s.replace(/\\operatorname\{([^{}]*)\}/g, '$1');
+      s = s.replace(/\\mathrm\{([^{}]*)\}/g, '$1');
+      s = s.replace(/\\text\{([^{}]*)\}/g, '$1');
+      s = s.replace(/\\(left|right|displaystyle|textstyle)/g, '');
+      s = s.replace(/\\(sin|cos|tan|cot|ln|log|exp)/g, '$1');
+      s = s.replace(/\\sqrt\{([^{}]*)\}/g, 'sqrt($1)');
+      s = s.replace(/\\pi/g, 'pi');
+      s = s.replace(/\\infty/g, 'Infinity');
+      for (let i = 0; i < 8 && /\\frac\{/.test(s); i++) {
+        s = s.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+      }
+      s = s.replace(/\^\{([^{}]*)\}/g, '^$1');
+      s = s.replace(/_\{([^{}]*)\}/g, '_$1');
+      s = s.replace(/([a-zA-Z])_\{?([a-zA-Z0-9]+)\}?/g, '$1$2');
+      s = s.replace(
+        /\b(sin|cos|tan|cot|ln|log|exp|sqrt|abs)\{([^{}]*)\}/gi,
+        '$1($2)'
+      );
+      s = s.replace(/\\[a-zA-Z]+/g, '');
+      s = s.replace(/[{}\\]/g, '');
+      s = s.replace(/\b(sin|cos|tan|cot|ln|log|exp)\s+([a-zA-Z])\b/gi, '$1($2)');
+      s = s.replace(/\b(sin|cos|tan|cot|ln|log|exp)([a-zA-Z])\b/gi, '$1($2)');
+      s = s.replace(/\s+/g, '');
+      return s;
+    }
+
+    function graphFieldLatex(mf) {
+      if (!mf) return '';
+      try {
+        return (mf.value ?? mf.getValue?.('latex') ?? '').trim();
+      } catch {
+        return (mf.value ?? '').trim();
+      }
+    }
+
+    function parseGraphCurveSpec(plain) {
+      let xVar = 'x';
+      let yVar = 'y';
+      let expr = plain.trim();
+      const head = expr.match(/^([a-zA-Z])\s*\(\s*([a-zA-Z])\s*\)\s*,\s*(.+)$/);
+      if (head) {
+        yVar = head[1];
+        xVar = head[2];
+        expr = head[3].trim();
+      }
+      const eq = expr.match(/^([a-zA-Z])\s*=\s*(.+)$/);
+      if (eq && eq[1] === yVar) {
+        expr = eq[2].trim();
+      }
+      return { xVar, yVar, expr };
+    }
+
+    function compileGraphExpression(source, xVar = 'x') {
+      const varName = /^[a-zA-Z]$/.test(xVar) ? xVar : 'x';
+      let s = source.trim();
+      if (!s) return null;
+      s = s.replace(new RegExp(`^${varName}\\s*=\\s*`, 'i'), '');
+      s = s.replace(/^y\s*=\s*/i, '');
+      s = s.replace(/\^/g, '**');
+      for (let i = 0; i < 6; i++) {
+        const next = s.replace(/(?<![A-Za-z])([A-Za-z])([A-Za-z])(?![A-Za-z])/g, '$1*$2');
+        if (next === s) break;
+        s = next;
+      }
+      s = s.replace(/(\d)([A-Za-z(])/g, '$1*$2');
+      s = s.replace(/\)([A-Za-z(])/g, ')*$1');
+      s = s.replace(/\bpi\b/gi, 'Math.PI');
+      s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\b/g, (id) => {
+        if (id === 'Math' || id === varName || id === 'Infinity' || id === 'NaN' || id === 'PI') {
+          return id;
+        }
+        const low = id.toLowerCase();
+        if (GRAPH_FUNCS.has(low) || GRAPH_FUNCS.has(id)) return low === 'pi' ? 'pi' : low;
+        if (Object.prototype.hasOwnProperty.call(GRAPH_CONSTANTS, id)) {
+          return `(${GRAPH_CONSTANTS[id]})`;
+        }
+        if (Object.prototype.hasOwnProperty.call(GRAPH_CONSTANTS, low)) {
+          return `(${GRAPH_CONSTANTS[low]})`;
+        }
+        return '(1)';
+      });
+      s = s.replace(/\bsin\b/g, 'Math.sin');
+      s = s.replace(/\bcos\b/g, 'Math.cos');
+      s = s.replace(/\btan\b/g, 'Math.tan');
+      s = s.replace(/\bcot\b/g, '1/Math.tan');
+      s = s.replace(/\bsqrt\b/g, 'Math.sqrt');
+      s = s.replace(/\babs\b/g, 'Math.abs');
+      s = s.replace(/\bln\b/g, 'Math.log');
+      s = s.replace(/\blog10\b/g, 'Math.log10');
+      s = s.replace(/\blog\b/g, 'Math.log10');
+      s = s.replace(/\bexp\b/g, 'Math.exp');
+      s = s.replace(/\bpi\b/g, 'Math.PI');
+      const fn = graphJsEvaluator(s, varName);
+      if (!fn) return null;
+      try {
+        const probe = fn(1);
+        if (typeof probe !== 'number' || Number.isNaN(probe)) return null;
+        return (x) => {
+          const y = fn(x);
+          return typeof y === 'number' && Number.isFinite(y) ? y : NaN;
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    function graphJsEvaluator(src, varName) {
+      const str = String(src || '').replace(/\s+/g, '');
+      if (!str) return null;
+      return (xValue) => {
+        let i = 0;
+        const fail = () => {
+          throw new Error('graph');
+        };
+        function peek() {
+          return str[i];
+        }
+        function eat(ch) {
+          if (str[i] === ch) {
+            i += 1;
+            return true;
+          }
+          return false;
+        }
+        function parseExpr() {
+          let left = parseMul();
+          while (peek() === '+' || peek() === '-') {
+            const op = str[i++];
+            const right = parseMul();
+            left = op === '+' ? left + right : left - right;
+          }
+          return left;
+        }
+        function parseMul() {
+          let left = parsePow();
+          while (peek() === '*' || peek() === '/') {
+            if (peek() === '*' && str[i + 1] === '*') break;
+            const op = str[i++];
+            const right = parsePow();
+            left = op === '*' ? left * right : left / right;
+          }
+          return left;
+        }
+        function parsePow() {
+          const left = parseUnary();
+          if (str[i] === '*' && str[i + 1] === '*') {
+            i += 2;
+            return left ** parsePow();
+          }
+          return left;
+        }
+        function parseUnary() {
+          if (eat('+')) return parseUnary();
+          if (eat('-')) return -parseUnary();
+          return parsePrimary();
+        }
+        function parsePrimary() {
+          if (eat('(')) {
+            const value = parseExpr();
+            if (!eat(')')) fail();
+            return value;
+          }
+          const num = str.slice(i).match(/^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/i);
+          if (num) {
+            i += num[0].length;
+            return Number(num[0]);
+          }
+          const id = str.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*/);
+          if (!id) fail();
+          i += id[0].length;
+          if (id[0] === 'Math') {
+            if (!eat('.')) fail();
+            const method = str.slice(i).match(/^[A-Za-z]+/);
+            if (!method) fail();
+            i += method[0].length;
+            if (method[0] === 'PI') return Math.PI;
+            if (!eat('(')) fail();
+            const arg = parseExpr();
+            if (!eat(')')) fail();
+            const f = Math[method[0]];
+            if (typeof f !== 'function') fail();
+            return f(arg);
+          }
+          if (eat('(')) {
+            const arg = parseExpr();
+            if (!eat(')')) fail();
+            const f = {
+              sin: Math.sin,
+              cos: Math.cos,
+              tan: Math.tan,
+              sqrt: Math.sqrt,
+              abs: Math.abs,
+              log: Math.log,
+              log10: Math.log10,
+              exp: Math.exp,
+            }[id[0]];
+            if (!f) fail();
+            return f(arg);
+          }
+          if (id[0] === varName) return xValue;
+          if (id[0] === 'Infinity') return Infinity;
+          if (id[0] === 'NaN') return NaN;
+          fail();
+          return NaN;
+        }
+        const value = parseExpr();
+        if (i !== str.length) fail();
+        return value;
+      };
+    }
+
+    function parseGraphCurvesFromLatex(latex) {
+      const specs = splitGraphSpecsLatex(latex);
+      if (!specs.length) return { curves: [], xVar: 'x' };
+      let axisX = null;
+      const curves = [];
+      for (const spec of specs) {
+        const { xVar, yVar, expr } = parseGraphCurveSpec(spec);
+        if (axisX == null) axisX = xVar;
+        else if (xVar !== axisX) {
+          return { curves: [], xVar: axisX, axisConflict: true };
+        }
+        const fn = compileGraphExpression(expr, xVar);
+        if (!fn) {
+          return { curves: [], xVar: axisX || 'x', bad: true };
+        }
+        curves.push({ fn, yVar, xVar, label: `${yVar}(${xVar})` });
+      }
+      return { curves, xVar: axisX || 'x' };
+    }
+
     function parseDrawContent(raw) {
-      if (!raw) return { png: '', h: 280 };
+      if (!raw) return { png: '', h: 280, graph: '' };
       try {
         const data = JSON.parse(raw);
         return {
           png: data.png || '',
           h: Number(data.h) > 0 ? Number(data.h) : 280,
+          graph: typeof data.graph === 'string' ? data.graph : '',
         };
       } catch {
         return {
           png: typeof raw === 'string' && raw.startsWith('data:') ? raw : '',
           h: 280,
+          graph: '',
         };
       }
     }
@@ -4309,6 +4706,7 @@
       const undoStack = drawHistory.undo;
       const redoStack = drawHistory.redo;
       const UNDO_MAX = 40;
+      const saved = parseDrawContent(block.content);
 
       const swatches = DRAW_COLORS.map((c) => {
         const b = document.createElement('button');
@@ -4357,6 +4755,13 @@
         sizeVal.textContent = String(size);
       });
 
+      const graphMf = document.createElement('math-field');
+      graphMf.classList.add('draw-graph-input');
+      graphMf.setAttribute(
+        'title',
+        'v(t), 9.8t — ось t, v · sin(x) или y(x), x^2 · несколько через ;'
+      );
+
       const btnClear = document.createElement('button');
       btnClear.type = 'button';
       btnClear.className = 'danger';
@@ -4367,10 +4772,27 @@
         persist();
       });
 
-      tools.append(...swatches, btnBrush, btnErase, sizeLabel, btnClear);
+      tools.append(...swatches, btnBrush, btnErase, sizeLabel, graphMf, btnClear);
+
+      const graphSpecBlock = {
+        id: `${block.id}:graph`,
+        type: 'math',
+        graphField: true,
+        content: saved.graph || '',
+      };
+      wireMathField(graphMf, graphSpecBlock);
+
+      const canvasWrap = document.createElement('div');
+      canvasWrap.className = 'draw-canvas-wrap';
+
+      const graphCanvas = document.createElement('canvas');
+      graphCanvas.className = 'draw-graph-layer';
+      graphCanvas.setAttribute('aria-hidden', 'true');
 
       const canvas = document.createElement('canvas');
+      canvas.className = 'draw-stroke-layer';
       const ctx = canvas.getContext('2d');
+      const gctx = graphCanvas.getContext('2d');
 
       function drawPadAlive(requireConnected = false) {
         if (padEpoch !== drawPadEpoch) return false;
@@ -4387,13 +4809,124 @@
 
       function applyCssHeight(h) {
         cssH = Math.max(140, Math.min(900, Math.round(h)));
-        canvas.style.setProperty('--draw-h', `${cssH}px`);
-        canvas.style.height = `${cssH}px`;
+        canvasWrap.style.setProperty('--draw-h', `${cssH}px`);
+      }
+
+      let graphDebounce = null;
+
+      function renderGraphLayer() {
+        const w = graphCanvas.width;
+        const h = graphCanvas.height;
+        if (!w || !h) return;
+        paintDrawPadPaper(gctx, w, h);
+        const graphLatex = graphFieldLatex(graphMf);
+        graphMf.classList.remove('invalid');
+        if (isVisuallyEmptyMath(graphLatex)) return;
+
+        const parsed = parseGraphCurvesFromLatex(graphLatex);
+        if (parsed.axisConflict || parsed.bad || !parsed.curves.length) {
+          graphMf.classList.add('invalid');
+          const plain = latexToGraphPlain(graphLatex);
+          graphMf.title = plain
+            ? `не разобрал: ${plain}`
+            : 'формат: v(t), 9.8t или sin(x)';
+          return;
+        }
+        graphMf.title = 'v(t), 9.8t — ось t, v · sin(x) · несколько через ;';
+
+        const [xMin, xMax] = DRAW_GRAPH_X;
+        const samples = Math.max(120, Math.min(640, Math.round(w * 0.55)));
+        let yMin = Infinity;
+        let yMax = -Infinity;
+        const series = parsed.curves.map(({ fn }) => {
+          const pts = [];
+          for (let i = 0; i <= samples; i++) {
+            const x = xMin + (i / samples) * (xMax - xMin);
+            const y = fn(x);
+            if (Number.isFinite(y)) {
+              pts.push({ x, y });
+              yMin = Math.min(yMin, y);
+              yMax = Math.max(yMax, y);
+            }
+          }
+          return pts;
+        });
+
+        if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) {
+          graphMf.classList.add('invalid');
+          return;
+        }
+        let pad = (yMax - yMin) * 0.1;
+        if (!pad) pad = 1;
+        yMin -= pad;
+        yMax += pad;
+        const ySpan = yMax - yMin;
+
+        const toPxX = (x) => ((x - xMin) / (xMax - xMin)) * w;
+        const toPxY = (y) => h - ((y - yMin) / ySpan) * h;
+
+        gctx.save();
+        gctx.lineWidth = 1.5;
+        gctx.strokeStyle = drawPadAxisColor();
+        if (xMin <= 0 && xMax >= 0) {
+          const ox = toPxX(0);
+          gctx.beginPath();
+          gctx.moveTo(ox, 0);
+          gctx.lineTo(ox, h);
+          gctx.stroke();
+        }
+        if (yMin <= 0 && yMax >= 0) {
+          const oy = toPxY(0);
+          gctx.beginPath();
+          gctx.moveTo(0, oy);
+          gctx.lineTo(w, oy);
+          gctx.stroke();
+        }
+
+        series.forEach((pts, idx) => {
+          gctx.strokeStyle = DRAW_GRAPH_COLORS[idx % DRAW_GRAPH_COLORS.length];
+          gctx.lineWidth = 2.75;
+          gctx.lineJoin = 'round';
+          gctx.lineCap = 'round';
+          gctx.beginPath();
+          let drawingLine = false;
+          let prevY = null;
+          for (const { x, y } of pts) {
+            const px = toPxX(x);
+            const py = toPxY(y);
+            if (prevY != null && Math.abs(y - prevY) > ySpan * 0.45) {
+              drawingLine = false;
+            }
+            if (!drawingLine) {
+              gctx.moveTo(px, py);
+              drawingLine = true;
+            } else {
+              gctx.lineTo(px, py);
+            }
+            prevY = y;
+          }
+          gctx.stroke();
+        });
+        gctx.restore();
+      }
+
+      function syncCanvasHeights(newH) {
+        canvas.width = DRAW_W;
+        canvas.height = newH;
+        graphCanvas.width = DRAW_W;
+        graphCanvas.height = newH;
+        setupCtx();
+        renderGraphLayer();
       }
 
       function syncPixelSizeFromCss(keepImage = true) {
-        const cssW = canvas.getBoundingClientRect().width || pad.clientWidth || DRAW_W;
-        const newH = Math.max(160, Math.round(DRAW_W * (cssH / cssW)));
+        const cssW =
+          canvas.getBoundingClientRect().width ||
+          canvasWrap.getBoundingClientRect().width ||
+          pad.clientWidth ||
+          DRAW_W;
+        const safeW = cssW > 8 ? cssW : DRAW_W;
+        const newH = Math.max(160, Math.round(DRAW_W * (cssH / safeW)));
         let snapshot = null;
         if (keepImage && canvas.width && canvas.height) {
           snapshot = document.createElement('canvas');
@@ -4401,20 +4934,25 @@
           snapshot.height = canvas.height;
           snapshot.getContext('2d').drawImage(canvas, 0, 0);
         }
-        canvas.width = DRAW_W;
-        canvas.height = newH;
-        setupCtx();
+        syncCanvasHeights(newH);
         if (snapshot) {
           ctx.drawImage(snapshot, 0, 0);
         }
       }
 
-      const saved = parseDrawContent(block.content);
+      function bootGraphFieldValue() {
+        if (!graphMf.isConnected) return;
+        const want = saved.graph || '';
+        if (want && isVisuallyEmptyMath(graphFieldLatex(graphMf))) {
+          graphMf.value = want;
+        }
+        renderGraphLayer();
+      }
+      graphMf.addEventListener('mount', bootGraphFieldValue, { once: true });
+      queueMicrotask(bootGraphFieldValue);
+
       applyCssHeight(saved.h || 280);
-      // первичная высота пикселей
-      canvas.width = DRAW_W;
-      canvas.height = DRAW_H;
-      setupCtx();
+      syncCanvasHeights(DRAW_H);
 
       if (saved.png) {
         const img = new Image();
@@ -4423,8 +4961,7 @@
             if (!drawPadAlive()) return;
             syncPixelSizeFromCss(false);
             if (img.height > canvas.height) {
-              canvas.height = img.height;
-              setupCtx();
+              syncCanvasHeights(img.height);
             }
             ctx.drawImage(img, 0, 0);
           });
@@ -4447,9 +4984,19 @@
             v: 1,
             png: canvas.toDataURL('image/png'),
             h: cssH,
+            graph: graphFieldLatex(graphMf),
           })
         );
       }
+
+      graphFieldSaveHooks.set(graphMf, () => {
+        renderGraphLayer();
+        clearTimeout(graphDebounce);
+        graphDebounce = setTimeout(() => persist(), 280);
+      });
+      graphMf.addEventListener('input', () => {
+        renderGraphLayer();
+      });
 
       function pushDrawHistory() {
         undoStack.push(canvas.toDataURL('image/png'));
@@ -4462,9 +5009,7 @@
         img.onload = () => {
           if (!drawPadAlive()) return;
           if (img.width && img.height) {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            setupCtx();
+            syncCanvasHeights(img.height);
           } else {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
           }
@@ -4559,6 +5104,16 @@
       let resizing = false;
       let startY = 0;
       let startH = 0;
+      let resizeSyncRaf = 0;
+      function syncDrawPadDuringResize() {
+        resizeSyncRaf = 0;
+        if (!drawPadAlive(true)) return;
+        syncPixelSizeFromCss(true);
+      }
+      function scheduleDrawPadResizeSync() {
+        if (resizeSyncRaf) return;
+        resizeSyncRaf = requestAnimationFrame(syncDrawPadDuringResize);
+      }
       resize.addEventListener('pointerdown', (e) => {
         if (e.button != null && e.button !== 0) return;
         e.preventDefault();
@@ -4572,10 +5127,15 @@
         if (!resizing) return;
         e.preventDefault();
         applyCssHeight(startH + (e.clientY - startY));
+        scheduleDrawPadResizeSync();
       });
       resize.addEventListener('pointerup', (e) => {
         if (!resizing) return;
         resizing = false;
+        if (resizeSyncRaf) {
+          cancelAnimationFrame(resizeSyncRaf);
+          resizeSyncRaf = 0;
+        }
         pushDrawHistory();
         applyCssHeight(startH + (e.clientY - startY));
         syncPixelSizeFromCss(true);
@@ -4583,6 +5143,10 @@
       });
       resize.addEventListener('pointercancel', () => {
         resizing = false;
+        if (resizeSyncRaf) {
+          cancelAnimationFrame(resizeSyncRaf);
+          resizeSyncRaf = 0;
+        }
       });
 
       pad.addEventListener('keydown', (e) => {
@@ -4601,7 +5165,8 @@
         }
       });
 
-      pad.append(tools, canvas, resize);
+      canvasWrap.append(graphCanvas, canvas);
+      pad.append(tools, canvasWrap, resize);
       return pad;
     }
 
@@ -5637,6 +6202,7 @@
     }
 
     function insertBlock(type, afterId = null, content = '') {
+      if (afterId != null && String(afterId).endsWith(':graph')) return;
       const before = documentSnapshot();
       const focusBefore = activeBlockId();
       const block = {
@@ -6107,7 +6673,6 @@
 
       if (e.key === 'Enter' && block.type === 'math' && !e.shiftKey && !e.altKey) {
         const mf = e.currentTarget;
-        // в режиме \команды (и если mode недоступен — при незавершённом \) не перехватываем
         const mode = mf.mode;
         if (mode === 'latex' || mode === 'text') return;
 
@@ -6218,7 +6783,7 @@
             if (after !== '' || /\\displaylines|\\\\/.test(after)) {
               clearMathBlockIfEmpty(mf, block.id);
             }
-            if (!e.repeat && isVisuallyEmptyMath(mf.value ?? '')) {
+            if (!e.repeat && isVisuallyEmptyMath(mf.value ?? '') && !block.graphField) {
               const otherSteps = blocks.filter(
                 (b) => b.id !== block.id && b.type !== 'heading'
               );
@@ -6273,6 +6838,11 @@
           if (mode === 'latex' || mode === 'text') return;
           // и не preventDefault, пока в поле есть хоть что-то
           if (!isVisuallyEmptyMath(mf.value ?? '') || e.repeat) return;
+          if (block.graphField) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
 
           const otherSteps = blocks.filter(
             (b) => b.id !== block.id && b.type !== 'heading'
@@ -6374,6 +6944,24 @@
         }
 
         const fence = autoFencePair(e);
+        if (
+          e.altKey &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.shiftKey &&
+          (e.code === 'BracketLeft' || e.key === '[')
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            insertStretchAngleBrackets(mf);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
         if (fence) {
           e.preventDefault();
           e.stopImmediatePropagation?.();
