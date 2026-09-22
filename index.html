@@ -684,6 +684,15 @@
     .draw-tools math-field.draw-graph-input:focus-within {
       border-radius: 6px;
     }
+    .draw-zoom {
+      display: inline-flex;
+      gap: 0.2rem;
+    }
+    .draw-zoom button {
+      min-width: 1.7rem;
+      padding: 0.2rem 0.4rem;
+      line-height: 1;
+    }
     .draw-canvas-wrap {
       position: relative;
       width: 100%;
@@ -938,6 +947,7 @@
     /** Акценты над символом слева — Shift+~ */
     const ACCENT_PICKER = [
       { latex: '\\hat', sym: 'x̂', name: '^' },
+      { latex: '\\vec', sym: 'x⃗', name: '→' },
       { latex: '\\bar', sym: 'x̄', name: '−' },
       { latex: '\\tilde', sym: 'x̃', name: '~' },
     ];
@@ -1435,35 +1445,17 @@
       }
 
       const end = model.position;
-      let atom = model.at(end);
-      if (!isAccentableAtom(atom) && atom?.leftSibling) {
-        atom = atom.leftSibling;
-      }
-      if (!atom || atom.type === 'first') return null;
-
-      if (atom.type === 'mclose') {
-        const opens = { ')': '(', ']': '[', '}': '{', '\\rangle': '\\langle' };
-        const open = opens[atom.value];
-        let cur = atom;
-        while (
-          cur &&
-          !cur.isFirstSibling &&
-          !(cur.type === 'mopen' && cur.value === open)
-        ) {
-          cur = cur.leftSibling;
-        }
-        if (cur && cur.type === 'mopen') {
-          return [model.offsetOf(cur), end];
-        }
-      }
-
-      if (!isAccentableAtom(atom)) return null;
-      return [model.offsetOf(atom), end];
+      const atom = model.at(end);
+      if (!atom || atom.type === 'first' || !isAccentableAtom(atom)) return null;
+      const start = atom.leftSibling ? model.offsetOf(atom.leftSibling) : 0;
+      if (typeof start !== 'number' || start >= end) return null;
+      return [start, end];
     }
 
-    /** Крышка / черта / тильда над символом слева от курсора. */
+    /** Крышка / черта / стрелка / тильда — только над символом слева от курсора. */
     function wrapPreviousWithAccent(mf, accentCmd) {
       const model = mf._mathfield?.model;
+      if (!model) return;
       const insertWrapped = (body) =>
         mf.insert(`${accentCmd}{${body}}`, {
           insertionMode: 'replaceSelection',
@@ -1471,39 +1463,20 @@
           format: 'latex',
         });
 
-      if (model) {
-        const range = accentWrapRange(model);
-        if (range === 'selection') {
-          const selected = (model.getValue(model.selection, 'latex') || '').trim();
-          if (selected) {
-            try {
-              if (insertWrapped(selected) !== false) return;
-            } catch {
-              /* fall through */
-            }
-          }
-        } else if (range) {
-          try {
-            model.extendSelectionTo(range[0], range[1]);
-            const selected = (model.getValue(model.selection, 'latex') || '').trim();
-            if (selected && insertWrapped(selected) !== false) return;
-          } catch {
-            /* fall through */
-          }
-        }
-      }
-
-      try {
-        mf.executeCommand(['insert', `${accentCmd}{#@}`]);
+      const range = accentWrapRange(model);
+      if (range === 'selection') {
+        const selected = (model.getValue(model.selection, 'latex') || '').trim();
+        if (selected) insertWrapped(selected);
         return;
+      }
+      if (!range) return;
+      try {
+        model.extendSelectionTo(range[0], range[1]);
+        const selected = (model.getValue(model.selection, 'latex') || '').trim();
+        if (selected) insertWrapped(selected);
       } catch {
         /* ignore */
       }
-
-      mf.insert(`${accentCmd}{#?}`, {
-        selectionMode: 'placeholder',
-        format: 'latex',
-      });
     }
 
     function isShiftTildeKey(e) {
@@ -1798,6 +1771,18 @@
       }
     }
 
+    function removeEmptyLeftrightBody(mf, leftright) {
+      for (const branch of ['body', 'above']) {
+        const atoms = atomBranchKids(leftright, branch).filter(
+          (atom) => atom && atom.type !== 'first'
+        );
+        if (atoms.length && atoms.every((atom) => isPlaceholderMathAtom(atom))) {
+          return deleteAtomsInclusive(mf, atoms[0], atoms.at(-1));
+        }
+      }
+      return false;
+    }
+
     function handleEnterOutOfParens(mf) {
       const fence = closingFenceBeforeCaret(mf);
       if (fence && moveCaretAfterAtom(mf, fence)) return true;
@@ -1808,6 +1793,7 @@
         if (!leftright) return false;
         const offset = model.offsetOf(leftright);
         if (typeof offset === 'number' && model.position < offset) {
+          removeEmptyLeftrightBody(mf, leftright);
           return moveCaretAfterAtom(mf, leftright);
         }
       } catch {
@@ -1820,12 +1806,29 @@
       const model = mf._mathfield?.model;
       const wrapped = !!(model && !model.selectionIsCollapsed);
       try {
-        mf.insert(wrapped ? '\\left\\langle#@\\right\\rangle' : '\\left\\langle#?\\right\\rangle', {
+        if (wrapped) {
+          const selected = (model.getValue(model.selection, 'latex') || '').trim();
+          if (selected) {
+            mf.insert(`\\left\\langle${selected}\\right\\rangle`, {
+              format: 'latex',
+              insertionMode: 'replaceSelection',
+              selectionMode: 'after',
+              smartFence: false,
+            });
+            return;
+          }
+        }
+        mf.insert('\\left\\langle\\right\\rangle', {
           format: 'latex',
-          insertionMode: wrapped ? 'replaceSelection' : 'insert',
-          selectionMode: 'placeholder',
           smartFence: false,
         });
+        const after = mf._mathfield?.model;
+        const bracket = after?.at(after.position);
+        if (bracket?.type === 'leftright') {
+          moveCaretIntoBranch(mf, bracket, 'body');
+        } else {
+          mf.executeCommand('moveToPreviousChar');
+        }
       } finally {
         flushMathInlineShortcutBuffer(mf);
       }
@@ -4353,9 +4356,126 @@
     }
 
     const DRAW_GRAPH_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#7c3aed'];
-    const DRAW_GRAPH_X = [-10, 10];
 
-    const DRAW_GRID_STEP = 24;
+    function robustGraphYRange(values) {
+      const ys = values.filter((y) => Number.isFinite(y)).sort((a, b) => a - b);
+      if (!ys.length) return null;
+      const at = (p) => ys[Math.min(ys.length - 1, Math.max(0, Math.round((ys.length - 1) * p)))];
+      let lo = at(0.06);
+      let hi = at(0.94);
+      if (!(hi > lo)) {
+        lo = ys[0];
+        hi = ys[ys.length - 1];
+      }
+      const pad = (hi - lo) * 0.12 || 1;
+      return [lo - pad, hi + pad];
+    }
+
+    function graphNiceStep(span) {
+      if (!Number.isFinite(span) || span <= 0) return 1;
+      const rough = span / 8;
+      const pow = 10 ** Math.floor(Math.log10(rough));
+      const norm = rough / pow;
+      const nice = norm >= 7.5 ? 10 : norm >= 3.5 ? 5 : norm >= 1.5 ? 2 : 1;
+      return nice * pow;
+    }
+
+    function formatGraphTick(value, step) {
+      if (!Number.isFinite(value) || Math.abs(value) < Math.abs(step) * 1e-4) return '0';
+      const decimals = step >= 1 ? 0 : Math.min(6, Math.ceil(-Math.log10(step)));
+      let text = value.toFixed(decimals);
+      if (decimals > 0) text = text.replace(/0+$/, '').replace(/\.$/, '');
+      return text;
+    }
+
+    function graphViewBounds(view) {
+      return {
+        xMin: view.xCenter - view.xSpan / 2,
+        xMax: view.xCenter + view.xSpan / 2,
+        yMin: view.yCenter - view.ySpan / 2,
+        yMax: view.yCenter + view.ySpan / 2,
+      };
+    }
+
+    /** Сетка в тех же координатах, что и оси: x=0 и y=0 лежат на линиях сетки. */
+    function paintMathGrid(ctx, view, w, h) {
+      const { xMin, xMax, yMin, yMax } = graphViewBounds(view);
+      const toPxX = (x) => ((x - xMin) / (xMax - xMin)) * w;
+      const toPxY = (y) => h - ((y - yMin) / (yMax - yMin)) * h;
+      const snap = (px) => Math.round(px) + 0.5;
+      ctx.fillStyle = drawPadPaperColor();
+      ctx.fillRect(0, 0, w, h);
+      const xStep = graphNiceStep(view.xSpan);
+      const yStep = graphNiceStep(view.ySpan);
+      ctx.save();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = drawPadGridLineColor();
+      ctx.font = '11px "IBM Plex Sans", "Segoe UI", sans-serif';
+      const x0 = Math.ceil(xMin / xStep - 1e-8);
+      const x1 = Math.floor(xMax / xStep + 1e-8);
+      for (let i = x0; i <= x1; i++) {
+        const px = snap(toPxX(i * xStep));
+        ctx.beginPath();
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, h);
+        ctx.stroke();
+      }
+      const y0 = Math.ceil(yMin / yStep - 1e-8);
+      const y1 = Math.floor(yMax / yStep + 1e-8);
+      for (let i = y0; i <= y1; i++) {
+        const py = snap(toPxY(i * yStep));
+        ctx.beginPath();
+        ctx.moveTo(0, py);
+        ctx.lineTo(w, py);
+        ctx.stroke();
+      }
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = drawPadAxisColor();
+      let axisX = null;
+      let axisY = null;
+      if (xMin <= 0 && xMax >= 0) {
+        axisX = snap(toPxX(0));
+        ctx.beginPath();
+        ctx.moveTo(axisX, 0);
+        ctx.lineTo(axisX, h);
+        ctx.stroke();
+      }
+      if (yMin <= 0 && yMax >= 0) {
+        axisY = snap(toPxY(0));
+        ctx.beginPath();
+        ctx.moveTo(0, axisY);
+        ctx.lineTo(w, axisY);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(28,25,23,0.62)';
+      const labelY = axisY == null ? h - 14 : Math.min(h - 14, Math.max(2, axisY + 3));
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for (let i = x0; i <= x1; i++) {
+        if (i === 0) continue;
+        const x = i * xStep;
+        const px = toPxX(x);
+        if (px < 14 || px > w - 14) continue;
+        ctx.fillText(formatGraphTick(x, xStep), px, labelY);
+      }
+      const labelX = axisX == null ? 4 : Math.min(w - 40, Math.max(2, axisX + 4));
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      for (let i = y0; i <= y1; i++) {
+        if (i === 0) continue;
+        const y = i * yStep;
+        const py = toPxY(y);
+        if (py < 8 || py > h - 8) continue;
+        ctx.fillText(formatGraphTick(y, yStep), labelX, py);
+      }
+      if (axisX != null && axisY != null) {
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText('0', Math.min(w - 12, axisX + 3), Math.min(h - 12, axisY + 2));
+      }
+      ctx.restore();
+      return { xMin, xMax, yMin, yMax, toPxX, toPxY };
+    }
 
     function drawPadPaperColor() {
       return document.documentElement.dataset.theme === 'dark' ? '#fafaf9' : '#fff';
@@ -4369,31 +4489,6 @@
 
     function drawPadAxisColor() {
       return 'rgba(28,25,23,0.42)';
-    }
-
-    /** Сетка в координатах canvas — одна на слое графика, перерисовывается при ресайзе */
-    function paintDrawPadPaper(ctx, w, h) {
-      ctx.fillStyle = drawPadPaperColor();
-      ctx.fillRect(0, 0, w, h);
-      const step = DRAW_GRID_STEP;
-      ctx.save();
-      ctx.strokeStyle = drawPadGridLineColor();
-      ctx.lineWidth = 1;
-      for (let x = 0; x <= w; x += step) {
-        const px = Math.round(x) + 0.5;
-        ctx.beginPath();
-        ctx.moveTo(px, 0);
-        ctx.lineTo(px, h);
-        ctx.stroke();
-      }
-      for (let y = 0; y <= h; y += step) {
-        const py = Math.round(y) + 0.5;
-        ctx.beginPath();
-        ctx.moveTo(0, py);
-        ctx.lineTo(w, py);
-        ctx.stroke();
-      }
-      ctx.restore();
     }
 
     function splitGraphSpecsLatex(latex) {
@@ -4421,7 +4516,7 @@
 
     const GRAPH_CONSTANTS = { g: 9.8, G: 6.6743e-11, c: 2.99792458e8, e: Math.E };
     const GRAPH_FUNCS = new Set([
-      'sin', 'cos', 'tan', 'cot', 'ln', 'log', 'log10', 'exp', 'sqrt', 'abs', 'pi',
+      'sin', 'cos', 'tan', 'cot', 'ln', 'log', 'log10', 'lg', 'exp', 'sqrt', 'abs', 'pi',
     ]);
 
     function latexGraphChunkToPlain(chunk) {
@@ -4438,7 +4533,7 @@
       s = s.replace(/\\mathrm\{([^{}]*)\}/g, '$1');
       s = s.replace(/\\text\{([^{}]*)\}/g, '$1');
       s = s.replace(/\\(left|right|displaystyle|textstyle)/g, '');
-      s = s.replace(/\\(sin|cos|tan|cot|ln|log|exp)/g, '$1');
+      s = s.replace(/\\(sin|cos|tan|cot|ln|log|lg|exp)/g, '$1');
       s = s.replace(/\\sqrt\{([^{}]*)\}/g, 'sqrt($1)');
       s = s.replace(/\\pi/g, 'pi');
       s = s.replace(/\\infty/g, 'Infinity');
@@ -4447,16 +4542,56 @@
       }
       s = s.replace(/\^\{([^{}]*)\}/g, '^$1');
       s = s.replace(/_\{([^{}]*)\}/g, '_$1');
+      s = rewriteLogBases(s);
       s = s.replace(/([a-zA-Z])_\{?([a-zA-Z0-9]+)\}?/g, '$1$2');
-      s = s.replace(
-        /\b(sin|cos|tan|cot|ln|log|exp|sqrt|abs)\{([^{}]*)\}/gi,
-        '$1($2)'
-      );
+      s = s.replace(/\b(sin|cos|tan|cot|ln|lg|log|exp|sqrt|abs)\{([^{}]*)\}/gi, '$1($2)');
       s = s.replace(/\\[a-zA-Z]+/g, '');
       s = s.replace(/[{}\\]/g, '');
-      s = s.replace(/\b(sin|cos|tan|cot|ln|log|exp)\s+([a-zA-Z])\b/gi, '$1($2)');
-      s = s.replace(/\b(sin|cos|tan|cot|ln|log|exp)([a-zA-Z])\b/gi, '$1($2)');
+      s = s.replace(/\b(sin|cos|tan|cot|ln|lg|log|exp)\s+([a-zA-Z])\b/gi, '$1($2)');
+      s = s.replace(/\b(sin|cos|tan|cot|ln|lg|log|exp)([a-zA-Z])\b/gi, '$1($2)');
       s = s.replace(/\s+/g, '');
+      return s;
+    }
+
+    function splitGraphIdent(id) {
+      const funcs = [...GRAPH_FUNCS].filter((name) => name.length >= 2).sort((a, b) => b.length - a.length);
+      const consts = Object.keys(GRAPH_CONSTANTS).sort((a, b) => b.length - a.length);
+      const parts = [];
+      let i = 0;
+      while (i < id.length) {
+        const rest = id.slice(i);
+        const restLow = rest.toLowerCase();
+        const func = funcs.find((name) => restLow.startsWith(name));
+        if (func) {
+          parts.push(func);
+          i += func.length;
+          continue;
+        }
+        const constant = consts.find(
+          (name) => rest.startsWith(name) || restLow.startsWith(name.toLowerCase())
+        );
+        if (constant) {
+          parts.push(rest.startsWith(constant) ? constant : constant.toLowerCase());
+          i += constant.length;
+          continue;
+        }
+        parts.push(id[i]);
+        i += 1;
+      }
+      return parts.join('*');
+    }
+
+    function rewriteLogBases(s) {
+      const forms = [
+        /\blog_\{([^{}]+)\}\s*\{([^{}]+)\}/g,
+        /\blog_\{([^{}]+)\}\s*\(([^()]*)\)/g,
+        /\blog_([0-9.]+|[a-zA-Z])\s*\{([^{}]+)\}/g,
+        /\blog_([0-9.]+|[a-zA-Z])\s*\(([^()]*)\)/g,
+        /\blog_([0-9.]+|[a-zA-Z])([a-zA-Z][a-zA-Z0-9]*)/g,
+      ];
+      for (const re of forms) {
+        s = s.replace(re, '(ln($2)/ln($1))');
+      }
       return s;
     }
 
@@ -4493,11 +4628,19 @@
       s = s.replace(new RegExp(`^${varName}\\s*=\\s*`, 'i'), '');
       s = s.replace(/^y\s*=\s*/i, '');
       s = s.replace(/\^/g, '**');
-      for (let i = 0; i < 6; i++) {
-        const next = s.replace(/(?<![A-Za-z])([A-Za-z])([A-Za-z])(?![A-Za-z])/g, '$1*$2');
-        if (next === s) break;
-        s = next;
-      }
+      s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\b/g, (id) => {
+        if (id === 'Math' || id === 'Infinity' || id === 'NaN' || id === 'PI') return id;
+        const low = id.toLowerCase();
+        if (GRAPH_FUNCS.has(low) || GRAPH_FUNCS.has(id)) return id;
+        if (
+          Object.prototype.hasOwnProperty.call(GRAPH_CONSTANTS, id) ||
+          Object.prototype.hasOwnProperty.call(GRAPH_CONSTANTS, low)
+        ) {
+          return id;
+        }
+        if (id.length === 1) return id;
+        return splitGraphIdent(id);
+      });
       s = s.replace(/(\d)([A-Za-z(])/g, '$1*$2');
       s = s.replace(/\)([A-Za-z(])/g, ')*$1');
       s = s.replace(/\bpi\b/gi, 'Math.PI');
@@ -4521,23 +4664,36 @@
       s = s.replace(/\bcot\b/g, '1/Math.tan');
       s = s.replace(/\bsqrt\b/g, 'Math.sqrt');
       s = s.replace(/\babs\b/g, 'Math.abs');
-      s = s.replace(/\bln\b/g, 'Math.log');
       s = s.replace(/\blog10\b/g, 'Math.log10');
+      s = s.replace(/\blg\b/g, 'Math.log10');
       s = s.replace(/\blog\b/g, 'Math.log10');
+      s = s.replace(/\bln\b/g, 'Math.log');
       s = s.replace(/\bexp\b/g, 'Math.exp');
       s = s.replace(/\bpi\b/g, 'Math.PI');
       const fn = graphJsEvaluator(s, varName);
       if (!fn) return null;
-      try {
-        const probe = fn(1);
-        if (typeof probe !== 'number' || Number.isNaN(probe)) return null;
-        return (x) => {
+      const probes = [1, 2, 0.5, 10, Math.E, -1, 0.1];
+      let accepted = false;
+      for (const x of probes) {
+        try {
+          const y = fn(x);
+          if (typeof y === 'number' && Number.isFinite(y)) {
+            accepted = true;
+            break;
+          }
+        } catch {
+          return null;
+        }
+      }
+      if (!accepted) return null;
+      return (x) => {
+        try {
           const y = fn(x);
           return typeof y === 'number' && Number.isFinite(y) ? y : NaN;
-        };
-      } catch {
-        return null;
-      }
+        } catch {
+          return NaN;
+        }
+      };
     }
 
     function graphJsEvaluator(src, varName) {
@@ -4606,7 +4762,7 @@
           i += id[0].length;
           if (id[0] === 'Math') {
             if (!eat('.')) fail();
-            const method = str.slice(i).match(/^[A-Za-z]+/);
+            const method = str.slice(i).match(/^[A-Za-z][A-Za-z0-9]*/);
             if (!method) fail();
             i += method[0].length;
             if (method[0] === 'PI') return Math.PI;
@@ -4673,14 +4829,27 @@
           png: data.png || '',
           h: Number(data.h) > 0 ? Number(data.h) : 280,
           graph: typeof data.graph === 'string' ? data.graph : '',
+          view: readGraphView(data.view),
         };
       } catch {
         return {
           png: typeof raw === 'string' && raw.startsWith('data:') ? raw : '',
           h: 280,
           graph: '',
+          view: null,
         };
       }
+    }
+
+    function readGraphView(view) {
+      if (!view || typeof view !== 'object') return null;
+      const xSpan = Number(view.xSpan);
+      const ySpan = Number(view.ySpan);
+      const xCenter = Number(view.xCenter);
+      const yCenter = Number(view.yCenter);
+      if (![xSpan, ySpan, xCenter, yCenter].every(Number.isFinite)) return null;
+      if (xSpan <= 0 || ySpan <= 0) return null;
+      return { xCenter, xSpan, yCenter, ySpan };
     }
 
     function wireDrawPad(block) {
@@ -4762,6 +4931,20 @@
         'v(t), 9.8t — ось t, v · sin(x) или y(x), x^2 · несколько через ;'
       );
 
+      const zoomBox = document.createElement('span');
+      zoomBox.className = 'draw-zoom';
+      const btnZoomIn = document.createElement('button');
+      btnZoomIn.type = 'button';
+      btnZoomIn.textContent = '+';
+      btnZoomIn.title = 'Приблизить (Ctrl + колёсико)';
+      btnZoomIn.addEventListener('click', () => zoomGraphBy(1 / 1.25));
+      const btnZoomOut = document.createElement('button');
+      btnZoomOut.type = 'button';
+      btnZoomOut.textContent = '−';
+      btnZoomOut.title = 'Отдалить (Ctrl + колёсико)';
+      btnZoomOut.addEventListener('click', () => zoomGraphBy(1.25));
+      zoomBox.append(btnZoomIn, btnZoomOut);
+
       const btnClear = document.createElement('button');
       btnClear.type = 'button';
       btnClear.className = 'danger';
@@ -4772,7 +4955,7 @@
         persist();
       });
 
-      tools.append(...swatches, btnBrush, btnErase, sizeLabel, graphMf, btnClear);
+      tools.append(...swatches, btnBrush, btnErase, sizeLabel, graphMf, zoomBox, btnClear);
 
       const graphSpecBlock = {
         id: `${block.id}:graph`,
@@ -4813,76 +4996,170 @@
       }
 
       let graphDebounce = null;
+      let graphView = saved.view || null;
+      let graphViewCustom = !!saved.view;
+      let graphShown = graphView;
+
+      function fittedGraphView(yLo, yHi) {
+        let ySpan = yHi - yLo;
+        if (!Number.isFinite(ySpan) || ySpan <= 0) ySpan = 20;
+        return { xCenter: 0, xSpan: 20, yCenter: (yLo + yHi) / 2, ySpan };
+      }
+
+      function emptyGraphView() {
+        const w = graphCanvas.width || DRAW_W;
+        const h = graphCanvas.height || DRAW_H;
+        return { xCenter: 0, xSpan: 20, yCenter: 0, ySpan: 20 * (h / w) };
+      }
+
+      function zoomGraphAt(factor, clientX, clientY) {
+        const w = graphCanvas.width;
+        const h = graphCanvas.height;
+        if (!w || !h) return;
+        const base = graphShown || graphView || emptyGraphView();
+        const rect = canvas.getBoundingClientRect();
+        const px = ((clientX - rect.left) / Math.max(rect.width, 1)) * w;
+        const py = ((clientY - rect.top) / Math.max(rect.height, 1)) * h;
+        const xMin = base.xCenter - base.xSpan / 2;
+        const yMax = base.yCenter + base.ySpan / 2;
+        const x = xMin + (px / w) * base.xSpan;
+        const y = yMax - (py / h) * base.ySpan;
+        const xSpan = Math.min(1e6, Math.max(1e-4, base.xSpan * factor));
+        const ySpan = Math.min(1e6, Math.max(1e-4, base.ySpan * factor));
+        const nextXMin = x - (px / w) * xSpan;
+        const nextYMax = y + (py / h) * ySpan;
+        graphView = {
+          xCenter: nextXMin + xSpan / 2,
+          xSpan,
+          yCenter: nextYMax - ySpan / 2,
+          ySpan,
+        };
+        graphViewCustom = true;
+        renderGraphLayer();
+        persist();
+      }
+
+      function zoomGraphBy(factor) {
+        const rect = canvas.getBoundingClientRect();
+        zoomGraphAt(factor, rect.left + rect.width / 2, rect.top + rect.height / 2);
+      }
+
+      let panning = false;
+      let panLast = null;
+
+      function beginGraphPan(e) {
+        e.preventDefault();
+        const base = graphShown || graphView || emptyGraphView();
+        graphView = {
+          xCenter: base.xCenter,
+          xSpan: base.xSpan,
+          yCenter: base.yCenter,
+          ySpan: base.ySpan,
+        };
+        graphViewCustom = true;
+        panning = true;
+        panLast = { x: e.clientX, y: e.clientY };
+        canvas.style.cursor = 'grabbing';
+      }
+
+      function moveGraphPan(e) {
+        if (!panning || !panLast || !graphView) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const dx = e.clientX - panLast.x;
+        const dy = e.clientY - panLast.y;
+        panLast = { x: e.clientX, y: e.clientY };
+        const worldDx = (dx / Math.max(rect.width, 1)) * graphView.xSpan;
+        const worldDy = (dy / Math.max(rect.height, 1)) * graphView.ySpan;
+        graphView = {
+          ...graphView,
+          xCenter: graphView.xCenter - worldDx,
+          yCenter: graphView.yCenter + worldDy,
+        };
+        renderGraphLayer();
+      }
+
+      function endGraphPan() {
+        if (!panning) return;
+        panning = false;
+        panLast = null;
+        canvas.style.cursor = '';
+        persist();
+      }
+
+      canvasWrap.addEventListener(
+        'wheel',
+        (e) => {
+          if (!e.ctrlKey && !e.metaKey) return;
+          e.preventDefault();
+          const factor = e.deltaY > 0 ? 1.12 : 1 / 1.12;
+          zoomGraphAt(factor, e.clientX, e.clientY);
+        },
+        { passive: false }
+      );
 
       function renderGraphLayer() {
         const w = graphCanvas.width;
         const h = graphCanvas.height;
         if (!w || !h) return;
-        paintDrawPadPaper(gctx, w, h);
         const graphLatex = graphFieldLatex(graphMf);
         graphMf.classList.remove('invalid');
-        if (isVisuallyEmptyMath(graphLatex)) return;
-
-        const parsed = parseGraphCurvesFromLatex(graphLatex);
-        if (parsed.axisConflict || parsed.bad || !parsed.curves.length) {
+        const parsed = isVisuallyEmptyMath(graphLatex)
+          ? { curves: [] }
+          : parseGraphCurvesFromLatex(graphLatex);
+        const bad =
+          !isVisuallyEmptyMath(graphLatex) &&
+          (parsed.axisConflict || parsed.bad || !parsed.curves.length);
+        if (bad) {
           graphMf.classList.add('invalid');
           const plain = latexToGraphPlain(graphLatex);
-          graphMf.title = plain
-            ? `не разобрал: ${plain}`
-            : 'формат: v(t), 9.8t или sin(x)';
-          return;
+          graphMf.title = plain ? `не разобрал: ${plain}` : 'формат: v(t), 9.8t или sin(x)';
+        } else if (!isVisuallyEmptyMath(graphLatex)) {
+          graphMf.title = 'v(t), 9.8t — ось t, v · sin(x) · несколько через ;';
         }
-        graphMf.title = 'v(t), 9.8t — ось t, v · sin(x) · несколько через ;';
 
-        const [xMin, xMax] = DRAW_GRAPH_X;
-        const samples = Math.max(120, Math.min(640, Math.round(w * 0.55)));
-        let yMin = Infinity;
-        let yMax = -Infinity;
-        const series = parsed.curves.map(({ fn }) => {
-          const pts = [];
-          for (let i = 0; i <= samples; i++) {
-            const x = xMin + (i / samples) * (xMax - xMin);
-            const y = fn(x);
-            if (Number.isFinite(y)) {
+        let view = graphViewCustom && graphView ? graphView : null;
+        let series = [];
+        if (!bad && parsed.curves?.length) {
+          const probe = view || { xCenter: 0, xSpan: 20, yCenter: 0, ySpan: 20 };
+          const probeBounds = graphViewBounds(probe);
+          const samples = Math.max(160, Math.min(900, Math.round(w * 0.7)));
+          const dx = probe.xSpan / samples;
+          const ys = [];
+          series = parsed.curves.map(({ fn }) => {
+            const pts = [];
+            let prevX = null;
+            for (let i = 0; i <= samples; i++) {
+              const x = probeBounds.xMin + (i / samples) * probe.xSpan;
+              const y = fn(x);
+              if (!Number.isFinite(y)) {
+                if (pts.length && pts[pts.length - 1] !== null) pts.push(null);
+                prevX = null;
+                continue;
+              }
+              if (prevX != null && x - prevX > dx * 1.6) pts.push(null);
               pts.push({ x, y });
-              yMin = Math.min(yMin, y);
-              yMax = Math.max(yMax, y);
+              ys.push(y);
+              prevX = x;
+            }
+            return pts;
+          });
+          if (!view) {
+            const range = robustGraphYRange(ys);
+            if (range) view = fittedGraphView(range[0], range[1]);
+            else {
+              graphMf.classList.add('invalid');
+              view = emptyGraphView();
+              series = [];
             }
           }
-          return pts;
-        });
-
-        if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) {
-          graphMf.classList.add('invalid');
-          return;
         }
-        let pad = (yMax - yMin) * 0.1;
-        if (!pad) pad = 1;
-        yMin -= pad;
-        yMax += pad;
-        const ySpan = yMax - yMin;
-
-        const toPxX = (x) => ((x - xMin) / (xMax - xMin)) * w;
-        const toPxY = (y) => h - ((y - yMin) / ySpan) * h;
-
+        if (!view) view = graphView || emptyGraphView();
+        graphShown = view;
+        const grid = paintMathGrid(gctx, view, w, h);
+        if (!series.length) return;
+        const ySpan = grid.yMax - grid.yMin;
         gctx.save();
-        gctx.lineWidth = 1.5;
-        gctx.strokeStyle = drawPadAxisColor();
-        if (xMin <= 0 && xMax >= 0) {
-          const ox = toPxX(0);
-          gctx.beginPath();
-          gctx.moveTo(ox, 0);
-          gctx.lineTo(ox, h);
-          gctx.stroke();
-        }
-        if (yMin <= 0 && yMax >= 0) {
-          const oy = toPxY(0);
-          gctx.beginPath();
-          gctx.moveTo(0, oy);
-          gctx.lineTo(w, oy);
-          gctx.stroke();
-        }
-
         series.forEach((pts, idx) => {
           gctx.strokeStyle = DRAW_GRAPH_COLORS[idx % DRAW_GRAPH_COLORS.length];
           gctx.lineWidth = 2.75;
@@ -4891,12 +5168,21 @@
           gctx.beginPath();
           let drawingLine = false;
           let prevY = null;
-          for (const { x, y } of pts) {
-            const px = toPxX(x);
-            const py = toPxY(y);
-            if (prevY != null && Math.abs(y - prevY) > ySpan * 0.45) {
+          for (const pt of pts) {
+            if (!pt) {
               drawingLine = false;
+              prevY = null;
+              continue;
             }
+            const { x, y } = pt;
+            if (x < grid.xMin || x > grid.xMax) {
+              drawingLine = false;
+              prevY = y;
+              continue;
+            }
+            const px = grid.toPxX(x);
+            const py = grid.toPxY(y);
+            if (prevY != null && Math.abs(y - prevY) > ySpan * 0.45) drawingLine = false;
             if (!drawingLine) {
               gctx.moveTo(px, py);
               drawingLine = true;
@@ -4985,6 +5271,7 @@
             png: canvas.toDataURL('image/png'),
             h: cssH,
             graph: graphFieldLatex(graphMf),
+            ...(graphViewCustom && graphView ? { view: graphView } : {}),
           })
         );
       }
@@ -5073,6 +5360,10 @@
         pad.focus({ preventScroll: true });
       }
       function move(e) {
+        if (panning) {
+          moveGraphPan(e);
+          return;
+        }
         if (!drawing) return;
         e.preventDefault();
         const p = pos(e);
@@ -5080,6 +5371,11 @@
         last = p;
       }
       function end() {
+        if (panning) {
+          endGraphPan();
+          return;
+        }
+        canvas.style.cursor = '';
         if (!drawing) return;
         drawing = false;
         last = null;
@@ -5087,10 +5383,25 @@
       }
 
       canvas.addEventListener('pointerdown', (e) => {
+        if (e.button === 2) {
+          e.preventDefault();
+          beginGraphPan(e);
+          try {
+            canvas.setPointerCapture?.(e.pointerId);
+          } catch {
+            /* указатель уже отпущен */
+          }
+          return;
+        }
         if (e.button != null && e.button !== 0) return;
-        canvas.setPointerCapture?.(e.pointerId);
+        try {
+          canvas.setPointerCapture?.(e.pointerId);
+        } catch {
+          /* указатель уже отпущен */
+        }
         start(e);
       });
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
       canvas.addEventListener('pointermove', move);
       canvas.addEventListener('pointerup', end);
       canvas.addEventListener('pointercancel', end);
