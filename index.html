@@ -619,11 +619,8 @@
     .draw-pad {
       border: 1px solid var(--line);
       border-radius: 10px;
-      background: #fff;
+      background: var(--paper);
       overflow: hidden;
-    }
-    html[data-theme="dark"] .draw-pad {
-      background: #fafaf9;
     }
     .draw-resize {
       height: 10px;
@@ -753,6 +750,7 @@
       border-bottom: 1px solid var(--line);
       border-radius: 0;
       background: var(--paper);
+      color: var(--ink);
     }
     .draw-note {
       position: relative;
@@ -815,7 +813,8 @@
     .draw-pad.note-hidden .draw-note {
       display: none;
     }
-    .draw-pad.is-folded {
+    .draw-pad.is-folded,
+    html[data-theme="dark"] .draw-pad.is-folded {
       border: none;
       background: transparent;
       overflow: visible;
@@ -854,6 +853,10 @@
       padding: 0.35rem 0.2rem 0.05rem;
       border: none;
       background: transparent;
+      color: var(--ink);
+    }
+    .draw-pad.is-folded math-field.draw-graph-input:focus-within {
+      background: var(--accent-soft);
     }
     .draw-side math-field.draw-graph-input.invalid {
       border-bottom-color: color-mix(in srgb, var(--danger) 65%, var(--line));
