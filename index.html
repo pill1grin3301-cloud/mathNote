@@ -254,8 +254,8 @@
       z-index: 35;
       display: flex;
       flex-direction: column;
-      gap: 0.85rem;
-      padding: 1.15rem 1.35rem 1.75rem;
+      gap: 0.55rem;
+      padding: 0.85rem 0.9rem 1.1rem;
       color: var(--muted);
       background: var(--paper);
       border-right: 1px solid var(--line);
@@ -268,6 +268,7 @@
     .library-note .note-title {
       color: var(--ink);
       font-weight: 500;
+      font-size: 0.82rem;
     }
     .library button:not(.primary) {
       color: var(--muted);
@@ -281,7 +282,7 @@
     }
     .library h2 {
       margin: 0;
-      font-size: 1.15rem;
+      font-size: 0.95rem;
       color: var(--ink);
       font-weight: 650;
     }
@@ -303,12 +304,12 @@
     .library-tree {
       display: flex;
       flex-direction: column;
-      gap: 0.85rem;
+      gap: 0.45rem;
     }
     .library-group {
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 0.55rem 0.65rem 0.65rem;
+      border-radius: 9px;
+      padding: 0.28rem 0.4rem 0.32rem;
       background: var(--focus-bg);
     }
     .library-group.drag-over,
@@ -319,7 +320,7 @@
     .library-group-head {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.35rem;
+      gap: 0.2rem;
       align-items: center;
       cursor: pointer;
       list-style: none;
@@ -330,36 +331,36 @@
     .library-group-head::before {
       content: '▸';
       flex: none;
-      width: 0.9rem;
+      width: 0.7rem;
       color: var(--muted);
-      font-size: 0.78rem;
+      font-size: 0.68rem;
       line-height: 1;
     }
     .library-group[open] > .library-group-head::before {
       content: '▾';
     }
     .library-group[open] > .library-group-head {
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.22rem;
     }
     .library-group-head strong {
       flex: 1;
-      min-width: 7rem;
+      min-width: 0;
     }
     .library-notes {
       display: flex;
       flex-direction: column;
-      gap: 0.3rem;
+      gap: 0.18rem;
     }
     .library-note {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.3rem;
+      gap: 0.15rem;
       align-items: center;
       width: 100%;
       text-align: left;
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 0.2rem 0.35rem;
+      border-radius: 6px;
+      padding: 0.04rem 0.2rem;
       background: var(--paper);
       cursor: grab;
     }
@@ -372,10 +373,10 @@
     }
     .library-note .note-open {
       flex: 1;
-      min-width: 8rem;
+      min-width: 0;
       border: 0;
       background: transparent;
-      padding: 0.35rem 0.2rem;
+      padding: 0.12rem 0.1rem;
       text-align: left;
       box-shadow: none;
     }
@@ -384,34 +385,34 @@
     }
     .library-note .note-meta,
     .library-group-head button {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.45rem;
+      font-size: 0.68rem;
+      padding: 0.1rem 0.22rem;
     }
     .library .icon-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 1.7rem;
-      min-height: 1.7rem;
-      padding: 0.28rem;
+      min-width: 1.22rem;
+      min-height: 1.22rem;
+      padding: 0.12rem;
     }
     .library .icon-btn svg {
       display: block;
-      width: 0.95rem;
-      height: 0.95rem;
+      width: 0.7rem;
+      height: 0.7rem;
     }
     .library-note .icon-btn {
-      min-width: 1.4rem;
-      min-height: 1.4rem;
-      padding: 0.18rem;
+      min-width: 1.05rem;
+      min-height: 1.05rem;
+      padding: 0.06rem;
     }
     .library-note .icon-btn svg {
-      width: 0.72rem;
-      height: 0.72rem;
+      width: 0.6rem;
+      height: 0.6rem;
     }
     .drag-grip {
       color: var(--muted);
-      font-size: 0.85rem;
+      font-size: 0.68rem;
       letter-spacing: -0.12em;
       user-select: none;
       cursor: grab;
@@ -516,18 +517,16 @@
       color: var(--accent);
     }
 
-    .block.text .text-input {
-      width: 100%;
-      border: none;
-      outline: none;
-      resize: none;
-      background: transparent;
-      font: inherit;
+    .block.text math-field {
       font-size: 1rem;
       line-height: 1.45;
       padding: 0.5rem 0.35rem;
       min-height: 2.4rem;
-      overflow: hidden;
+      --text-font-family: var(--sans);
+    }
+    .block.text math-field:focus-within {
+      background: transparent;
+      border-radius: 0;
     }
 
     math-field {
@@ -1021,12 +1020,12 @@
       <p class="sc">Буквенные команды — на EN-раскладке. Большинство автозамен от 3 символов и все греческие подтверждаются <kbd>Enter</kbd>. Команды, отмеченные «сразу», рисуются без него.</p>
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
-        <li><strong>Текст и комментарии:</strong> <kbd>Tab</kbd> — четыре пробела</li>
+        <li><strong>Текст и комментарии:</strong> <kbd>Tab</kbd> — четыре пробела · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
-        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
+        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
         <li><strong>Сравнения:</strong> <kbd>lt</kbd> &lt; · <kbd>gt</kbd> &gt; · <kbd>le</kbd>/<kbd>&lt;=</kbd> ≤ · <kbd>ge</kbd>/<kbd>&gt;=</kbd> ≥ · <kbd>!=</kbd> ≠ · <kbd>~~</kbd> ≈ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>Alt</kbd>+<kbd>=</kbd> / <kbd>iff</kbd> ⇔ сразу</li>
         <li><strong>Стрелки:</strong> <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>harr</kbd> ↔ · <kbd>larr</kbd> ← · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓</li>
         <li><strong>Множества и логика:</strong> <kbd>RR</kbd> ℝ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>ems</kbd> ∅ · <kbd>in</kbd>+<kbd>Enter</kbd> ∈ · <kbd>!in</kbd> ∉ сразу · <kbd>!EE</kbd> ∄ сразу · <kbd>sub</kbd> ⊂ · <kbd>!sub</kbd> ⊄ · <kbd>sube</kbd> ⊆ · <kbd>!sube</kbd> ⊈ · <kbd>sup</kbd> ⊃ · <kbd>!sup</kbd> ⊅ · <kbd>supe</kbd> ⊇ · <kbd>!supe</kbd> ⊉ · <kbd>uu</kbd>/<kbd>union</kbd> ∪ · <kbd>nn</kbd> ∩ · <kbd>xx</kbd> × (умножение / декартово произведение) · <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA/forall</kbd> ∀ · <kbd>EE/exists</kbd> ∃</li>
@@ -1126,8 +1125,9 @@
 
     /** Акценты над символом слева — Shift+~ */
     const ACCENT_PICKER = [
-      { latex: '\\hat', sym: 'x̂', name: '^' },
       { latex: '\\vec', sym: 'x⃗', name: '→' },
+      { latex: '\\dot', sym: 'ẋ', name: '·' },
+      { latex: '\\hat', sym: 'x̂', name: '^' },
       { latex: '\\bar', sym: 'x̄', name: '−' },
       { latex: '\\tilde', sym: 'x̃', name: '~' },
     ];
@@ -1296,6 +1296,29 @@
         }
       }
       return t;
+    }
+
+    function escapePlainTextLatex(text) {
+      return String(text)
+        .replace(/\\/g, '\\textbackslash{}')
+        .replace(/([{}#$%&_^~])/g, '\\$1');
+    }
+
+    /** Старый текстовый блок — обычная строка. Новый — LaTeX, в том числе `слово $ \\theta $`. */
+    function isStoredTextLatex(content) {
+      const raw = content ?? '';
+      if (/\\(?:text|textbackslash|displaystyle|displaylines)\b|\\\\/.test(raw)) return true;
+      return /\$[^$]*\$/.test(raw);
+    }
+
+    function textContentToLatex(content) {
+      const raw = content ?? '';
+      if (!raw) return '';
+      if (isStoredTextLatex(raw)) return raw;
+      return raw
+        .split('\n')
+        .map((line) => `\\text{${line ? escapePlainTextLatex(line) : ' '}}`)
+        .join('\\\\');
     }
 
     /** Пусто / одни placeholder'ы и разрывы строк — как чистый лист */
@@ -1632,7 +1655,7 @@
       return [start, end];
     }
 
-    /** Крышка / черта / стрелка / тильда — только над символом слева от курсора. */
+    /** Стрелка / точка / крышка / черта / тильда — только над символом слева от курсора. */
     function wrapPreviousWithAccent(mf, accentCmd) {
       const model = mf._mathfield?.model;
       if (!model) return;
@@ -2005,10 +2028,17 @@
             return;
           }
         }
-        mf.insert('\\left\\langle\\right\\rangle', {
-          format: 'latex',
-          smartFence: false,
-        });
+        mf.insert(
+          mf.defaultMode === 'text'
+            ? '\\left\\langle#?\\right\\rangle'
+            : '\\left\\langle\\right\\rangle',
+          {
+            format: 'latex',
+            smartFence: false,
+            selectionMode: mf.defaultMode === 'text' ? 'placeholder' : 'after',
+          }
+        );
+        if (mf.defaultMode === 'text') return;
         const after = mf._mathfield?.model;
         const bracket = after?.at(after.position);
         if (bracket?.type === 'leftright') {
@@ -2584,6 +2614,7 @@
       rho: ['\\rho', '\\Rho'],
       sig: ['\\sigma', '\\Sigma'],
       tau: ['\\tau', '\\Tau'],
+      the: ['\\theta', '\\Theta'],
       ups: ['\\upsilon', '\\Upsilon'],
       phi: ['\\varphi', '\\Phi'],
       chi: ['\\chi', '\\Chi'],
@@ -2627,7 +2658,6 @@
       alpha: '\\alpha',
       delta: '\\delta',
       Delta: '\\Delta',
-      theta: '\\theta',
       Theta: '\\Theta',
       nabla: '\\nabla',
       grad: '\\nabla',
@@ -2801,6 +2831,14 @@
     }
 
     function insertAbbrevLatex(mf, latex) {
+      // Стирание последней буквы inline-формулы в тексте само выходит в текст.
+      if (mf.mode === 'text') {
+        try {
+          mf.executeCommand(['switchMode', 'math', '', '']);
+        } catch {
+          /* ignore */
+        }
+      }
       const placeholder = /#\?|#0/.test(latex);
       mf.insert(latex, {
         format: 'latex',
@@ -2958,6 +2996,9 @@
           latex = token === token.toUpperCase() ? pair[1] : pair[0];
         } else {
           latex = lookupEnterInline(token);
+        }
+        if (!latex && token === 'th' && mf.defaultMode === 'text') {
+          latex = '\\operatorname{th}';
         }
       }
       if (!latex) {
@@ -4327,10 +4368,40 @@
       return true;
     }
 
+    function applyTextFieldMetrics(mf) {
+      const root = mf.shadowRoot;
+      if (!root) {
+        requestAnimationFrame(() => {
+          if (mf.isConnected) applyTextFieldMetrics(mf);
+        });
+        return;
+      }
+      if (root.querySelector('style[data-text-metrics]')) return;
+      const style = document.createElement('style');
+      style.dataset.textMetrics = '';
+      style.textContent = `
+        .ML__latex, .ML__base {
+          width: 100% !important;
+          max-width: 100% !important;
+          white-space: pre-wrap !important;
+          line-height: 1.45 !important;
+        }
+        .ML__text { white-space: pre-wrap !important; }
+      `;
+      root.appendChild(style);
+    }
+
     function wireMathField(mf, block) {
       const fieldEpoch = mathFieldEpoch;
       mf.setAttribute('virtual-keyboard-mode', 'onfocus');
-      mf.setAttribute('smart-mode', '');
+      if (block.type !== 'text') mf.setAttribute('smart-mode', '');
+      if (block.type === 'text') {
+        mf.classList.add('text-math');
+        mf.defaultMode = 'text';
+        mf.smartMode = false;
+        mf.placeholder = 'Пояснение к шагу…';
+        applyTextFieldMetrics(mf);
+      }
       // сами делаем () как в VS Code; smartFence даёт \\left...\\right
       mf.smartFence = false;
       // Даже одноцифровую степень завершаем явно по Enter.
@@ -4353,6 +4424,8 @@
             }
             Object.assign(shortcuts, INSTANT_INLINE_ABBREV);
             shortcuts.in = null;
+            // В тексте `th` мгновенно съедает `the` → θ.
+            if (block.type === 'text') shortcuts.th = null;
             shortcuts['!in'] = '\\notin';
             shortcuts['!EE'] = '\\nexists';
             shortcuts['*'] = '\\ast';
@@ -4371,7 +4444,10 @@
       }
       // Space вставляет матв пробел (по умолчанию MathLive его игнорирует)
       mf.mathModeSpace = '\\:';
-      mf.value = block.content || '';
+      mf.value =
+        block.type === 'text'
+          ? textContentToLatex(block.content || '')
+          : block.content || '';
       const savedHistory = mathHistoryByBlockId.get(block.id);
       const currentValue = mf.value ?? '';
       const history =
@@ -6557,6 +6633,64 @@
       }
     }
 
+    /** Пробел или начало строки: граница для Ctrl+Backspace в тексте. */
+    function isTextWordGap(atom) {
+      if (!atom || atom.type === 'first') return true;
+      if (isSpacingAtom(atom)) return true;
+      const value = String(atom.value ?? '');
+      return value.length > 0 && /^\s+$/.test(value);
+    }
+
+    /**
+     * Ctrl+Backspace в тексте: слово до пробела, вместе с хвостовыми пробелами.
+     * MathLive deletePreviousWord не стирает слово в начале единственной строки.
+     */
+    function deletePreviousTextWord(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        if (!model.selectionIsCollapsed) {
+          mf.executeCommand('deleteBackward');
+          return true;
+        }
+        const end = atomJustBeforeCaret(model);
+        if (!end || end.type === 'first') return false;
+
+        let wordEnd = end;
+        if (isTextWordGap(wordEnd)) {
+          let cursor = wordEnd;
+          while (isTextWordGap(cursor)) {
+            const previous = cursor.leftSibling;
+            if (!previous || previous.type === 'first') {
+              let start = end;
+              while (
+                start.leftSibling &&
+                start.leftSibling.type !== 'first' &&
+                isTextWordGap(start.leftSibling)
+              ) {
+                start = start.leftSibling;
+              }
+              return deleteAtomsInclusive(mf, start, end);
+            }
+            cursor = previous;
+          }
+          wordEnd = cursor;
+        }
+
+        let start = wordEnd;
+        while (
+          start.leftSibling &&
+          start.leftSibling.type !== 'first' &&
+          !isTextWordGap(start.leftSibling)
+        ) {
+          start = start.leftSibling;
+        }
+        return deleteAtomsInclusive(mf, start, end);
+      } catch {
+        return false;
+      }
+    }
+
     /**
      * Пока сессия комментария — полностью контролируем ввод (пробелы/буквы).
      * @returns {boolean} true если событие обработано
@@ -6938,18 +7072,7 @@
           input.addEventListener('keydown', (e) => onFieldKey(e, block));
           body.appendChild(input);
         } else if (block.type === 'text') {
-          const ta = document.createElement('textarea');
-          ta.className = 'text-input';
-          ta.value = block.content;
-          ta.placeholder = 'Пояснение к шагу…';
-          ta.rows = 1;
-          ta.addEventListener('input', () => {
-            updateContent(block.id, ta.value);
-            autosizeTextarea(ta);
-          });
-          ta.addEventListener('keydown', (e) => onFieldKey(e, block));
-          body.appendChild(ta);
-          requestAnimationFrame(() => autosizeTextarea(ta));
+          body.appendChild(wireMathField(document.createElement('math-field'), block));
         } else if (block.type === 'draw') {
           const pad = wireDrawPad(block);
           body.appendChild(pad);
@@ -6992,6 +7115,178 @@
       });
     }
 
+    function textBlockInMathMode(block, target) {
+      return (
+        block.type === 'text' &&
+        target?.tagName === 'MATH-FIELD' &&
+        target.mode === 'math'
+      );
+    }
+
+    function textCharsBeforeCaret(mf, maxLen) {
+      const model = mf?._mathfield?.model;
+      if (!model || model.selectionIsCollapsed === false) return '';
+      let atom = atomJustBeforeCaret(model);
+      const chars = [];
+      while (atom && atom.type !== 'first' && chars.length < maxLen) {
+        if (atom.mode && atom.mode !== 'text') break;
+        const ch = latinLetterOfAtom(atom) || atomPlainChar(atom);
+        if (!ch || !/^[\x21-\x7e]$/.test(ch)) break;
+        chars.unshift(ch);
+        atom = atom.isFirstSibling ? null : atom.leftSibling;
+      }
+      return chars.join('');
+    }
+
+    function inlineShortcutLatex(mf, token) {
+      if (!token || token === 'th' || token === 'of' || token === 'or') return '';
+      const raw = mf.inlineShortcuts?.[token];
+      if (typeof raw === 'string') return raw;
+      if (raw && typeof raw === 'object' && typeof raw.value === 'string') return raw.value;
+      return '';
+    }
+
+    function longestTextInlineShortcut(mf, typed) {
+      if (!typed || typed.length < 2) return '';
+      const table = mf.inlineShortcuts || {};
+      let best = '';
+      for (const key of Object.keys(table)) {
+        if (key.length < 2 || key.length > typed.length || key.length < best.length) continue;
+        if (!typed.endsWith(key)) continue;
+        if (inlineShortcutLatex(mf, key) === '') continue;
+        const start = typed.length - key.length;
+        if (start > 0 && /[A-Za-z]/.test(typed[start - 1])) continue;
+        best = key;
+      }
+      return best;
+    }
+
+    function enterLatexForTextRun(token) {
+      if (!token) return '';
+      if (token === 'th') return '\\operatorname{th}';
+      const pair = GREEK_ABBREV[token.toLowerCase()];
+      if (pair) return token === token.toUpperCase() ? pair[1] : pair[0];
+      return lookupEnterInline(token) || '';
+    }
+
+    function commitTextRunLatex(mf, block, deleteCount, latex) {
+      for (let i = 0; i < deleteCount; i++) mf.executeCommand('deleteBackward');
+      if (mf.mode !== 'math') {
+        try {
+          mf.executeCommand(['switchMode', 'math', '', '']);
+        } catch {
+          /* ignore */
+        }
+      }
+      insertAbbrevLatex(mf, latex);
+      saveMathField(mf, block.id);
+    }
+
+    function trailingSimpleMathArg(mf) {
+      const raw = textCharsBeforeCaret(mf, 16);
+      if (/^[0-9]+(?:\.[0-9]+)?$/.test(raw) || /^[A-Za-z]$/.test(raw)) return raw;
+      return '';
+    }
+
+    function promoteSimpleMathArg(mf) {
+      const arg = trailingSimpleMathArg(mf);
+      if (arg) {
+        for (let i = 0; i < arg.length; i++) mf.executeCommand('deleteBackward');
+      }
+      if (mf.mode !== 'math') {
+        try {
+          mf.executeCommand(['switchMode', 'math', '', '']);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (arg) mf.insert(arg, { format: 'latex', mode: 'math' });
+    }
+
+    function tryTextModeMathShortcut(e, mf, block) {
+      if (e.repeat && e.key !== 'Enter') return false;
+      const model = mf._mathfield?.model;
+      if (!model || model.selectionIsCollapsed === false) return false;
+
+      if (e.key === 'Enter' && !e.shiftKey) {
+        const { letters, before } = greekAbbrevLettersBeforeCaret(model);
+        let token = letters.join('');
+        let extra = 0;
+        const beforeCh = atomPlainChar(before);
+        if (letters.length && beforeCh === '!') {
+          token = '!' + token;
+          extra = 1;
+        } else if (letters.length && beforeCh === '(' && token.toLowerCase() === 'mod') {
+          token = '(mod';
+          extra = 1;
+        }
+        const latex = enterLatexForTextRun(token);
+        if (!latex || !letters.length) return false;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        try {
+          commitTextRunLatex(mf, block, letters.length + extra, latex);
+        } catch {
+          /* ignore */
+        }
+        return true;
+      }
+
+      if (e.key.length === 1 && !e.altKey) {
+        const typed = textCharsBeforeCaret(mf, 16) + e.key;
+        const shortcut = longestTextInlineShortcut(mf, typed);
+        if (shortcut) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          try {
+            commitTextRunLatex(
+              mf,
+              block,
+              shortcut.length - 1,
+              inlineShortcutLatex(mf, shortcut)
+            );
+          } catch {
+            /* ignore */
+          }
+          return true;
+        }
+      }
+
+      const fence = autoFencePair(e);
+      const power = e.key === '^' || e.key === '_';
+      const slash = isFractionSlashKey(e);
+      const star = isAsteriskKey(e);
+      if (!fence && !power && !slash && !star) return false;
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      try {
+        const pending = textCharsBeforeCaret(mf, 8);
+        if (pending === 'th') commitTextRunLatex(mf, block, 2, '\\operatorname{th}');
+        if (fence) {
+          if (mf.mode !== 'math') mf.executeCommand(['switchMode', 'math', '', '']);
+          insertAutoFence(mf, fence[0], fence[1]);
+        } else if (slash) {
+          promoteSimpleMathArg(mf);
+          insertSmartFraction(mf);
+        } else if (power) {
+          promoteSimpleMathArg(mf);
+          mf.executeCommand(['insert', e.key === '^' ? '#@^{#?}' : '#@_{#?}']);
+        } else if (star) {
+          if (mf.mode !== 'math') mf.executeCommand(['switchMode', 'math', '', '']);
+          mf.executeCommand(['insert', '\\ast']);
+        }
+        flushMathInlineShortcutBuffer(mf);
+        saveMathField(mf, block.id);
+      } catch {
+        /* ignore */
+      }
+      return true;
+    }
+
     function onFieldKey(e, block) {
       if (
         block.type === 'text' &&
@@ -7001,20 +7296,95 @@
         !e.metaKey &&
         !e.altKey
       ) {
-        const input = e.currentTarget;
-        if (input instanceof HTMLTextAreaElement) {
+        const mf = e.currentTarget;
+        if (mf?.tagName === 'MATH-FIELD' && mf.mode === 'text') {
           e.preventDefault();
-          const start = input.selectionStart;
-          const end = input.selectionEnd;
-          input.setRangeText('    ', start, end, 'end');
-          updateContent(block.id, input.value);
-          autosizeTextarea(input);
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          try {
+            for (let i = 0; i < 4; i++) {
+              mf.insert(' ', { format: 'text', mode: 'text' });
+            }
+            saveMathField(mf, block.id);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+      }
+
+      if (
+        block.type === 'text' &&
+        e.key === '$' &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        e.currentTarget?.tagName === 'MATH-FIELD' &&
+        e.currentTarget.mode !== 'latex'
+      ) {
+        const mf = e.currentTarget;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        const next = mf.mode === 'math' ? 'text' : 'math';
+        try {
+          mf.executeCommand(['switchMode', next, '', '']);
+        } catch {
+          try {
+            mf.mode = next;
+          } catch {
+            /* ignore */
+          }
         }
         return;
       }
 
+      if (
+        block.type === 'text' &&
+        e.currentTarget?.tagName === 'MATH-FIELD' &&
+        e.currentTarget.mode === 'text' &&
+        !e.ctrlKey &&
+        !e.metaKey
+      ) {
+        const mf = e.currentTarget;
+        if (
+          e.altKey &&
+          !e.shiftKey &&
+          (e.code === 'BracketLeft' || e.key === '[')
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+          try {
+            if (mf.mode !== 'math') {
+              mf.executeCommand(['switchMode', 'math', '', '']);
+            }
+            insertStretchAngleBrackets(mf);
+            saveMathField(mf, block.id);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        const altMath =
+          e.altKey &&
+          (/^Digit[0-9]$/.test(e.code) ||
+            e.code === 'Minus' ||
+            e.code === 'Equal' ||
+            /^Key[A-Z]$/.test(e.code));
+        if (altMath) {
+          try {
+            mf.executeCommand(['switchMode', 'math', '', '']);
+          } catch {
+            /* ignore */
+          }
+        } else if (!e.altKey && tryTextModeMathShortcut(e, mf, block)) {
+          return;
+        }
+      }
+
       // Alt+Digit → степень (Shift свободен для () и т.п.)
-      if (block.type === 'math') {
+      if (block.type === 'math' || textBlockInMathMode(block, e.currentTarget)) {
         const mf = e.currentTarget;
 
         if (
@@ -7238,7 +7608,7 @@
         e.key === 'Backspace' &&
         (e.ctrlKey || e.metaKey) &&
         !e.altKey &&
-        block.type === 'math'
+        (block.type === 'math' || block.type === 'text')
       ) {
         const mf = e.currentTarget;
         const mode = mf.mode;
@@ -7262,8 +7632,10 @@
           try {
             const deleted = isInHashComment(mf)
               ? deletePreviousCommentWord(mf)
-              : null;
-            if (deleted === null) mf.executeCommand('deletePreviousWord');
+              : deletePreviousTextWord(mf);
+            if (deleted === null || deleted === false) {
+              mf.executeCommand('deletePreviousWord');
+            }
             if (wasHashComment && !isInHashComment(mf)) {
               leaveFormerCommentRow(mf);
             }
@@ -7321,12 +7693,18 @@
         }
       }
 
-      if (e.key === 'Enter' && block.type === 'math' && !e.shiftKey && !e.altKey) {
+      if (
+        e.key === 'Enter' &&
+        (block.type === 'math' || textBlockInMathMode(block, e.currentTarget)) &&
+        !e.shiftKey &&
+        !e.altKey
+      ) {
         const mf = e.currentTarget;
         const mode = mf.mode;
         if (mode === 'latex' || mode === 'text') return;
 
         if (e.ctrlKey || e.metaKey) {
+          if (block.type === 'text') return;
           // новый блок-шаг
           e.preventDefault();
           insertBlock('math', block.id);
@@ -7379,10 +7757,12 @@
             }
           } else {
             const fenceCtx = closingFenceContext(mf);
-            if (fenceCtx === 'after') {
-              mf.executeCommand('addRowAfter');
-            } else if (fenceCtx === 'before') {
+            if (fenceCtx === 'before') {
               handleEnterOutOfParens(mf);
+            } else if (block.type === 'text') {
+              mf.executeCommand(['switchMode', 'text', '', '']);
+            } else if (fenceCtx === 'after') {
+              mf.executeCommand('addRowAfter');
             } else {
               mf.executeCommand('addRowAfter');
             }
@@ -7404,7 +7784,7 @@
         insertBlock(block.type === 'heading' ? 'text' : block.type === 'draw' ? 'math' : block.type, block.id);
         return;
       }
-      if (e.key === 'Backspace' && block.type === 'math' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.key === 'Backspace' && (block.type === 'math' || block.type === 'text') && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const mf = e.currentTarget;
         const mode = mf.mode;
         // Shift+Backspace MathLive часто игнорирует — стираем сами.
@@ -7475,11 +7855,17 @@
       }
 
       if (e.key === 'Backspace') {
-        if (block.type === 'math') {
+        if (block.type === 'math' || (block.type === 'text' && e.currentTarget?.tagName === 'MATH-FIELD')) {
           const mf = e.currentTarget;
           const mode = mf.mode;
           // не трогаем Backspace во время набора \команды
-          if (mode === 'latex' || mode === 'text') return;
+          if (mode === 'latex' || (block.type === 'math' && mode === 'text')) return;
+          if (block.type === 'text' && mode === 'text') {
+            if (!isVisuallyEmptyMath(mf.value ?? '') || e.repeat) return;
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
           // и не preventDefault, пока в поле есть хоть что-то
           if (!isVisuallyEmptyMath(mf.value ?? '') || e.repeat) return;
           e.preventDefault();
