@@ -479,6 +479,27 @@
       user-select: none;
       letter-spacing: -0.02em;
     }
+    .block.draw .num {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.12rem;
+      min-width: 1.7rem;
+    }
+    .draw-fold {
+      margin-top: 0;
+      padding: 0.16rem 0.34rem;
+      border-radius: 6px;
+      color: var(--muted);
+      background: var(--focus-bg);
+      font-size: 0.68rem;
+      line-height: 1;
+    }
+    .draw-fold[aria-expanded="false"] {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
     .block.heading .num { visibility: hidden; }
 
     .body { min-width: 0; }
@@ -634,14 +655,46 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.45rem;
-      padding: 0.45rem 0.55rem;
+      gap: 0.3rem;
+      height: 100%;
+      padding: 0.28rem 0.4rem;
       border-bottom: 1px solid var(--line);
       background: var(--focus-bg);
     }
+    .draw-tools button {
+      font-size: 0.75rem;
+      padding: 0.16rem 0.42rem;
+    }
+    .draw-color { position: relative; }
+    .draw-color-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+    }
+    .draw-color-dot {
+      width: 0.68rem;
+      height: 0.68rem;
+      border-radius: 999px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+    }
+    .draw-color-bar {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 6;
+      display: flex;
+      gap: 0.28rem;
+      padding: 0.32rem;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px var(--shadow);
+    }
+    .draw-color-bar[hidden] { display: none; }
+    .draw-pad.color-open { overflow: visible; }
     .draw-tools .swatch {
-      width: 1.35rem;
-      height: 1.35rem;
+      width: 1.15rem;
+      height: 1.15rem;
       border-radius: 999px;
       border: 2px solid transparent;
       padding: 0;
@@ -659,30 +712,154 @@
     .draw-tools label.size {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
-      font-size: 0.78rem;
+      gap: 0.28rem;
+      font-size: 0.72rem;
       color: var(--muted);
     }
     .draw-tools input[type="range"] {
-      width: 7rem;
+      width: 4.2rem;
       accent-color: var(--accent);
     }
-    .draw-tools math-field.draw-graph-input {
-      flex: 1 1 14rem;
-      min-width: 9rem;
-      max-width: 30rem;
-      min-height: 2.15rem;
+    .draw-split {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      align-items: stretch;
+      min-width: 0;
+    }
+    .draw-main {
+      display: grid;
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      grid-template-rows: subgrid;
+      min-width: 0;
+    }
+    .draw-side {
+      display: grid;
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      grid-template-rows: subgrid;
+      min-width: 0;
+      border-left: 1px solid var(--line);
+      background: var(--focus-bg);
+    }
+    .draw-side math-field.draw-graph-input {
+      width: 100%;
+      height: 100%;
+      min-height: 1.85rem;
+      font-size: 0.95rem;
+      padding: 0.2rem 0.4rem;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background: var(--paper);
+    }
+    .draw-note {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      display: flex;
+    }
+    .draw-note-hint {
+      position: absolute;
+      left: 0.5rem;
+      top: 0.55rem;
+      z-index: 1;
+      color: var(--muted);
+      opacity: 0.55;
+      font-size: 0.75rem;
+      pointer-events: none;
+    }
+    .draw-note.has-value .draw-note-hint,
+    .draw-note:focus-within .draw-note-hint {
+      display: none;
+    }
+    .draw-note math-field.draw-note-input {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 100%;
       font-size: 1.05rem;
-      padding: 0.15rem 0.4rem;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--bg);
+      padding: 0.4rem 0.35rem;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      caret-color: var(--caret);
+      --caret-color: var(--caret);
     }
-    .draw-tools math-field.draw-graph-input.invalid {
-      border-color: color-mix(in srgb, var(--danger) 65%, var(--line));
+    .draw-pad.note-hidden:not(.is-folded) .draw-split {
+      display: flex;
+      flex-direction: column;
     }
-    .draw-tools math-field.draw-graph-input:focus-within {
-      border-radius: 6px;
+    .draw-pad.note-hidden:not(.is-folded) .draw-main,
+    .draw-pad.note-hidden:not(.is-folded) .draw-side {
+      display: contents;
+    }
+    .draw-pad.note-hidden:not(.is-folded) .draw-tools {
+      order: 0;
+      width: 100%;
+      height: auto;
+    }
+    .draw-pad.note-hidden:not(.is-folded) math-field.draw-graph-input {
+      order: 1;
+      width: 100%;
+      height: auto;
+    }
+    .draw-pad.note-hidden:not(.is-folded) .draw-canvas-wrap {
+      order: 2;
+      width: 100%;
+    }
+    .draw-pad.note-hidden .draw-note {
+      display: none;
+    }
+    .draw-pad.is-folded {
+      border: none;
+      background: transparent;
+      overflow: visible;
+    }
+    .draw-pad.is-folded .draw-main,
+    .draw-pad.is-folded .draw-note,
+    .draw-pad.is-folded .draw-resize {
+      display: none;
+    }
+    .draw-pad.is-folded .draw-split {
+      display: block;
+    }
+    .draw-pad.is-folded .draw-side {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      border: none;
+      background: transparent;
+    }
+    .draw-graph-tag {
+      display: none;
+    }
+    .draw-pad.is-folded .draw-graph-tag {
+      display: block;
+      margin: 0 0.15rem 0.2rem;
+      padding: 0 0.35rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.2;
+    }
+    .draw-pad.is-folded math-field.draw-graph-input {
+      width: 100%;
+      height: auto;
+      min-height: 2.2rem;
+      font-size: 1.35rem;
+      padding: 0.35rem 0.2rem 0.05rem;
+      border: none;
+      background: transparent;
+    }
+    .draw-side math-field.draw-graph-input.invalid {
+      border-bottom-color: color-mix(in srgb, var(--danger) 65%, var(--line));
+    }
+    .draw-pad.is-folded math-field.draw-graph-input.invalid {
+      border: none;
     }
     .draw-zoom {
       display: inline-flex;
@@ -842,7 +1019,7 @@
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
         <li><strong>Текст и комментарии:</strong> <kbd>Tab</kbd> — четыре пробела</li>
-        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> и <kbd>{</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
+        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
@@ -1546,7 +1723,13 @@
           return;
         }
         mf.insert(`${open}${close}`, { format: 'latex', smartFence: false });
-        mf.executeCommand('moveToPreviousChar');
+        const after = mf._mathfield?.model;
+        const atom = after?.at(after.position);
+        if (atom?.type === 'leftright') {
+          moveCaretIntoBranch(mf, atom, 'body');
+        } else {
+          mf.executeCommand('moveToPreviousChar');
+        }
       } finally {
         flushMathInlineShortcutBuffer(mf);
       }
@@ -1560,6 +1743,7 @@
       if (e.altKey || e.ctrlKey || e.metaKey) return null;
       if (e.key === '(') return ['(', ')'];
       if (e.key === '{') return ['\\{', '\\}'];
+      if (e.key === '|') return ['\\left|', '\\right|'];
       return null;
     }
 
@@ -4533,6 +4717,9 @@
       s = s.replace(/\\mathrm\{([^{}]*)\}/g, '$1');
       s = s.replace(/\\text\{([^{}]*)\}/g, '$1');
       s = s.replace(/\\(left|right|displaystyle|textstyle)/g, '');
+      for (let i = 0; i < 6 && /\|[^|]+\|/.test(s); i++) {
+        s = s.replace(/\|([^|]+)\|/g, 'abs($1)');
+      }
       s = s.replace(/\\(sin|cos|tan|cot|ln|log|lg|exp)/g, '$1');
       s = s.replace(/\\sqrt\{([^{}]*)\}/g, 'sqrt($1)');
       s = s.replace(/\\pi/g, 'pi');
@@ -4822,13 +5009,16 @@
     }
 
     function parseDrawContent(raw) {
-      if (!raw) return { png: '', h: 280, graph: '' };
+      if (!raw) return { png: '', h: 280, graph: '', note: '', folded: false, noteHidden: false };
       try {
         const data = JSON.parse(raw);
         return {
           png: data.png || '',
           h: Number(data.h) > 0 ? Number(data.h) : 280,
           graph: typeof data.graph === 'string' ? data.graph : '',
+          note: typeof data.note === 'string' ? data.note : '',
+          folded: data.folded === true,
+          noteHidden: data.noteHidden === true,
           view: readGraphView(data.view),
         };
       } catch {
@@ -4836,6 +5026,9 @@
           png: typeof raw === 'string' && raw.startsWith('data:') ? raw : '',
           h: 280,
           graph: '',
+          note: '',
+          folded: false,
+          noteHidden: false,
           view: null,
         };
       }
@@ -4876,6 +5069,45 @@
       const redoStack = drawHistory.redo;
       const UNDO_MAX = 40;
       const saved = parseDrawContent(block.content);
+      let folded = saved.folded;
+      let noteHidden = saved.noteHidden;
+
+      const foldBtn = document.createElement('button');
+      foldBtn.type = 'button';
+      foldBtn.className = 'draw-fold';
+      foldBtn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+      foldBtn.title = folded ? 'Показать график' : 'Свернуть график';
+      foldBtn.setAttribute('aria-label', foldBtn.title);
+      foldBtn.textContent = folded ? '▸' : '▾';
+      pad.foldButton = foldBtn;
+      if (folded) pad.classList.add('is-folded');
+
+      const noteBtn = document.createElement('button');
+      noteBtn.type = 'button';
+      noteBtn.className = 'draw-fold draw-note-toggle';
+      noteBtn.textContent = '✎';
+      function syncNoteBtn() {
+        noteBtn.setAttribute('aria-expanded', noteHidden ? 'false' : 'true');
+        noteBtn.title = noteHidden ? 'Показать комментарий' : 'Спрятать комментарий';
+        noteBtn.setAttribute('aria-label', noteBtn.title);
+      }
+      syncNoteBtn();
+      pad.noteButton = noteBtn;
+      if (noteHidden) pad.classList.add('note-hidden');
+
+      const colorBox = document.createElement('div');
+      colorBox.className = 'draw-color';
+      const btnColor = document.createElement('button');
+      btnColor.type = 'button';
+      btnColor.className = 'tool-btn draw-color-btn';
+      btnColor.title = 'Цвет кисти';
+      const colorDot = document.createElement('i');
+      colorDot.className = 'draw-color-dot';
+      colorDot.style.background = color;
+      btnColor.append(colorDot, document.createTextNode('Цвет'));
+      const colorBar = document.createElement('div');
+      colorBar.className = 'draw-color-bar';
+      colorBar.hidden = true;
 
       const swatches = DRAW_COLORS.map((c) => {
         const b = document.createElement('button');
@@ -4885,13 +5117,36 @@
         b.title = c;
         b.addEventListener('click', () => {
           color = c;
+          colorDot.style.background = c;
           mode = 'brush';
           swatches.forEach((s) => s.classList.toggle('active', s === b));
           btnBrush.classList.add('active');
           btnErase.classList.remove('active');
+          closeColorBar();
         });
         return b;
       });
+      colorBar.append(...swatches);
+
+      function closeColorBar() {
+        colorBar.hidden = true;
+        pad.classList.remove('color-open');
+        document.removeEventListener('pointerdown', onColorDoc, true);
+      }
+      function onColorDoc(e) {
+        if (colorBox.contains(e.target)) return;
+        closeColorBar();
+      }
+      btnColor.addEventListener('click', () => {
+        if (colorBar.hidden) {
+          colorBar.hidden = false;
+          pad.classList.add('color-open');
+          document.addEventListener('pointerdown', onColorDoc, true);
+        } else {
+          closeColorBar();
+        }
+      });
+      colorBox.append(btnColor, colorBar);
 
       const btnBrush = document.createElement('button');
       btnBrush.type = 'button';
@@ -4955,7 +5210,17 @@
         persist();
       });
 
-      tools.append(...swatches, btnBrush, btnErase, sizeLabel, graphMf, zoomBox, btnClear);
+      const noteWrap = document.createElement('div');
+      noteWrap.className = 'draw-note';
+      const noteHint = document.createElement('span');
+      noteHint.className = 'draw-note-hint';
+      noteHint.textContent = 'комментарий';
+      const noteMf = document.createElement('math-field');
+      noteMf.classList.add('draw-note-input');
+      noteMf.title = 'Комментарий к графику';
+      noteWrap.append(noteHint, noteMf);
+
+      tools.append(colorBox, btnBrush, btnErase, sizeLabel, zoomBox, btnClear);
 
       const graphSpecBlock = {
         id: `${block.id}:graph`,
@@ -4964,6 +5229,14 @@
         content: saved.graph || '',
       };
       wireMathField(graphMf, graphSpecBlock);
+
+      const noteSpecBlock = {
+        id: `${block.id}:note`,
+        type: 'math',
+        graphField: true,
+        content: saved.note || '',
+      };
+      wireMathField(noteMf, noteSpecBlock);
 
       const canvasWrap = document.createElement('div');
       canvasWrap.className = 'draw-canvas-wrap';
@@ -5237,6 +5510,17 @@
       graphMf.addEventListener('mount', bootGraphFieldValue, { once: true });
       queueMicrotask(bootGraphFieldValue);
 
+      function bootNoteFieldValue() {
+        if (!noteMf.isConnected) return;
+        const want = saved.note || '';
+        if (want && isVisuallyEmptyMath(graphFieldLatex(noteMf))) {
+          noteMf.value = want;
+        }
+        noteWrap.classList.toggle('has-value', !isVisuallyEmptyMath(graphFieldLatex(noteMf)));
+      }
+      noteMf.addEventListener('mount', bootNoteFieldValue, { once: true });
+      queueMicrotask(bootNoteFieldValue);
+
       applyCssHeight(saved.h || 280);
       syncCanvasHeights(DRAW_H);
 
@@ -5271,6 +5555,9 @@
             png: canvas.toDataURL('image/png'),
             h: cssH,
             graph: graphFieldLatex(graphMf),
+            note: graphFieldLatex(noteMf),
+            ...(folded ? { folded: true } : {}),
+            ...(noteHidden ? { noteHidden: true } : {}),
             ...(graphViewCustom && graphView ? { view: graphView } : {}),
           })
         );
@@ -5283,6 +5570,40 @@
       });
       graphMf.addEventListener('input', () => {
         renderGraphLayer();
+      });
+      graphFieldSaveHooks.set(noteMf, () => {
+        noteWrap.classList.toggle('has-value', !isVisuallyEmptyMath(graphFieldLatex(noteMf)));
+        clearTimeout(graphDebounce);
+        graphDebounce = setTimeout(() => persist(), 280);
+      });
+
+      foldBtn.addEventListener('click', () => {
+        folded = !folded;
+        pad.classList.toggle('is-folded', folded);
+        foldBtn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+        foldBtn.title = folded ? 'Показать график' : 'Свернуть график';
+        foldBtn.setAttribute('aria-label', foldBtn.title);
+        foldBtn.textContent = folded ? '▸' : '▾';
+        closeColorBar();
+        if (!folded) {
+          requestAnimationFrame(() => {
+            if (drawPadAlive(true)) syncPixelSizeFromCss(true);
+          });
+        }
+        persist();
+      });
+
+      noteBtn.addEventListener('click', () => {
+        noteHidden = !noteHidden;
+        pad.classList.toggle('note-hidden', noteHidden);
+        syncNoteBtn();
+        closeColorBar();
+        if (!folded) {
+          requestAnimationFrame(() => {
+            if (drawPadAlive(true)) syncPixelSizeFromCss(true);
+          });
+        }
+        persist();
       });
 
       function pushDrawHistory() {
@@ -5477,7 +5798,19 @@
       });
 
       canvasWrap.append(graphCanvas, canvas);
-      pad.append(tools, canvasWrap, resize);
+      const split = document.createElement('div');
+      split.className = 'draw-split';
+      const main = document.createElement('div');
+      main.className = 'draw-main';
+      const side = document.createElement('div');
+      side.className = 'draw-side';
+      const graphTag = document.createElement('div');
+      graphTag.className = 'draw-graph-tag';
+      graphTag.textContent = '#график';
+      side.append(graphMf, graphTag, noteWrap);
+      main.append(tools, canvasWrap);
+      split.append(main, side);
+      pad.append(split, resize);
       return pad;
     }
 
@@ -6513,7 +6846,7 @@
     }
 
     function insertBlock(type, afterId = null, content = '') {
-      if (afterId != null && String(afterId).endsWith(':graph')) return;
+      if (afterId != null && /:(graph|note)$/.test(String(afterId))) return;
       const before = documentSnapshot();
       const focusBefore = activeBlockId();
       const block = {
@@ -6615,7 +6948,10 @@
           body.appendChild(ta);
           requestAnimationFrame(() => autosizeTextarea(ta));
         } else if (block.type === 'draw') {
-          body.appendChild(wireDrawPad(block));
+          const pad = wireDrawPad(block);
+          body.appendChild(pad);
+          if (pad.foldButton) num.append(pad.foldButton);
+          if (pad.noteButton) num.append(pad.noteButton);
         } else {
           body.appendChild(wireMathField(document.createElement('math-field'), block));
         }
@@ -7094,12 +7430,6 @@
             if (after !== '' || /\\displaylines|\\\\/.test(after)) {
               clearMathBlockIfEmpty(mf, block.id);
             }
-            if (!e.repeat && isVisuallyEmptyMath(mf.value ?? '') && !block.graphField) {
-              const otherSteps = blocks.filter(
-                (b) => b.id !== block.id && b.type !== 'heading'
-              );
-              if (otherSteps.length) removeBlock(block.id);
-            }
           } else {
             saveMathField(mf, block.id);
           }
@@ -7149,19 +7479,8 @@
           if (mode === 'latex' || mode === 'text') return;
           // и не preventDefault, пока в поле есть хоть что-то
           if (!isVisuallyEmptyMath(mf.value ?? '') || e.repeat) return;
-          if (block.graphField) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-          }
-
-          const otherSteps = blocks.filter(
-            (b) => b.id !== block.id && b.type !== 'heading'
-          );
-          if (otherSteps.length === 0) return;
-
           e.preventDefault();
-          removeBlock(block.id);
+          e.stopPropagation();
           return;
         }
 
@@ -7170,7 +7489,6 @@
         const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
         if (empty && atStart && !e.repeat) {
           e.preventDefault();
-          removeBlock(block.id);
         }
       }
     }
