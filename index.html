@@ -1025,7 +1025,7 @@
       <p class="sc">Буквенные команды — на EN-раскладке. Большинство автозамен от 3 символов и все греческие подтверждаются <kbd>Enter</kbd>. Команды, отмеченные «сразу», рисуются без него.</p>
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
-        <li><strong>Текст и комментарии:</strong> <kbd>Tab</kbd> — четыре пробела · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
+        <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка · <kbd>Tab</kbd> — четыре пробела · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
@@ -1038,12 +1038,12 @@
       <p class="sc"><strong>Как работает <kbd>Enter</kbd></strong></p>
       <ul>
         <li>После команды вроде <kbd>ems</kbd>, <kbd>sqrt</kbd> или <kbd>prod</kbd> сначала выполняет автозамену.</li>
-        <li>В степени, индексе и основании логарифма — выходит вправо на основную строку.</li>
+        <li>В степени, индексе и основании логарифма — выходит на один уровень вправо.</li>
         <li>В дроби: числитель → знаменатель → после дроби.</li>
         <li>В корне: показатель → подкоренное выражение → после корня. Пустой показатель при переходе исчезает — остаётся квадратный корень.</li>
         <li>В интеграле или сумме: верхний предел → нижний предел → после знака.</li>
         <li>В пределе: выражение слева от стрелки → значение справа → после предела.</li>
-        <li>Перед закрывающей скобкой — выходит за неё; внутри системы — выходит из системы, а <kbd>Shift</kbd>+<kbd>Enter</kbd> добавляет строку в систему.</li>
+        <li>Каждый <kbd>Enter</kbd> закрывает один уровень: скобки, модуль, индекс, степень, дробь, корень, интеграл, предел, система. Следующий выходит из внешнего знака. <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе добавляет строку.</li>
       </ul>
       <p class="sc"><a href="shortcuts.html">полная документация</a></p>
     </details>
@@ -1935,57 +1935,6 @@
       return typeof offset === 'number' && setMathSelection(mf, offset, offset);
     }
 
-    /**
-     * Контекст закрывающей скобки у каретки:
-     * before — внутри, перед ')'; after — уже сразу за ')'.
-     */
-    function closingFenceContext(mf) {
-      try {
-        const model = mf?._mathfield?.model;
-        if (!model || model.selectionIsCollapsed === false) return 'none';
-        const atom = model.at(model.position);
-        if (!atom) return 'none';
-
-        if (atom.leftSibling?.type === 'mclose') return 'after';
-
-        if (atom.type === 'mclose') {
-          const offset = model.offsetOf(atom);
-          if (typeof offset === 'number' && model.position >= offset) {
-            return 'after';
-          }
-          return 'before';
-        }
-
-        if (atom.rightSibling?.type === 'mclose') return 'before';
-
-        const leftright = findAncestorAtom(atom, (item) => item.type === 'leftright');
-        if (leftright) {
-          const offset = model.offsetOf(leftright);
-          if (typeof offset === 'number' && model.position >= offset) {
-            return 'after';
-          }
-          return 'before';
-        }
-        return 'none';
-      } catch {
-        return 'none';
-      }
-    }
-
-    function closingFenceBeforeCaret(mf) {
-      try {
-        const model = mf?._mathfield?.model;
-        if (!model) return null;
-        const atom = model.at(model.position);
-        if (!atom) return null;
-        if (atom.type === 'mclose') return atom;
-        if (atom.rightSibling?.type === 'mclose') return atom.rightSibling;
-        return null;
-      } catch {
-        return null;
-      }
-    }
-
     function removeEmptyLeftrightBody(mf, leftright) {
       for (const branch of ['body', 'above']) {
         const atoms = atomBranchKids(leftright, branch).filter(
@@ -1998,23 +1947,126 @@
       return false;
     }
 
-    function handleEnterOutOfParens(mf) {
-      const fence = closingFenceBeforeCaret(mf);
-      if (fence && moveCaretAfterAtom(mf, fence)) return true;
+    function positionInsideLeftright(mf, leftright) {
+      const model = mf?._mathfield?.model;
+      if (!model || !leftright) return false;
+      let atom = model.at(model.position);
+      let found = false;
+      while (atom) {
+        if (atom === leftright) {
+          found = true;
+          break;
+        }
+        atom = atom.parent;
+      }
+      if (!found) return false;
+      const offset = model.offsetOf(leftright);
+      return !(typeof offset === 'number' && model.position >= offset);
+    }
+
+    function openSiblingParenEnd(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const atom = model?.at(model.position);
+        if (!atom || !model) return null;
+        const group = siblingParenGroupContaining(atom);
+        if (!group?.end) return null;
+        const endOff = model.offsetOf(group.end);
+        if (typeof endOff !== 'number' || model.position >= endOff) return null;
+        return group.end;
+      } catch {
+        return null;
+      }
+    }
+
+    function nearestOpenLeftright(mf) {
       try {
         const model = mf?._mathfield?.model;
         const atom = model?.at(model.position);
         const leftright = findAncestorAtom(atom, (item) => item.type === 'leftright');
-        if (!leftright) return false;
-        const offset = model.offsetOf(leftright);
-        if (typeof offset === 'number' && model.position < offset) {
-          removeEmptyLeftrightBody(mf, leftright);
-          return moveCaretAfterAtom(mf, leftright);
-        }
+        if (!leftright || !positionInsideLeftright(mf, leftright)) return null;
+        return leftright;
       } catch {
-        /* ignore */
+        return null;
       }
-      return false;
+    }
+
+    function tightestOpenFence(mf) {
+      const parenEnd = openSiblingParenEnd(mf);
+      const leftright = nearestOpenLeftright(mf);
+      if (parenEnd && leftright) {
+        let walk = parenEnd;
+        while (walk) {
+          if (walk === leftright) return { kind: 'paren', atom: parenEnd };
+          walk = walk.parent;
+        }
+        walk = leftright;
+        while (walk) {
+          if (walk === parenEnd) return { kind: 'leftright', atom: leftright };
+          walk = walk.parent;
+        }
+      }
+      if (parenEnd) return { kind: 'paren', atom: parenEnd };
+      if (leftright) return { kind: 'leftright', atom: leftright };
+      return null;
+    }
+
+    function stillInsideFence(mf, fence) {
+      if (!fence) return false;
+      if (fence.kind === 'leftright') return positionInsideLeftright(mf, fence.atom);
+      const model = mf?._mathfield?.model;
+      if (!model) return false;
+      const endOff = model.offsetOf(fence.atom);
+      if (typeof endOff !== 'number' || model.position >= endOff) return false;
+      const group = siblingParenGroupContaining(model.at(model.position));
+      return group?.end === fence.atom;
+    }
+
+    /** Ближайшие скобки, затем ближайший модуль или другая пара. Один уровень за Enter. */
+    function handleEnterOutOfEnclosingFence(mf) {
+      const parenEnd = openSiblingParenEnd(mf);
+      if (parenEnd && moveCaretAfterAtom(mf, parenEnd)) return true;
+      const leftright = nearestOpenLeftright(mf);
+      if (!leftright) return false;
+      removeEmptyLeftrightBody(mf, leftright);
+      return moveCaretAfterAtom(mf, leftright);
+    }
+
+    function exitEnclosingCases(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        const cases = mathEnvironmentAtCaret(mf, 'cases');
+        if (!cases || !model) return false;
+        const afterCases = model.offsetOf(cases);
+        if (typeof afterCases !== 'number' || model.position >= afterCases) return false;
+        return setMathSelection(mf, afterCases, afterCases);
+      } catch {
+        return false;
+      }
+    }
+
+    /**
+     * Один уровень родителя. Не проскакиваем ближайшие скобки, модуль
+     * и систему: следующий Enter выходит из них отдельно.
+     */
+    function stepOutOfInnerParent(mf) {
+      const model = mf?._mathfield?.model;
+      if (!model) return false;
+      const beforeKey = mathCaretKey(mf);
+      const beforePos = model.position;
+      const inCases = !!mathEnvironmentAtCaret(mf, 'cases');
+      const fence = tightestOpenFence(mf);
+      mf.executeCommand('moveAfterParent');
+      if (mathCaretKey(mf) === beforeKey) return false;
+      if (inCases && !mathEnvironmentAtCaret(mf, 'cases')) {
+        setMathSelection(mf, beforePos, beforePos);
+        return false;
+      }
+      if (fence && !stillInsideFence(mf, fence)) {
+        setMathSelection(mf, beforePos, beforePos);
+        return false;
+      }
+      return true;
     }
 
     function insertStretchAngleBrackets(mf) {
@@ -2056,6 +2108,65 @@
       }
     }
 
+    /**
+     * Между кареткой и знаком есть более тесное вложение
+     * (скобки, модуль, индекс, дробь, корень): его закрываем раньше.
+     */
+    function hasCloserNesting(mf, container) {
+      try {
+        const model = mf?._mathfield?.model;
+        const atom = model?.at(model.position);
+        if (!atom || !container || !model) return false;
+        const stillInside = (item) => {
+          if (!item) return false;
+          let cursor = atom;
+          let found = false;
+          while (cursor) {
+            if (cursor === item) {
+              found = true;
+              break;
+            }
+            cursor = cursor.parent;
+          }
+          if (!found) return false;
+          const offset = model.offsetOf(item);
+          return !(typeof offset === 'number' && model.position >= offset);
+        };
+        let walk = atom;
+        while (walk && walk !== container) {
+          if (
+            (walk.type === 'leftright' ||
+              walk.type === 'genfrac' ||
+              isSurdAtom(walk) ||
+              isIntOperatorAtom(walk)) &&
+            stillInside(walk)
+          ) {
+            return true;
+          }
+          const env = String(walk.environmentName || walk.envName || '').toLowerCase();
+          if (env === 'cases') return true;
+          if (
+            (walk.parentBranch === 'superscript' || walk.parentBranch === 'subscript') &&
+            walk.parent &&
+            walk.parent !== container
+          ) {
+            return true;
+          }
+          walk = walk.parent;
+        }
+        const parenEnd = openSiblingParenEnd(mf);
+        if (!parenEnd || parenEnd === container) return false;
+        let owner = parenEnd;
+        while (owner) {
+          if (owner === container) return true;
+          owner = owner.parent;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    }
+
     /** В \lim_{x→0}: первый Enter — к 0, второй — из подстрочника вперёд. */
     function handleEnterInLimit(mf) {
       try {
@@ -2063,6 +2174,7 @@
         const lim = limitOperatorAtCaret(mf);
         if (!model || !lim) return false;
         if (!caretIsInLimitScript(lim, model.at(model.position))) return false;
+        if (hasCloserNesting(mf, lim)) return false;
 
         const toAtom = findLimitToAtom(limitScriptAtoms(lim));
         if (!toAtom) return false;
@@ -2292,6 +2404,7 @@
         const model = mf?._mathfield?.model;
         const frac = fractionAtCaret(mf);
         if (!model || !frac) return false;
+        if (hasCloserNesting(mf, frac)) return false;
         const branch = caretBranchOf(frac, model.at(model.position));
         if (branch === 'above') {
           return (
@@ -2339,6 +2452,7 @@
         const model = mf?._mathfield?.model;
         const surd = rootAtCaret(mf);
         if (!model || !surd) return false;
+        if (hasCloserNesting(mf, surd)) return false;
         const branch = caretBranchOf(surd, model.at(model.position));
         if (branch === 'index' || branch === 'above') {
           removeEmptyRootIndex(mf, surd);
@@ -2381,7 +2495,10 @@
         const found = integralAtCaret(mf);
         if (!model || !found) return false;
         const { integ, after } = found;
-        if (after) return moveCaretIntoBranch(mf, integ, 'subscript');
+        // После знака последовательность уже закончена: не возвращаемся в нижний предел,
+        // иначе Enter зацикливается и не выходит из системы.
+        if (after) return false;
+        if (hasCloserNesting(mf, integ)) return false;
         const branch = caretBranchOf(integ, model.at(model.position));
         if (branch === 'superscript' || branch === 'above') {
           return moveCaretIntoBranch(mf, integ, 'subscript');
@@ -7187,6 +7304,38 @@
       saveMathField(mf, block.id);
     }
 
+    /** После символа без «дырки» для курсора снова пишем обычным текстом. */
+    function resumeTextAfterSymbol(mf, block, latex) {
+      if (block.type !== 'text' || /#[?0@]/.test(latex || '')) return;
+      if (mf.mode === 'text') return;
+      try {
+        mf.executeCommand(['switchMode', 'text', '', '']);
+      } catch {
+        try {
+          mf.mode = 'text';
+        } catch {
+          /* ignore */
+        }
+      }
+      saveMathField(mf, block.id);
+    }
+
+    /** Enter в тексте. addRowAfter уводит поле в формулу и мельчит следующий набор. */
+    function insertTextLineBreak(mf) {
+      mf.executeCommand('addRowAfter');
+      if (mf.mode !== 'text') {
+        try {
+          mf.executeCommand(['switchMode', 'text', '', '']);
+        } catch {
+          try {
+            mf.mode = 'text';
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+
     function trailingSimpleMathArg(mf) {
       const raw = textCharsBeforeCaret(mf, 16);
       if (/^[0-9]+(?:\.[0-9]+)?$/.test(raw) || /^[A-Za-z]$/.test(raw)) return raw;
@@ -7232,6 +7381,7 @@
         e.stopImmediatePropagation?.();
         try {
           commitTextRunLatex(mf, block, letters.length + extra, latex);
+          resumeTextAfterSymbol(mf, block, latex);
         } catch {
           /* ignore */
         }
@@ -7383,6 +7533,19 @@
           } catch {
             /* ignore */
           }
+        } else if (!e.altKey && e.key === 'Enter' && !e.shiftKey) {
+          if (!tryTextModeMathShortcut(e, mf, block)) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation?.();
+            try {
+              insertTextLineBreak(mf);
+              saveMathField(mf, block.id);
+            } catch {
+              /* ignore */
+            }
+          }
+          return;
         } else if (!e.altKey && tryTextModeMathShortcut(e, mf, block)) {
           return;
         }
@@ -7724,16 +7887,6 @@
             saveMathField(mf, block.id);
             return;
           }
-          const cases = mathEnvironmentAtCaret(mf, 'cases');
-          const model = mf._mathfield?.model;
-          if (cases && model) {
-            const afterCases = model.offsetOf(cases);
-            if (typeof afterCases === 'number') {
-              setMathSelection(mf, afterCases, afterCases);
-              saveMathField(mf, block.id);
-              return;
-            }
-          }
           if (handleEnterInFraction(mf)) {
             saveMathField(mf, block.id);
             return;
@@ -7750,27 +7903,20 @@
             saveMathField(mf, block.id);
             return;
           }
-          // если курсор в степени / индексе / основании лога — выйти вправо на основную линию
-          const before = mathCaretKey(mf);
-          mf.executeCommand('moveAfterParent');
-          if (mathCaretKey(mf) !== before) {
-            // выходим из всех вложенностей до основной строки
-            for (let i = 0; i < 16; i++) {
-              const p = mathCaretKey(mf);
-              mf.executeCommand('moveAfterParent');
-              if (mathCaretKey(mf) === p) break;
-            }
+          // Степень, индекс, скобки, модуль — один уровень за Enter.
+          // Из системы выходим только когда внутри неё больше нечего закрывать.
+          if (stepOutOfInnerParent(mf) || handleEnterOutOfEnclosingFence(mf)) {
+            saveMathField(mf, block.id);
+            return;
+          }
+          if (exitEnclosingCases(mf)) {
+            saveMathField(mf, block.id);
+            return;
+          }
+          if (block.type === 'text') {
+            mf.executeCommand(['switchMode', 'text', '', '']);
           } else {
-            const fenceCtx = closingFenceContext(mf);
-            if (fenceCtx === 'before') {
-              handleEnterOutOfParens(mf);
-            } else if (block.type === 'text') {
-              mf.executeCommand(['switchMode', 'text', '', '']);
-            } else if (fenceCtx === 'after') {
-              mf.executeCommand('addRowAfter');
-            } else {
-              mf.executeCommand('addRowAfter');
-            }
+            mf.executeCommand('addRowAfter');
           }
           saveMathField(mf, block.id);
         } catch {
