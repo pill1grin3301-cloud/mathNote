@@ -1028,6 +1028,7 @@
         <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка · <kbd>Tab</kbd> — четыре пробела · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
+        <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
@@ -3159,6 +3160,125 @@
         if (!raw.endsWith(typed)) flushMathInlineShortcutBuffer(mf);
       } catch {
         /* ignore */
+      }
+    }
+
+    function isMathSpaceAtom(atom) {
+      if (!atom) return false;
+      if (atom.type === 'spacing' || atom.type === 'first') return true;
+      const raw = `${atom.value ?? ''} ${atom.command ?? ''} ${atom.verbatimLatex ?? ''}`;
+      return /\\[,:;]/.test(raw) || atom.value === ' ' || atom.value === '\u00a0';
+    }
+
+    function isCommaSeparatorAtom(atom) {
+      if (!atom || isMathSpaceAtom(atom)) return false;
+      const raw = String(atom.value ?? atom.command ?? atom.verbatimLatex ?? '').trim();
+      return raw === ',' || raw === '\\comma';
+    }
+
+    function matchWordEndingAt(atom, word) {
+      const letters = [];
+      let walk = atom;
+      for (let i = word.length - 1; i >= 0; i -= 1) {
+        const ch = latinLetterOfAtom(walk);
+        if (!ch || ch !== word[i]) return null;
+        letters.unshift(walk);
+        if (i === 0) break;
+        if (!walk || walk.isFirstSibling) return null;
+        walk = walk.leftSibling;
+      }
+      const prev = letters[0]?.isFirstSibling ? null : letters[0]?.leftSibling;
+      if (prev && latinLetterOfAtom(prev)) return null;
+      return letters[0] || null;
+    }
+
+    function latexOfAtomSpan(model, atoms) {
+      let startIdx = 0;
+      let endIdx = atoms.length - 1;
+      while (startIdx <= endIdx && isMathSpaceAtom(atoms[startIdx])) startIdx += 1;
+      while (endIdx >= startIdx && isMathSpaceAtom(atoms[endIdx])) endIdx -= 1;
+      if (startIdx > endIdx || !model) return '';
+      const first = atoms[startIdx];
+      const last = atoms[endIdx];
+      const start = first.leftSibling ? model.offsetOf(first.leftSibling) : 0;
+      const end = model.offsetOf(last);
+      if (typeof start !== 'number' || typeof end !== 'number' || end <= start) return '';
+      return (model.getValue(start, end, 'latex') || '').trim();
+    }
+
+    function sequenceLimitDefinitionLines(sequence, limit) {
+      return [
+        '\\forall\\:\\varepsilon\\:>\\:0,\\:\\exists\\:N_{\\varepsilon}\\:\\in\\:\\mathbb{N}:\\:\\forall\\:n\\:\\in\\:\\mathbb{N}:',
+        'n\\:\\ge\\:N_{\\varepsilon}\\::\\:|\\:' +
+          sequence +
+          '\\:-\\:' +
+          limit +
+          '\\:|\\:<\\:\\varepsilon',
+      ];
+    }
+
+    /**
+     * dls(последовательность, предел) + Enter → определение предела последовательности.
+     * Курсор может стоять перед закрывающей скобкой или сразу после неё.
+     */
+    function tryExpandSequenceLimitDefinition(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model || model.selectionIsCollapsed === false) return false;
+        const atCaret = model.at(model.position);
+        let close = null;
+        if (atCaret?.type === 'mclose' && atCaret.value === ')') close = atCaret;
+        else if (atCaret?.rightSibling?.type === 'mclose' && atCaret.rightSibling.value === ')') {
+          close = atCaret.rightSibling;
+        }
+        if (!close) return false;
+        const open = findMatchingOpen(close);
+        if (!open || open.value !== '(') return false;
+
+        let beforeOpen = open.leftSibling;
+        while (beforeOpen && isMathSpaceAtom(beforeOpen)) {
+          if (beforeOpen.isFirstSibling) {
+            beforeOpen = null;
+            break;
+          }
+          beforeOpen = beforeOpen.leftSibling;
+        }
+        const commandStart = matchWordEndingAt(beforeOpen, 'dls');
+        if (!commandStart) return false;
+
+        const inner = [];
+        let walk = open.rightSibling;
+        while (walk && walk !== close) {
+          inner.push(walk);
+          if (walk.isLastSibling) break;
+          walk = walk.rightSibling;
+        }
+        let depth = 0;
+        let comma = null;
+        for (const atom of inner) {
+          if (atom.type === 'mopen') depth += 1;
+          else if (atom.type === 'mclose') depth = Math.max(0, depth - 1);
+          else if (depth === 0 && isCommaSeparatorAtom(atom)) {
+            comma = atom;
+            break;
+          }
+        }
+        if (!comma) return false;
+        const sequence = latexOfAtomSpan(
+          model,
+          inner.slice(0, inner.indexOf(comma))
+        );
+        const limit = latexOfAtomSpan(model, inner.slice(inner.indexOf(comma) + 1));
+        if (!sequence || !limit) return false;
+        if (!deleteAtomsInclusive(mf, commandStart, close)) return false;
+        const [firstLine, secondLine] = sequenceLimitDefinitionLines(sequence, limit);
+        mf.insert(firstLine, { format: 'latex', selectionMode: 'after' });
+        mf.executeCommand('addRowAfter');
+        mf.insert(secondLine, { format: 'latex', selectionMode: 'after' });
+        flushMathInlineShortcutBuffer(mf);
+        return true;
+      } catch {
+        return false;
       }
     }
 
@@ -7951,7 +8071,7 @@
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         try {
-          if (tryCompleteGreekAbbrev(mf)) {
+          if (tryExpandSequenceLimitDefinition(mf) || tryCompleteGreekAbbrev(mf)) {
             saveMathField(mf, block.id);
             return;
           }
