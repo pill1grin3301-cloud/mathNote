@@ -1026,7 +1026,7 @@
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
         <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка · <kbd>Tab</kbd> — четыре пробела · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
-        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
+        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
@@ -1482,22 +1482,68 @@
       }
     }
 
-    /** Курсор внутри ^ / _ — #@ забирает только показатель; выходим вправо. */
-    function exitScriptBeforeFraction(mf) {
-      for (let i = 0; i < 8; i++) {
-        let branch;
-        try {
-          const model = mf._mathfield?.model;
-          const atom = model?.at(model.position);
-          branch = atom?.parentBranch;
-        } catch {
-          branch = undefined;
+    function caretScriptBranch(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        let atom = model?.at(model.position);
+        while (atom) {
+          if (atom.parentBranch === 'superscript' || atom.parentBranch === 'subscript') {
+            return atom.parentBranch;
+          }
+          atom = atom.parent;
         }
-        if (branch !== 'superscript' && branch !== 'subscript') break;
-        const before = mathCaretKey(mf);
-        mf.executeCommand('moveAfterParent');
-        if (mathCaretKey(mf) === before) break;
+      } catch {
+        /* ignore */
       }
+      return '';
+    }
+
+    /** Курсор внутри степени, модуля, корня, дроби или системы — не на основной строке. */
+    function caretInNestedStructure(mf) {
+      if (caretScriptBranch(mf)) return true;
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model) return false;
+        const pos = model.position;
+        let atom = model.at(pos);
+        while (atom?.parent) {
+          const parent = atom.parent;
+          const env = String(parent.environmentName || parent.envName || '').toLowerCase();
+          if (env && env !== 'lines' && env !== 'displaylines') return true;
+          if (
+            parent.type === 'leftright' ||
+            parent.type === 'genfrac' ||
+            isSurdAtom(parent)
+          ) {
+            const offset = model.offsetOf(parent);
+            if (!(typeof offset === 'number' && pos >= offset)) return true;
+          }
+          atom = parent;
+        }
+      } catch {
+        /* ignore */
+      }
+      return false;
+    }
+
+    /**
+     * Индекс внутри степени. MathLive по `_` вешает подстрочник на основание
+     * (x_{}^{n}), поэтому здесь ставим его на атом внутри показателя.
+     */
+    function insertSubscriptInsideScript(mf) {
+      if (!caretScriptBranch(mf)) return false;
+      const model = mf._mathfield?.model;
+      const atom = model?.at(model.position);
+      const bare = !atom || atom.type === 'first' || atom.type === 'placeholder';
+      if (bare) {
+        mf.insert('_{#?}', {
+          format: 'latex',
+          selectionMode: 'placeholder',
+        });
+      } else {
+        mf.executeCommand(['insert', '#@_{#?}']);
+      }
+      return true;
     }
 
     function isFractionLeftAtom(atom) {
@@ -1524,7 +1570,22 @@
     }
 
     function insertSmartFractionBody(mf) {
-      exitScriptBeforeFraction(mf);
+      if (caretInNestedStructure(mf)) {
+        const scriptModel = mf._mathfield?.model;
+        if (scriptModel && scriptModel.selectionIsCollapsed === false) {
+          const selected = (scriptModel.getValue(scriptModel.selection, 'latex') || '').trim();
+          if (selected) {
+            const ok = mf.insert(`\\frac{${selected}}{#?}`, {
+              insertionMode: 'replaceSelection',
+              selectionMode: 'placeholder',
+              format: 'latex',
+            });
+            if (ok) return;
+          }
+        }
+        mf.executeCommand(['insert', '\\frac{#@}{#?}']);
+        return;
+      }
 
       const model = mf._mathfield?.model;
       if (!model) {
@@ -1559,7 +1620,14 @@
         ) {
           atom = atom.leftSibling;
         }
-        if (atom && !atom.isFirstSibling) atom = atom.leftSibling;
+        if (
+          atom &&
+          !atom.isFirstSibling &&
+          atom.leftSibling &&
+          atom.leftSibling.type !== 'first'
+        ) {
+          atom = atom.leftSibling;
+        }
       } else if (atom?.type === 'leftright') {
         atom = atom.leftSibling;
       }
@@ -8085,6 +8153,23 @@
         if (mode === 'latex' || mode === 'text') return;
 
         if (handleAccentPickerShortcut(e, mf, blockId)) return;
+
+        if (
+          (e.key === '_' || (e.shiftKey && e.code === 'Minus')) &&
+          !e.altKey &&
+          caretScriptBranch(mf)
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            insertSubscriptInsideScript(mf);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
 
         if (isAsteriskKey(e)) {
           e.preventDefault();
