@@ -3780,7 +3780,23 @@
       }
     }
 
-    function renderedBoundsForAtoms(mf, atoms) {
+    function indexAtomElements(root) {
+      const map = new Map();
+      if (!root) return map;
+      for (const el of root.querySelectorAll('[data-atom-id]')) {
+        const id = el.dataset.atomId;
+        if (!id) continue;
+        let list = map.get(id);
+        if (!list) {
+          list = [];
+          map.set(id, list);
+        }
+        list.push(el);
+      }
+      return map;
+    }
+
+    function renderedBoundsForAtoms(mf, atoms, byId) {
       const root = mf?.shadowRoot;
       if (!root || !atoms?.length) return null;
       const tree = new Set();
@@ -3792,7 +3808,11 @@
       for (const atom of tree) {
         const id = atom?.id;
         if (!id) continue;
-        for (const el of root.querySelectorAll(`[data-atom-id="${id}"]`)) {
+        const nodes =
+          byId?.get(String(id)) ||
+          (byId ? null : root.querySelectorAll(`[data-atom-id="${id}"]`));
+        if (!nodes) continue;
+        for (const el of nodes) {
           const r = el.getBoundingClientRect();
           if (r.width < 0.5 || r.height < 0.5) continue;
           left = Math.min(left, r.left);
@@ -3836,12 +3856,34 @@
       return atoms;
     }
 
-    function rowDomBounds(mf, atoms, parent, rowIndex) {
+    function rowDomBounds(mf, atoms, parent, rowIndex, byId) {
       const root = mf?.shadowRoot;
       if (!root) return null;
+      if (parent?.id != null) {
+        const parentNodes = byId?.get(String(parent.id));
+        const parentEl =
+          parentNodes?.[0] ||
+          root.querySelector(`[data-atom-id="${parent.id}"]`);
+        // Строка displaylines — дочерний span колонки .ML__vlist, а не <tr>.
+        // Его коробка выше чернил глифов и включает нижнюю часть строки.
+        const rowEl = parentEl?.querySelector?.('.ML__vlist')?.children?.[rowIndex];
+        if (rowEl) {
+          // Обёртка ряда имеет height:0; видимая строка — внутренний span,
+          // не .ML__pstrut (он перекрывает соседние ряды).
+          const content = [...rowEl.children].find(
+            (el) => !el.classList?.contains('ML__pstrut')
+          );
+          const r = (content || rowEl).getBoundingClientRect();
+          if (r.height >= 0.5) {
+            return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+          }
+        }
+      }
       for (const atom of atoms) {
         if (!atom?.id) continue;
-        const el = root.querySelector(`[data-atom-id="${atom.id}"]`);
+        const el =
+          byId?.get(String(atom.id))?.[0] ||
+          root.querySelector(`[data-atom-id="${atom.id}"]`);
         const rowEl = el?.closest?.('tr, .ML__row');
         if (!rowEl) continue;
         const r = rowEl.getBoundingClientRect();
@@ -3849,14 +3891,7 @@
           return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
         }
       }
-      if (!parent?.id) return null;
-      const parentEl = root.querySelector(`[data-atom-id="${parent.id}"]`);
-      const rowEls = parentEl?.querySelectorAll?.('tr, .ML__row');
-      const rowEl = rowEls?.[rowIndex];
-      if (!rowEl) return null;
-      const r = rowEl.getBoundingClientRect();
-      if (r.height < 0.5) return null;
-      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+      return null;
     }
 
     function fillEmptyMathRowBounds(mf, rows) {
@@ -3954,14 +3989,66 @@
       }
     }
 
+    let mathRowCache = null;
+    let mathRowCacheOn = 0;
+
+    function withMathRowCache(fn) {
+      mathRowCacheOn += 1;
+      try {
+        return fn();
+      } finally {
+        mathRowCacheOn -= 1;
+        if (mathRowCacheOn <= 0) {
+          mathRowCacheOn = 0;
+          mathRowCache = null;
+        }
+      }
+    }
+
+    function finishMathRows(mf, rows) {
+      if (mathRowCacheOn > 0) mathRowCache = { mf, rows };
+      return rows;
+    }
+
+    function isBlockLinesParent(parent) {
+      const env = String(parent?.environmentName || parent?.envName || '').toLowerCase();
+      return env === 'lines' || env === 'displaylines';
+    }
+
+    /**
+     * Нижняя кромка последней строки тянется до низа поля.
+     * Иначе клик в отступе под последней строкой попадает в предыдущую
+     * или никуда.
+     */
+    function extendLowestMathRow(mf, rows) {
+      const field = mf.getBoundingClientRect();
+      let lowest = null;
+      for (const row of rows) {
+        if (!row?.bounds) continue;
+        if (
+          !lowest ||
+          row.bounds.bottom > lowest.bounds.bottom + 0.5 ||
+          (Math.abs(row.bounds.bottom - lowest.bounds.bottom) <= 0.5 &&
+            isBlockLinesParent(row.parent) &&
+            !isBlockLinesParent(lowest.parent))
+        ) {
+          lowest = row;
+        }
+      }
+      if (!lowest || field.bottom - lowest.bounds.bottom <= 1) return;
+      lowest.bounds = { ...lowest.bounds, bottom: field.bottom };
+    }
+
     /**
      * Строки displaylines вместе с экранными Y-границами.
      * Пустые ряды тоже включаем: MathLive не даёт atom на клик, и каретка
      * иначе остаётся на соседней формуле.
      */
     function renderedMathRows(mf) {
+      if (mathRowCacheOn > 0 && mathRowCache?.mf === mf) return mathRowCache.rows;
       const model = mf?._mathfield?.model;
-      if (!model) return [];
+      if (!model) return finishMathRows(mf, []);
+      const byId = indexAtomElements(mf.shadowRoot);
       const parents = new Map();
       const register = (parent, rowIndex, colIndex) => {
         let rows = parents.get(parent);
@@ -4036,13 +4123,24 @@
           const visible = atoms.filter(
             (atom) => atom && atom.type !== 'first' && !isPlaceholderMathAtom(atom)
           );
-          const bounds =
-            renderedBoundsForAtoms(mf, visible) ||
-            rowDomBounds(mf, atoms, parent, rowIndex);
+          const glyphs = renderedBoundsForAtoms(mf, visible, byId);
+          const line = rowDomBounds(mf, atoms, parent, rowIndex, byId);
+          let bounds = null;
+          if (line && glyphs) {
+            bounds = {
+              left: glyphs.left,
+              right: glyphs.right,
+              top: Math.min(line.top, glyphs.top),
+              bottom: Math.max(line.bottom, glyphs.bottom),
+            };
+          } else {
+            bounds = glyphs || line;
+          }
           if (!range) continue;
           group.push({
             range,
             bounds,
+            ink: glyphs,
             empty: isEmptyMathRowAtoms(atoms),
             parent,
             rowIndex,
@@ -4057,18 +4155,20 @@
           const atom = model.at(i);
           if (atom && !atoms.includes(atom)) atoms.push(atom);
         }
-        const bounds = renderedBoundsForAtoms(mf, atoms);
+        const bounds = renderedBoundsForAtoms(mf, atoms, byId);
         if (bounds) {
           result.push({
             range: [0, model.lastOffset],
             bounds,
+            ink: bounds,
             empty: isEmptyMathRowAtoms(atoms),
             parent: null,
             rowIndex: 0,
           });
         }
       }
-      return result;
+      extendLowestMathRow(mf, result);
+      return finishMathRows(mf, result);
     }
 
     function renderedMathRowAtY(mf, clientY) {
@@ -4081,9 +4181,9 @@
         const content = inside.filter((row) => !row.empty);
         const pool = content.length ? content : inside;
         return pool.reduce((best, row) => {
-          const height = row.bounds.bottom - row.bounds.top;
-          const bestHeight = best.bounds.bottom - best.bounds.top;
-          return height < bestHeight ? row : best;
+          const mid = (row.bounds.top + row.bounds.bottom) / 2;
+          const bestMid = (best.bounds.top + best.bounds.bottom) / 2;
+          return Math.abs(clientY - mid) < Math.abs(clientY - bestMid) ? row : best;
         });
       }
       let best = null;
@@ -4536,76 +4636,6 @@
       }
     }
 
-    /**
-     * Fallback для клика в визуальный промежуток/контейнер MathLive.
-     * Находим ближайший видимый атом и выбираем позицию слева или справа.
-     */
-    function nearestAtomCaretAnchor(mf, clientX, clientY) {
-      if (
-        !mf ||
-        selectionHold.has(mf) ||
-        !mathSelectionCollapsed(mf) ||
-        mf.mode === 'latex'
-      ) {
-        return null;
-      }
-      try {
-        const root = mf.shadowRoot;
-        const model = mf._mathfield?.model;
-        if (!root || !model) return null;
-        let best = null;
-        let bestScore = Infinity;
-        let bestArea = Infinity;
-        const atomsById = new Map();
-        for (let i = 0; i <= model.lastOffset; i++) {
-          const atom = model.at(i);
-          if (atom?.id != null) atomsById.set(String(atom.id), atom);
-        }
-        for (const el of root.querySelectorAll('[data-atom-id]')) {
-          const atom = atomsById.get(String(el.dataset.atomId));
-          if (!atom || atom.type === 'first') continue;
-          const r = el.getBoundingClientRect();
-          if (r.width < 0.5 || r.height < 0.5) continue;
-          const dx =
-            clientX < r.left
-              ? r.left - clientX
-              : clientX > r.right
-                ? clientX - r.right
-                : 0;
-          const dy =
-            clientY < r.top
-              ? r.top - clientY
-              : clientY > r.bottom
-                ? clientY - r.bottom
-                : 0;
-          const area = r.width * r.height;
-          // Небольшой штраф большим контейнерам: возле дробной черты
-          // выбираем ближайший атом числителя/знаменателя, а не всю genfrac.
-          const score = dx * dx + 4 * dy * dy + area * 0.01;
-          if (
-            score < bestScore ||
-            (score === bestScore && area < bestArea)
-          ) {
-            best = { atom, rect: r };
-            bestScore = score;
-            bestArea = area;
-          }
-        }
-        if (!best || bestScore > 48 * 48) return null;
-        if (emptyMathRowAtY(mf, clientY)) return null;
-        const after = model.offsetOf(best.atom);
-        const before = best.atom.leftSibling
-          ? model.offsetOf(best.atom.leftSibling)
-          : after - 1;
-        const position =
-          clientX < best.rect.left + best.rect.width / 2 ? before : after;
-        if (typeof position !== 'number') return null;
-        return { atom: null, position: Math.max(0, position) };
-      } catch {
-        return null;
-      }
-    }
-
     function trailingScriptBox(mf, clientX, clientY) {
       const root = mf.shadowRoot;
       if (!root) return null;
@@ -4740,12 +4770,122 @@
       }
     }
 
-    function snapCaretToClickedRow(mf, clientX, clientY) {
-      applyCaretAnchor(
-        mf,
-        caretAnchorAtPoint(mf, clientX, clientY) ||
-          nearestAtomCaretAnchor(mf, clientX, clientY)
+    function pointOnRowInk(row, clientX, clientY) {
+      const ink = row?.ink;
+      if (!ink) return false;
+      return (
+        clientX >= ink.left - 3 &&
+        clientX <= ink.right + 3 &&
+        clientY >= ink.top - 3 &&
+        clientY <= ink.bottom + 3
       );
+    }
+
+    function caretIsOnMathRow(model, row) {
+      const pos = model?.position;
+      if (!row?.range || typeof pos !== 'number') return false;
+      return pos >= row.range[0] && pos <= row.range[1];
+    }
+
+    function caretNearClickX(mf, model, clientX, byId) {
+      const pos = model?.position;
+      if (typeof pos !== 'number') return false;
+      const atom = model.at(pos);
+      const nodes = atom?.id != null ? byId.get(String(atom.id)) : null;
+      let edge = null;
+      if (nodes) {
+        for (const el of nodes) {
+          const r = el.getBoundingClientRect();
+          if (r.width < 0.5 || r.height < 0.5) continue;
+          edge = edge == null ? r.right : Math.max(edge, r.right);
+        }
+      }
+      if (edge == null) {
+        const next = model.at(pos + 1);
+        const nextNodes = next?.id != null ? byId.get(String(next.id)) : null;
+        if (nextNodes) {
+          for (const el of nextNodes) {
+            const r = el.getBoundingClientRect();
+            if (r.width < 0.5 || r.height < 0.5) continue;
+            edge = edge == null ? r.left : Math.min(edge, r.left);
+          }
+        }
+      }
+      return edge != null && Math.abs(edge - clientX) <= 16;
+    }
+
+    function caretPositionOnRow(mf, row, clientX, byId) {
+      const model = mf?._mathfield?.model;
+      if (!model || !row?.range) return null;
+      const start = row.range[0];
+      const end = row.range[1];
+      if (row.empty) return end ?? start;
+      const ink = row.ink || row.bounds;
+      if (ink && clientX > ink.right + 1) return end;
+      if (ink && clientX < ink.left - 1) return start;
+      let bestPos = null;
+      let bestScore = Infinity;
+      for (let i = 0; i <= model.lastOffset; i++) {
+        const atom = model.at(i);
+        if (!atom || atom.type === 'first' || atom.id == null) continue;
+        const after = model.offsetOf(atom);
+        if (typeof after !== 'number' || after <= start || after > end) continue;
+        const nodes = byId.get(String(atom.id));
+        if (!nodes) continue;
+        let before = start;
+        if (atom.leftSibling) {
+          const leftPos = model.offsetOf(atom.leftSibling);
+          if (typeof leftPos === 'number' && leftPos >= start && leftPos < after) {
+            before = leftPos;
+          }
+        }
+        for (const el of nodes) {
+          const r = el.getBoundingClientRect();
+          if (r.width < 0.5 || r.height < 0.5) continue;
+          const dx =
+            clientX < r.left ? r.left - clientX : clientX > r.right ? clientX - r.right : 0;
+          const area = r.width * r.height;
+          const score = dx * dx + area * 0.01;
+          if (score >= bestScore) continue;
+          bestScore = score;
+          bestPos = clientX < r.left + r.width / 2 ? before : after;
+        }
+      }
+      return bestPos ?? end;
+    }
+
+    function snapCaretToClickedRow(mf, clientX, clientY) {
+      if (
+        !mf ||
+        selectionHold.has(mf) ||
+        !mathSelectionCollapsed(mf) ||
+        mf.mode === 'latex'
+      ) {
+        return;
+      }
+      withMathRowCache(() => {
+        const forced =
+          mf.mode === 'text' ? null : caretAnchorAtPoint(mf, clientX, clientY);
+        if (forced) {
+          applyCaretAnchor(mf, forced);
+          return;
+        }
+        const row = renderedMathRowAtY(mf, clientY);
+        if (!row) return;
+        const model = mf._mathfield?.model;
+        const pos = model?.position;
+        const byId = indexAtomElements(mf.shadowRoot);
+        if (
+          caretIsOnMathRow(model, row) &&
+          (pointOnRowInk(row, clientX, clientY) ||
+            caretNearClickX(mf, model, clientX, byId))
+        ) {
+          return;
+        }
+        const position = caretPositionOnRow(mf, row, clientX, byId);
+        if (typeof position !== 'number' || position === pos) return;
+        applyCaretAnchor(mf, { atom: null, position });
+      });
     }
 
     const mathPtrDown = new WeakMap();
@@ -4753,7 +4893,9 @@
     function wireMathFieldClickCaret(mf) {
       mf.addEventListener('pointerdown', (e) => {
         if (e.button != null && e.button !== 0) return;
-        const anchor = caretAnchorAtPoint(mf, e.clientX, e.clientY);
+        const anchor = withMathRowCache(() =>
+          caretAnchorAtPoint(mf, e.clientX, e.clientY)
+        );
         mathPtrDown.set(mf, {
           x: e.clientX,
           y: e.clientY,
@@ -4787,21 +4929,14 @@
         mathPtrDown.delete(mf);
         if (!down || e.detail >= 2) return;
         if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
-        queueMicrotask(() => {
-          snapCaretToClickedRow(mf, e.clientX, e.clientY);
-        });
-      });
-      mf.addEventListener('click', (e) => {
-        if (e.detail >= 2) return;
         const x = e.clientX;
         const y = e.clientY;
-        queueMicrotask(() => {
-          snapCaretToClickedRow(mf, x, y);
-        });
-        // Некоторые вложенные ветки (числитель/знаменатель/корень)
-        // обновляют selection ещё одной задачей после click.
+        // Один проход после click MathLive. Повторные microtask+rAF
+        // сдвигали каретку ещё раз и выглядели как лаг.
         requestAnimationFrame(() => {
-          if (mf.matches(':focus')) snapCaretToClickedRow(mf, x, y);
+          // Фокус у MathLive внутри shadow: хост совпадает с :focus-within,
+          // но не с :focus, и проверка :focus пропускала поправку каретки.
+          if (mf.matches(':focus-within')) snapCaretToClickedRow(mf, x, y);
         });
       });
       mf.addEventListener('pointercancel', () => {
