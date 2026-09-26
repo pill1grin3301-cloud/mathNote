@@ -949,6 +949,27 @@
       font-family: var(--mono);
     }
     .set-picker .name { color: var(--ink); }
+
+    .sig-hint {
+      position: fixed;
+      z-index: 45;
+      padding: 0.22rem 0.5rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 0.75rem;
+      line-height: 1.35;
+      box-shadow: 0 8px 24px var(--shadow);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .sig-hint .sig-name { color: var(--ink); }
+    .sig-hint .sig-arg.active {
+      color: var(--accent);
+      font-weight: 650;
+    }
   </style>
 </head>
 <body>
@@ -1028,7 +1049,7 @@
         <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка · <kbd>Tab</kbd> — четыре пробела · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
-        <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε</li>
+        <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε. В скобках подсказка показывает, какой аргумент сейчас вводится.</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
@@ -1042,6 +1063,7 @@
         <li>В степени, индексе и основании логарифма — выходит на один уровень вправо.</li>
         <li>В дроби: числитель → знаменатель → после дроби.</li>
         <li>В корне: показатель → подкоренное выражение → после корня. Пустой показатель при переходе исчезает — остаётся квадратный корень.</li>
+        <li>Пустое поле без ввода не оставляет квадратик: дробь, сумма, интеграл, предел, корень, модуль, индекс.</li>
         <li>В интеграле или сумме: верхний предел → нижний предел → после знака.</li>
         <li>В пределе: выражение слева от стрелки → значение справа → после предела.</li>
         <li>Каждый <kbd>Enter</kbd> закрывает один уровень: скобки, модуль, индекс, степень, дробь, корень, интеграл, предел, система. Следующий выходит из внешнего знака. <kbd>Shift</kbd>+<kbd>Enter</kbd> в системе добавляет строку.</li>
@@ -1158,6 +1180,175 @@
 
     /** @type {null | { el: HTMLElement, idx: number, mf: HTMLElement, blockId: string, items: typeof SET_OP_PICKER }} */
     let symbolPicker = null;
+
+    /** Подпись аргументов у вызова в скобках, как подсказка параметров в редакторе. */
+    const CALL_SIGNATURES = {
+      dls: ['последовательность', 'предел'],
+    };
+
+    /** @type {null | { el: HTMLElement, mf: HTMLElement }} */
+    let signatureHint = null;
+    let signatureHintScrollBound = false;
+
+    function hideSignatureHint() {
+      if (signatureHint?.el) signatureHint.el.remove();
+      signatureHint = null;
+    }
+
+    function signatureCommandBefore(open) {
+      let walk = open?.leftSibling;
+      while (walk && isMathSpaceAtom(walk)) {
+        if (walk.isFirstSibling) return '';
+        walk = walk.leftSibling;
+      }
+      let name = '';
+      while (walk && latinLetterOfAtom(walk)) {
+        name = latinLetterOfAtom(walk) + name;
+        if (walk.isFirstSibling) break;
+        walk = walk.leftSibling;
+      }
+      return CALL_SIGNATURES[name] ? name : '';
+    }
+
+    function rowAtomAtCaret(model) {
+      let atom = model.at(model.position);
+      if (!atom) return null;
+      while (atom.parent && !atom.parent.isRoot && atom.parent.type !== 'root') {
+        const branch = atom.parentBranch;
+        const parent = atom.parent;
+        if (Array.isArray(branch) && typeof branch[0] === 'number') break;
+        if (
+          branch === 'superscript' ||
+          branch === 'subscript' ||
+          branch === 'above' ||
+          branch === 'below' ||
+          branch === 'index' ||
+          branch === 'body' ||
+          parent.type === 'leftright' ||
+          parent.type === 'genfrac' ||
+          parent.type === 'surd'
+        ) {
+          atom = parent;
+          continue;
+        }
+        break;
+      }
+      return atom;
+    }
+
+    function callSignatureAtCaret(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        if (!model || model.selectionIsCollapsed === false) return null;
+        if (mf.mode === 'text' || mf.mode === 'latex') return null;
+        const pos = model.position;
+        let atom = rowAtomAtCaret(model);
+        if (!atom) return null;
+        if (atom.type === 'first') {
+          const open = atom.leftSibling;
+          if (open?.type === 'mopen' && open.value === '(') atom = open;
+          else return null;
+        }
+        if (atom.type === 'mclose' && atom.value === ')') {
+          const offset = model.offsetOf(atom);
+          if (typeof offset === 'number' && pos >= offset) return null;
+        }
+
+        let passedComma = isCommaSeparatorAtom(atom);
+        let walk = atom;
+        if (atom.type === 'mopen' && atom.value === '(') {
+          const name = signatureCommandBefore(atom);
+          if (name) return { name, params: CALL_SIGNATURES[name], active: 0 };
+          walk = atom.isFirstSibling ? null : atom.leftSibling;
+          passedComma = false;
+        }
+
+        let depth = 0;
+        while (walk) {
+          if (walk.type === 'mclose') depth += 1;
+          else if (walk.type === 'mopen') {
+            if (depth > 0) depth -= 1;
+            else if (walk.value === '(') {
+              const name = signatureCommandBefore(walk);
+              if (name) {
+                return {
+                  name,
+                  params: CALL_SIGNATURES[name],
+                  active: Math.min(passedComma ? 1 : 0, CALL_SIGNATURES[name].length - 1),
+                };
+              }
+              passedComma = false;
+            }
+          } else if (depth === 0 && walk !== atom && isCommaSeparatorAtom(walk)) {
+            passedComma = true;
+          }
+          if (walk.isFirstSibling) break;
+          walk = walk.leftSibling;
+        }
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
+
+    function mathFieldIsFocused(mf) {
+      try {
+        if (typeof mf.hasFocus === 'function' && mf.hasFocus()) return true;
+      } catch {
+        /* ignore */
+      }
+      return document.activeElement === mf || !!mf.contains(document.activeElement);
+    }
+
+    function positionSignatureHint() {
+      if (!signatureHint) return;
+      const caret = signatureHint.mf.shadowRoot?.querySelector('.ML__caret');
+      const rect = caret?.getBoundingClientRect?.() || signatureHint.mf.getBoundingClientRect();
+      const el = signatureHint.el;
+      const width = el.offsetWidth || 180;
+      const height = el.offsetHeight || 28;
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const above = rect.top - height - 6;
+      el.style.left = `${left}px`;
+      el.style.top = `${(above > 8 ? above : rect.bottom + 6)}px`;
+    }
+
+    function showSignatureHint(mf, sig) {
+      if (!signatureHint || signatureHint.mf !== mf) {
+        hideSignatureHint();
+        const el = document.createElement('div');
+        el.className = 'sig-hint';
+        el.setAttribute('role', 'status');
+        document.body.appendChild(el);
+        signatureHint = { el, mf };
+      }
+      const args = sig.params
+        .map((label, i) => `<span class="sig-arg${i === sig.active ? ' active' : ''}">${label}</span>`)
+        .join(', ');
+      signatureHint.el.innerHTML = `<span class="sig-name">${sig.name}</span>(${args})`;
+      positionSignatureHint();
+      if (!signatureHintScrollBound) {
+        signatureHintScrollBound = true;
+        const move = () => {
+          if (signatureHint) positionSignatureHint();
+        };
+        window.addEventListener('scroll', move, true);
+        window.addEventListener('resize', move);
+      }
+    }
+
+    function refreshSignatureHint(mf) {
+      if (!mf || !mf.isConnected || !mathFieldIsFocused(mf)) {
+        if (!mf || signatureHint?.mf === mf) hideSignatureHint();
+        return;
+      }
+      const sig = callSignatureAtCaret(mf);
+      if (!sig) {
+        hideSignatureHint();
+        return;
+      }
+      showSignatureHint(mf, sig);
+    }
 
     function closeSymbolPicker() {
       if (symbolPicker?.el) symbolPicker.el.remove();
@@ -2010,7 +2201,7 @@
           (atom) => atom && atom.type !== 'first'
         );
         if (atoms.length && atoms.every((atom) => isPlaceholderMathAtom(atom))) {
-          return deleteAtomsInclusive(mf, atoms[0], atoms.at(-1));
+          return deleteAtomRange(mf, atoms[0], atoms.at(-1));
         }
       }
       return false;
@@ -2101,6 +2292,26 @@
       return moveCaretAfterAtom(mf, leftright);
     }
 
+    function stripPlaceholderCellAtCaret(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        let atom = model?.at(model.position);
+        while (atom?.parent) {
+          const branch = atom.parentBranch;
+          if (Array.isArray(branch) && typeof branch[0] === 'number') {
+            stripPlaceholderOnlyList(
+              mf,
+              multilineCellAtoms(atom.parent, branch[0], branch[1] ?? 0)
+            );
+            return;
+          }
+          atom = atom.parent;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     function exitEnclosingCases(mf) {
       try {
         const model = mf?._mathfield?.model;
@@ -2108,7 +2319,10 @@
         if (!cases || !model) return false;
         const afterCases = model.offsetOf(cases);
         if (typeof afterCases !== 'number' || model.position >= afterCases) return false;
-        return setMathSelection(mf, afterCases, afterCases);
+        stripPlaceholderCellAtCaret(mf);
+        const after = model.offsetOf(cases);
+        if (typeof after !== 'number') return false;
+        return setMathSelection(mf, after, after);
       } catch {
         return false;
       }
@@ -2121,6 +2335,19 @@
     function stepOutOfInnerParent(mf) {
       const model = mf?._mathfield?.model;
       if (!model) return false;
+      const script = scriptSlotAtCaret(mf);
+      if (script && stripPlaceholderOnlyBranch(mf, script.parent, script.branch)) {
+        const other =
+          script.branch === 'superscript' || script.branch === 'above'
+            ? 'subscript'
+            : script.branch === 'subscript' || script.branch === 'below'
+              ? 'superscript'
+              : '';
+        if (other && listIsPlaceholderOnly(atomBranchKids(script.parent, other))) {
+          stripPlaceholderOnlyBranch(mf, script.parent, other);
+        }
+        return true;
+      }
       const beforeKey = mathCaretKey(mf);
       const beforePos = model.position;
       const inCases = !!mathEnvironmentAtCaret(mf, 'cases');
@@ -2236,6 +2463,69 @@
       }
     }
 
+    function nonFirstBranchAtoms(atoms) {
+      return (atoms || []).filter((atom) => atom && atom.type !== 'first');
+    }
+
+    function listIsPlaceholderOnly(atoms) {
+      const real = nonFirstBranchAtoms(atoms);
+      return real.length > 0 && real.every((atom) => isPlaceholderMathAtom(atom));
+    }
+
+    function deleteAtomRange(mf, startAtom, endAtom) {
+      const model = mf?._mathfield?.model;
+      if (!model || !startAtom || !endAtom) return false;
+      let startOff = null;
+      try {
+        const left = startAtom.leftSibling;
+        if (left) startOff = model.offsetOf(left);
+      } catch {
+        startOff = null;
+      }
+      const endOff = model.offsetOf(endAtom);
+      if (typeof startOff !== 'number' || typeof endOff !== 'number' || endOff <= startOff) return false;
+      try {
+        model.deleteAtoms([startOff, endOff]);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    /** Пустое поле #? не оставляем квадратиком, когда из него уходят. */
+    function stripPlaceholderOnlyList(mf, atoms) {
+      const real = nonFirstBranchAtoms(atoms);
+      if (!listIsPlaceholderOnly(real)) return false;
+      return deleteAtomRange(mf, real[0], real.at(-1));
+    }
+
+    function stripPlaceholderOnlyBranch(mf, parent, branch) {
+      return stripPlaceholderOnlyList(mf, atomBranchKids(parent, branch));
+    }
+
+    function scriptSlotAtCaret(mf) {
+      try {
+        const model = mf?._mathfield?.model;
+        let atom = model?.at(model.position);
+        while (atom) {
+          const branch = atom.parentBranch;
+          if (
+            branch === 'superscript' ||
+            branch === 'subscript' ||
+            branch === 'above' ||
+            branch === 'below' ||
+            branch === 'index'
+          ) {
+            return { parent: atom.parent, branch };
+          }
+          atom = atom.parent;
+        }
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
+
     /** В \lim_{x→0}: первый Enter — к 0, второй — из подстрочника вперёд. */
     function handleEnterInLimit(mf) {
       try {
@@ -2251,8 +2541,42 @@
         const toOffset = model.offsetOf(toAtom);
         if (typeof toOffset !== 'number') return false;
 
+        const script = () => nonFirstBranchAtoms(limitScriptAtoms(lim));
+        const leftOf = (arrow) => {
+          const side = [];
+          for (const atom of script()) {
+            if (atom === arrow) break;
+            side.push(atom);
+          }
+          return side;
+        };
+        const rightOf = (arrow) => {
+          const side = [];
+          let seen = false;
+          for (const atom of script()) {
+            if (atom === arrow) {
+              seen = true;
+              continue;
+            }
+            if (seen) side.push(atom);
+          }
+          return side;
+        };
+
         if (model.position < toOffset) {
-          return setMathSelection(mf, toOffset, toOffset);
+          stripPlaceholderOnlyList(mf, leftOf(toAtom));
+          const nextTo = findLimitToAtom(limitScriptAtoms(lim));
+          const nextOff = model.offsetOf(nextTo);
+          if (typeof nextOff === 'number') return setMathSelection(mf, nextOff, nextOff);
+          return moveCaretAfterAtom(mf, lim);
+        }
+        stripPlaceholderOnlyList(mf, rightOf(toAtom));
+        const leftover = script().filter(
+          (atom) => atom !== findLimitToAtom(script()) && !isMathSpaceAtom(atom)
+        );
+        if (!leftover.length) {
+          const arrow = findLimitToAtom(script());
+          if (arrow) deleteAtomRange(mf, arrow, arrow);
         }
         return moveCaretAfterAtom(mf, lim);
       } catch {
@@ -2476,12 +2800,16 @@
         if (hasCloserNesting(mf, frac)) return false;
         const branch = caretBranchOf(frac, model.at(model.position));
         if (branch === 'above') {
+          stripPlaceholderOnlyBranch(mf, frac, 'above');
           return (
             moveCaretIntoBranch(mf, frac, 'below') ||
             moveCaretAfterAtom(mf, frac)
           );
         }
-        if (branch === 'below') return moveCaretAfterAtom(mf, frac);
+        if (branch === 'below') {
+          stripPlaceholderOnlyBranch(mf, frac, 'below');
+          return moveCaretAfterAtom(mf, frac);
+        }
         return false;
       } catch {
         return false;
@@ -2510,7 +2838,7 @@
           atoms.length &&
           atoms.every((atom) => isPlaceholderMathAtom(atom))
         ) {
-          return deleteAtomsInclusive(mf, atoms[0], atoms.at(-1));
+          return deleteAtomRange(mf, atoms[0], atoms.at(-1));
         }
       }
       return false;
@@ -2530,7 +2858,12 @@
             moveCaretAfterAtom(mf, surd)
           );
         }
-        if (branch === 'body') return moveCaretAfterAtom(mf, surd);
+        if (branch === 'body') {
+          stripPlaceholderOnlyBranch(mf, surd, 'body');
+          stripPlaceholderOnlyBranch(mf, surd, 'index');
+          stripPlaceholderOnlyBranch(mf, surd, 'above');
+          return moveCaretAfterAtom(mf, surd);
+        }
         if (!atomBranchKids(surd, 'body').length) {
           return moveCaretIntoBranch(mf, surd, 'body');
         }
@@ -2570,9 +2903,16 @@
         if (hasCloserNesting(mf, integ)) return false;
         const branch = caretBranchOf(integ, model.at(model.position));
         if (branch === 'superscript' || branch === 'above') {
-          return moveCaretIntoBranch(mf, integ, 'subscript');
+          stripPlaceholderOnlyBranch(mf, integ, branch);
+          return (
+            moveCaretIntoBranch(mf, integ, 'subscript') ||
+            moveCaretAfterAtom(mf, integ)
+          );
         }
         if (branch === 'subscript' || branch === 'below') {
+          stripPlaceholderOnlyBranch(mf, integ, branch);
+          stripPlaceholderOnlyBranch(mf, integ, 'superscript');
+          stripPlaceholderOnlyBranch(mf, integ, 'above');
           return moveCaretAfterAtom(mf, integ);
         }
         return false;
@@ -3132,6 +3472,44 @@
       } catch {
         /* ignore */
       }
+    }
+
+    /**
+     * oo → ∞ сразу. У MathLive контекст «space» не включает наш пробел \\:,
+     * а «operator» не входит в правило для oo, поэтому после пробела, lim и ∑
+     * вторая o оставалась буквой. Внутри слова (book, foo) не трогаем.
+     */
+    function tryInstantInfinity(e, mf, blockId) {
+      if (e.key !== 'o' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return false;
+      if (!mf || mf.mode === 'latex' || e.isComposing) return false;
+      const model = mf._mathfield?.model;
+      if (!model || model.selectionIsCollapsed === false) return false;
+      const atom = atomJustBeforeCaret(model);
+      if (latinLetterOfAtom(atom) !== 'o') return false;
+      const prev = atom.isFirstSibling ? null : atom.leftSibling;
+      if (prev && prev.type !== 'first' && latinLetterOfAtom(prev)) return false;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      try {
+        const block = blocks.find((item) => item.id === blockId);
+        const wasText = mf.mode === 'text';
+        mf.executeCommand('deleteBackward');
+        if (wasText) {
+          try {
+            mf.executeCommand(['switchMode', 'math', '', '']);
+          } catch {
+            mf.mode = 'math';
+          }
+        }
+        mf.insert('\\infty', { format: 'latex', selectionMode: 'after' });
+        flushMathInlineShortcutBuffer(mf);
+        if (wasText && block?.type === 'text') resumeTextAfterSymbol(mf, block, '\\infty');
+        if (blockId) saveMathField(mf, blockId);
+      } catch {
+        /* ignore */
+      }
+      return true;
     }
 
     /**
@@ -4470,17 +4848,133 @@
       );
     }
 
+    function multilineSelectionKey(atom) {
+      const branch = atom?.parentBranch;
+      if (!Array.isArray(branch) || typeof branch[0] !== 'number') return null;
+      const parent = atom.parent;
+      if (!parent) return null;
+      const env = String(parent.environmentName || parent.envName || '').toLowerCase();
+      if (!env) return null;
+      return { parent, env, row: branch[0], col: branch[1] ?? 0 };
+    }
+
+    /**
+     * Выделение, которое начинается не с самого первого атома строки,
+     * MathLive сериализует без \\\\ — несколько строк склеиваются в одну.
+     * Собираем строки и столбцы заново.
+     */
+    function latexPreservingRowBreaks(model) {
+      if (!model || model.selectionIsCollapsed) return '';
+      let atoms = [];
+      try {
+        atoms = model.getAtoms(model.selection) || [];
+      } catch {
+        return '';
+      }
+      const content = atoms.filter((atom) => atom && atom.type !== 'first');
+      if (content.length < 2) return '';
+      const segments = [];
+      let current = null;
+      for (const atom of content) {
+        const key = multilineSelectionKey(atom);
+        const id = key ? `${key.env}:${key.row}:${key.col}` : '';
+        if (
+          !current ||
+          current.id !== id ||
+          current.parent !== (key && key.parent)
+        ) {
+          current = { id, key, parent: key && key.parent, atoms: [atom] };
+          segments.push(current);
+        } else {
+          current.atoms.push(atom);
+        }
+      }
+      if (segments.filter((segment) => segment.key).length < 2) return '';
+      const pieces = [];
+      let prev = null;
+      for (const segment of segments) {
+        if (prev?.key && segment.key && prev.parent === segment.parent) {
+          if (segment.key.row > prev.key.row) {
+            const gap = segment.key.row - prev.key.row;
+            for (let i = 0; i < gap; i++) pieces.push('\\\\ ');
+          } else if (segment.key.col !== prev.key.col) {
+            pieces.push(' & ');
+          }
+        }
+        pieces.push(latexOfAtomSpan(model, segment.atoms));
+        if (segment.key) prev = segment;
+      }
+      const joined = pieces.join('').trim();
+      return /\\\\/.test(joined) ? joined : '';
+    }
+
     function selectedMathLatex(mf) {
       try {
         const model = mf?._mathfield?.model;
         if (!model || model.selectionIsCollapsed) return '';
-        return (
+        const raw =
           model.getValue(model.selection, 'latex') ||
           mf.getValue?.(mf.selection, 'latex') ||
-          ''
-        );
+          '';
+        if (/\\\\|\\begin\{|\\displaylines\b/.test(raw)) return raw;
+        return latexPreservingRowBreaks(model) || raw;
       } catch {
         return '';
+      }
+    }
+
+    /** \\\\ верхнего уровня. Внутри cases/matrix не режем — там свой набор строк. */
+    function splitTopLevelRowBreaks(latex) {
+      const source = String(latex ?? '');
+      if (!/\\\\/.test(source) || /\\begin\b/.test(source)) return null;
+      const parts = [];
+      let depth = 0;
+      let current = '';
+      for (let i = 0; i < source.length; i++) {
+        const ch = source[i];
+        if (ch === '\\' && source[i + 1] === '\\' && depth === 0) {
+          parts.push(current.trim());
+          current = '';
+          i += 1;
+          if (source[i + 1] === '[') {
+            const close = source.indexOf(']', i + 1);
+            if (close !== -1) i = close;
+          }
+          continue;
+        }
+        if (ch === '\\' && (source[i + 1] === '{' || source[i + 1] === '}')) {
+          current += ch + source[i + 1];
+          i += 1;
+          continue;
+        }
+        if (ch === '{') depth += 1;
+        else if (ch === '}') depth = Math.max(0, depth - 1);
+        current += ch;
+      }
+      parts.push(current.trim());
+      return parts.length > 1 ? parts : null;
+    }
+
+    function insertLatexKeepingRows(mf, latex) {
+      const lines = splitTopLevelRowBreaks(latex);
+      if (!lines) {
+        mf.insert(latex, {
+          format: 'latex',
+          insertionMode: 'replaceSelection',
+          selectionMode: 'after',
+        });
+        return;
+      }
+      if (lines[0]) {
+        mf.insert(lines[0], {
+          format: 'latex',
+          insertionMode: 'replaceSelection',
+          selectionMode: 'after',
+        });
+      }
+      for (let i = 1; i < lines.length; i++) {
+        mf.executeCommand('addRowAfter');
+        if (lines[i]) mf.insert(lines[i], { format: 'latex', selectionMode: 'after' });
       }
     }
 
@@ -4666,11 +5160,7 @@
         if (!destEmpty && mathFieldSelectionCoversAll(mf)) {
           mf.executeCommand('moveToMathFieldEnd');
         }
-        mf.insert(inlineLatex, {
-          format: 'latex',
-          insertionMode: 'replaceSelection',
-          selectionMode: 'after',
-        });
+        insertLatexKeepingRows(mf, inlineLatex);
         saveMathField(mf, blockId);
       } catch {
         return false;
@@ -4811,6 +5301,7 @@
       mf.addEventListener('input', () => {
         if (ignoreEditorEvents || clearingMath) return;
         if (fieldEpoch !== mathFieldEpoch || !mf.isConnected) return;
+        refreshSignatureHint(mf);
         reconcileInlineShortcutBuffer(mf);
         if (block.graphField) {
           trackMathHistory(mf);
@@ -4822,12 +5313,18 @@
       // Клик в существующий #-комментарий — снова серая сессия.
       // Не трогаем несвёрнутое выделение (dblclick-строка, drag, Shift+стрелки).
       mf.addEventListener('selection-change', () => {
+        refreshSignatureHint(mf);
         if (shouldLeaveMathSelectionAlone(mf)) return;
         if (isInHashComment(mf)) tryResumeCommentSession(mf, { moveCaret: false });
         else {
           commentExitGuard.delete(mf);
           if (isCommentSession(mf)) endCommentSession(mf);
         }
+      });
+      mf.addEventListener('blur', () => {
+        window.setTimeout(() => {
+          if (!mathFieldIsFocused(mf)) hideSignatureHint();
+        }, 80);
       });
       mf.addEventListener('keydown', (e) => onFieldKey(e, block), true);
       mf.addEventListener(
@@ -8268,6 +8765,8 @@
           }
           return;
         }
+
+        if (tryInstantInfinity(e, mf, blockId)) return;
 
         const mode = mf.mode;
         if (mode === 'latex' || mode === 'text') return;
