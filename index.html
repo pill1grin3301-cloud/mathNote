@@ -5337,6 +5337,10 @@
         mf.placeholder = 'Пояснение к шагу…';
         applyTextFieldMetrics(mf);
       }
+      // MathLive на каждый символ вызывает scrollIntoView всего поля.
+      // У блока выше экрана это поднимает страницу так, что конец блока
+      // оказывается у нижнего края. Новую строку у края листаем сами.
+      mf.onScrollIntoView = () => {};
       // сами делаем () как в VS Code; smartFence даёт \\left...\\right
       mf.smartFence = false;
       // Даже одноцифровую степень завершаем явно по Enter.
@@ -7711,6 +7715,7 @@
           mf.executeCommand(['switchMode', 'math']);
         }
         try {
+          scrollDownForNewLine(mf);
           mf.executeCommand('addRowAfter');
         } catch {
           /* ignore */
@@ -8140,8 +8145,27 @@
       saveMathField(mf, block.id);
     }
 
+    /**
+     * Новая строка у нижнего края экрана: прокрутить вниз на её высоту,
+     * чтобы конец блока не прилипал к краю. Если снизу ещё есть место — не трогать.
+     */
+    function scrollDownForNewLine(mf) {
+      if (!mf?.isConnected) return;
+      const edge = window.innerHeight;
+      const slack = edge - mf.getBoundingClientRect().bottom;
+      if (slack > 48 || slack < -120) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!mf.isConnected) return;
+          const overflow = mf.getBoundingClientRect().bottom - (edge - 28);
+          if (overflow > 1) window.scrollBy(0, overflow);
+        });
+      });
+    }
+
     /** Enter в тексте. addRowAfter уводит поле в формулу и мельчит следующий набор. */
     function insertTextLineBreak(mf) {
+      scrollDownForNewLine(mf);
       mf.executeCommand('addRowAfter');
       if (mf.mode !== 'text') {
         try {
@@ -8672,6 +8696,7 @@
           e.stopPropagation();
           e.stopImmediatePropagation?.();
           try {
+            scrollDownForNewLine(mf);
             mf.executeCommand('addRowAfter');
             saveMathField(mf, block.id);
           } catch {
@@ -8736,6 +8761,7 @@
           if (block.type === 'text') {
             mf.executeCommand(['switchMode', 'text', '', '']);
           } else {
+            scrollDownForNewLine(mf);
             mf.executeCommand('addRowAfter');
           }
           saveMathField(mf, block.id);
