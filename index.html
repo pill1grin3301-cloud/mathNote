@@ -1050,8 +1050,8 @@
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего · <kbd>Tab</kbd> — пять пробелов, внутри <kbd>\команды</kbd> команда завершается</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε. В скобках подсказка показывает, какой аргумент сейчас вводится.</li>
-        <li><strong>Предел по Гейне:</strong> <kbd>dlh</kbd>(функция, предел)+<kbd>Enter</kbd> — ∀x<sub>n</sub>→x<sub>0</sub>, x<sub>n</sub>≠x<sub>0</sub>: f(x<sub>n</sub>)→A. Буква x в функции становится x<sub>n</sub>.</li>
-        <li><strong>Предел по Коши:</strong> <kbd>dlc</kbd>(функция, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0: ∃δ&gt;0: ∀x, следующая: 0&lt;|x−x<sub>0</sub>|&lt;δ → |функция − предел|&lt;ε.</li>
+        <li><strong>Предел по Гейне:</strong> <kbd>dlh</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — ∀x<sub>n</sub>→точка, x<sub>n</sub>≠точка: f(x<sub>n</sub>)→предел. Буква x в функции становится x<sub>n</sub>.</li>
+        <li><strong>Предел по Коши:</strong> <kbd>dlc</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0: ∃δ&gt;0: ∀x, следующая: 0&lt;|x−точка|&lt;δ → |функция − предел|&lt;ε.</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
@@ -1186,8 +1186,8 @@
     /** Подпись аргументов у вызова в скобках, как подсказка параметров в редакторе. */
     const CALL_SIGNATURES = {
       dls: ['последовательность', 'предел'],
-      dlh: ['функция', 'предел'],
-      dlc: ['функция', 'предел'],
+      dlh: ['функция', 'точка', 'предел'],
+      dlc: ['функция', 'точка', 'предел'],
     };
 
     /** @type {null | { el: HTMLElement, mf: HTMLElement }} */
@@ -1258,13 +1258,12 @@
           if (typeof offset === 'number' && pos >= offset) return null;
         }
 
-        let passedComma = isCommaSeparatorAtom(atom);
+        let commaCount = 0;
         let walk = atom;
         if (atom.type === 'mopen' && atom.value === '(') {
           const name = signatureCommandBefore(atom);
           if (name) return { name, params: CALL_SIGNATURES[name], active: 0 };
           walk = atom.isFirstSibling ? null : atom.leftSibling;
-          passedComma = false;
         }
 
         let depth = 0;
@@ -1278,13 +1277,12 @@
                 return {
                   name,
                   params: CALL_SIGNATURES[name],
-                  active: Math.min(passedComma ? 1 : 0, CALL_SIGNATURES[name].length - 1),
+                  active: Math.min(commaCount, CALL_SIGNATURES[name].length - 1),
                 };
               }
-              passedComma = false;
             }
-          } else if (depth === 0 && walk !== atom && isCommaSeparatorAtom(walk)) {
-            passedComma = true;
+          } else if (depth === 0 && isCommaSeparatorAtom(walk)) {
+            commaCount += 1;
           }
           if (walk.isFirstSibling) break;
           walk = walk.leftSibling;
@@ -3651,31 +3649,56 @@
       return out;
     }
 
-    function limitDefinitionLines(command, first, second) {
-      if (command === 'dls') return sequenceLimitDefinitionLines(first, second);
+    function limitDefinitionLines(command, args) {
+      if (command === 'dls') return sequenceLimitDefinitionLines(args[0], args[1]);
+      const [fn, point, limit] = args;
       if (command === 'dlh') {
         return [
-          '\\forall x_{n}\\:\\to\\:x_0,\\:\\:x_{n}\\:\\ne\\:x_0:\\:' +
-            functionAlongSequence(first) +
+          '\\forall x_{n}\\:\\to\\:' +
+            point +
+            ',\\:\\:x_{n}\\:\\ne\\:' +
+            point +
+            ':\\:' +
+            functionAlongSequence(fn) +
             '\\:\\to\\:' +
-            second,
+            limit,
         ];
       }
       if (command === 'dlc') {
         return [
           '\\forall\\:\\varepsilon\\:>\\:0:\\:\\exists\\:\\delta\\:>\\:0:\\:\\forall x:',
-          '0<\\:\\left|x-x_0\\right|\\:<\\:\\delta\\to\\:\\left|' +
-            first +
+          '0<\\:\\left|x-' +
+            point +
+            '\\right|\\:<\\:\\delta\\to\\:\\left|' +
+            fn +
             '\\:-\\:' +
-            second +
+            limit +
             '\\right|\\:<\\:\\varepsilon',
         ];
       }
       return null;
     }
 
+    function splitCallArguments(model, inner) {
+      const parts = [];
+      let depth = 0;
+      let start = 0;
+      for (let i = 0; i < inner.length; i += 1) {
+        const atom = inner[i];
+        if (atom.type === 'mopen') depth += 1;
+        else if (atom.type === 'mclose') depth = Math.max(0, depth - 1);
+        else if (depth === 0 && isCommaSeparatorAtom(atom)) {
+          parts.push(latexOfAtomSpan(model, inner.slice(start, i)));
+          start = i + 1;
+        }
+      }
+      parts.push(latexOfAtomSpan(model, inner.slice(start)));
+      return parts;
+    }
+
     /**
-     * dls / dlh / dlc (первый аргумент, предел) + Enter.
+     * dls(последовательность, предел),
+     * dlh / dlc (функция, предельная точка, предел) + Enter.
      * Курсор может стоять перед закрывающей скобкой или сразу после неё.
      */
     function tryExpandSequenceLimitDefinition(mf) {
@@ -3719,23 +3742,10 @@
           if (walk.isLastSibling) break;
           walk = walk.rightSibling;
         }
-        let depth = 0;
-        let comma = null;
-        for (const atom of inner) {
-          if (atom.type === 'mopen') depth += 1;
-          else if (atom.type === 'mclose') depth = Math.max(0, depth - 1);
-          else if (depth === 0 && isCommaSeparatorAtom(atom)) {
-            comma = atom;
-            break;
-          }
-        }
-        if (!comma) return false;
-        const first = latexOfAtomSpan(
-          model,
-          inner.slice(0, inner.indexOf(comma))
-        );
-        const second = latexOfAtomSpan(model, inner.slice(inner.indexOf(comma) + 1));
-        const lines = first && second ? limitDefinitionLines(command, first, second) : null;
+        const args = splitCallArguments(model, inner);
+        const arity = command === 'dls' ? 2 : 3;
+        if (args.length !== arity || args.some((part) => !part)) return false;
+        const lines = limitDefinitionLines(command, args);
         if (!lines?.length) return false;
         if (!deleteAtomsInclusive(mf, commandStart, close)) return false;
         mf.insert(lines[0], { format: 'latex', selectionMode: 'after' });
