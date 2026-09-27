@@ -1050,6 +1050,8 @@
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего · <kbd>Tab</kbd> — пять пробелов, внутри <kbd>\команды</kbd> команда завершается</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε. В скобках подсказка показывает, какой аргумент сейчас вводится.</li>
+        <li><strong>Предел по Гейне:</strong> <kbd>dlh</kbd>(функция, предел)+<kbd>Enter</kbd> — ∀x<sub>n</sub>→x<sub>0</sub>, x<sub>n</sub>≠x<sub>0</sub>: f(x<sub>n</sub>)→A. Буква x в функции становится x<sub>n</sub>.</li>
+        <li><strong>Предел по Коши:</strong> <kbd>dlc</kbd>(функция, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0: ∃δ&gt;0: ∀x, следующая: 0&lt;|x−x<sub>0</sub>|&lt;δ → |функция − предел|&lt;ε.</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
@@ -1184,6 +1186,8 @@
     /** Подпись аргументов у вызова в скобках, как подсказка параметров в редакторе. */
     const CALL_SIGNATURES = {
       dls: ['последовательность', 'предел'],
+      dlh: ['функция', 'предел'],
+      dlc: ['функция', 'предел'],
     };
 
     /** @type {null | { el: HTMLElement, mf: HTMLElement }} */
@@ -2565,11 +2569,14 @@
 
         if (model.position < toOffset) {
           stripPlaceholderOnlyList(mf, leftOf(toAtom));
+          // x Enter x не должно собираться в xx → × через стрелку.
+          flushMathInlineShortcutBuffer(mf);
           const nextTo = findLimitToAtom(limitScriptAtoms(lim));
           const nextOff = model.offsetOf(nextTo);
           if (typeof nextOff === 'number') return setMathSelection(mf, nextOff, nextOff);
           return moveCaretAfterAtom(mf, lim);
         }
+        flushMathInlineShortcutBuffer(mf);
         stripPlaceholderOnlyList(mf, rightOf(toAtom));
         const leftover = script().filter(
           (atom) => atom !== findLimitToAtom(script()) && !isMathSpaceAtom(atom)
@@ -3534,8 +3541,25 @@
           return;
         }
         const typed = keys.join('');
-        const raw = charsBeforeCaret(model, typed.length);
-        if (!raw.endsWith(typed)) flushMathInlineShortcutBuffer(mf);
+        // Не перескакивать через стрелку или другой знак: иначе x перед →
+        // и следующий x справа собираются в xx → ×.
+        let atom = null;
+        try {
+          atom = model.at(model.position);
+        } catch {
+          atom = null;
+        }
+        const chars = [];
+        while (atom && atom.type !== 'first' && chars.length < typed.length) {
+          const ch = latinLetterOfAtom(atom) || atomPlainChar(atom);
+          if (!ch) {
+            chars.length = 0;
+            break;
+          }
+          chars.unshift(ch);
+          atom = atom.isFirstSibling ? null : atom.leftSibling;
+        }
+        if (!chars.join('').endsWith(typed)) flushMathInlineShortcutBuffer(mf);
       } catch {
         /* ignore */
       }
@@ -3595,8 +3619,63 @@
       ];
     }
 
+    /** Буква x в f(x) становится x_n: предел по Гейне вдоль последовательности. */
+    function functionAlongSequence(latex) {
+      let out = '';
+      for (let i = 0; i < latex.length; ) {
+        if (latex[i] === '\\') {
+          out += '\\';
+          i += 1;
+          if (i < latex.length && /[A-Za-z]/.test(latex[i])) {
+            while (i < latex.length && /[A-Za-z]/.test(latex[i])) {
+              out += latex[i];
+              i += 1;
+            }
+          } else if (i < latex.length) {
+            out += latex[i];
+            i += 1;
+          }
+          continue;
+        }
+        if ((latex[i] === 'x' || latex[i] === 'X') && latex[i + 1] !== '_') {
+          const prev = i > 0 ? latex[i - 1] : '';
+          if (prev !== '_' && !/[A-Za-z]/.test(prev)) {
+            out += latex[i] === 'X' ? 'X_{n}' : 'x_{n}';
+            i += 1;
+            continue;
+          }
+        }
+        out += latex[i];
+        i += 1;
+      }
+      return out;
+    }
+
+    function limitDefinitionLines(command, first, second) {
+      if (command === 'dls') return sequenceLimitDefinitionLines(first, second);
+      if (command === 'dlh') {
+        return [
+          '\\forall x_{n}\\:\\to\\:x_0,\\:\\:x_{n}\\:\\ne\\:x_0:\\:' +
+            functionAlongSequence(first) +
+            '\\:\\to\\:' +
+            second,
+        ];
+      }
+      if (command === 'dlc') {
+        return [
+          '\\forall\\:\\varepsilon\\:>\\:0:\\:\\exists\\:\\delta\\:>\\:0:\\:\\forall x:',
+          '0<\\:\\left|x-x_0\\right|\\:<\\:\\delta\\to\\:\\left|' +
+            first +
+            '\\:-\\:' +
+            second +
+            '\\right|\\:<\\:\\varepsilon',
+        ];
+      }
+      return null;
+    }
+
     /**
-     * dls(последовательность, предел) + Enter → определение предела последовательности.
+     * dls / dlh / dlc (первый аргумент, предел) + Enter.
      * Курсор может стоять перед закрывающей скобкой или сразу после неё.
      */
     function tryExpandSequenceLimitDefinition(mf) {
@@ -3621,7 +3700,16 @@
           }
           beforeOpen = beforeOpen.leftSibling;
         }
-        const commandStart = matchWordEndingAt(beforeOpen, 'dls');
+        let command = '';
+        let commandStart = null;
+        for (const name of ['dls', 'dlh', 'dlc']) {
+          const start = matchWordEndingAt(beforeOpen, name);
+          if (start) {
+            command = name;
+            commandStart = start;
+            break;
+          }
+        }
         if (!commandStart) return false;
 
         const inner = [];
@@ -3642,17 +3730,19 @@
           }
         }
         if (!comma) return false;
-        const sequence = latexOfAtomSpan(
+        const first = latexOfAtomSpan(
           model,
           inner.slice(0, inner.indexOf(comma))
         );
-        const limit = latexOfAtomSpan(model, inner.slice(inner.indexOf(comma) + 1));
-        if (!sequence || !limit) return false;
+        const second = latexOfAtomSpan(model, inner.slice(inner.indexOf(comma) + 1));
+        const lines = first && second ? limitDefinitionLines(command, first, second) : null;
+        if (!lines?.length) return false;
         if (!deleteAtomsInclusive(mf, commandStart, close)) return false;
-        const [firstLine, secondLine] = sequenceLimitDefinitionLines(sequence, limit);
-        mf.insert(firstLine, { format: 'latex', selectionMode: 'after' });
-        mf.executeCommand('addRowAfter');
-        mf.insert(secondLine, { format: 'latex', selectionMode: 'after' });
+        mf.insert(lines[0], { format: 'latex', selectionMode: 'after' });
+        for (let i = 1; i < lines.length; i += 1) {
+          mf.executeCommand('addRowAfter');
+          mf.insert(lines[i], { format: 'latex', selectionMode: 'after' });
+        }
         flushMathInlineShortcutBuffer(mf);
         return true;
       } catch {
@@ -8912,6 +9002,9 @@
         if (!mf || e.defaultPrevented) return;
         const blockId = mf.closest?.('.block')?.dataset?.id;
         if (!blockId) return;
+        // До обработки клавиши MathLive: буфер xx/uu/nn не должен пережить
+        // переход каретки (Enter в пределе, стрелки, клик).
+        reconcileInlineShortcutBuffer(mf);
 
         if (handleMathUndoRedoKey(e, mf, blockId)) return;
 
