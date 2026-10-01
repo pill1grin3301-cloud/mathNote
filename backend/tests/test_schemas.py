@@ -36,6 +36,7 @@ def test_notebook_document_accepts_frontend_shape() -> None:
     assert document.model_dump(by_alias=True) == {
         "schemaVersion": 1,
         "blocks": [],
+        "images": {},
     }
 
 

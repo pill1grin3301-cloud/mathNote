@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class NotebookBlock(BaseModel):
@@ -16,6 +16,19 @@ class NotebookCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     section_id: UUID | None = Field(default=None, alias="sectionId")
 
+class NotebookImage(BaseModel):
+    src: str = Field(min_length=16, max_length=1_500_000)
+    w: int = Field(ge=1, le=8_000)
+    h: int = Field(ge=1, le=8_000)
+
+    @field_validator("src")
+    @classmethod
+    def src_is_data_image(cls, value: str) -> str:
+        if not value.startswith("data:image/") or ";base64," not in value:
+            raise ValueError("image src must be a data URL")
+        return value
+
+
 class NotebookDocument(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -24,6 +37,17 @@ class NotebookDocument(BaseModel):
         alias="schemaVersion",
     )
     blocks: list[NotebookBlock] = Field(default_factory=list, max_length=1_000)
+    images: dict[str, NotebookImage] = Field(default_factory=dict, max_length=80)
+
+    @field_validator("images")
+    @classmethod
+    def image_ids_are_short(
+        cls, value: dict[str, NotebookImage]
+    ) -> dict[str, NotebookImage]:
+        for key in value:
+            if not key.isalnum() or not 4 <= len(key) <= 32:
+                raise ValueError("invalid image id")
+        return value
 
 
 class NotebookUpdateRequest(BaseModel):

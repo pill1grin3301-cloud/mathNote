@@ -142,6 +142,19 @@
     }
     .file-btn { display: inline-block; }
     .file-btn input { display: none; }
+    .img-resize-handle {
+      position: fixed;
+      z-index: 60;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #fff;
+      border-radius: 3px;
+      background: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+      cursor: nwse-resize;
+      touch-action: none;
+    }
+    .img-resize-handle[hidden] { display: none !important; }
 
     .auth-controls {
       display: inline-flex;
@@ -997,6 +1010,7 @@
         <button type="button" id="btn-heading">Заголовок</button>
         <button type="button" id="btn-text">Текст</button>
         <button type="button" class="primary" id="btn-math">Формула</button>
+        <label class="file-btn" title="png, jpeg, gif или webp в формулу или текст">Картинка<input type="file" id="insert-image" accept="image/png,image/jpeg,image/gif,image/webp" /></label>
         <button type="button" id="btn-draw" title="Ctrl+Shift+Enter">Рисовалка</button>
         <button type="button" id="btn-export">JSON ↑</button>
         <label class="file-btn">JSON ↓<input type="file" id="import-file" accept="application/json,.json" /></label>
@@ -1046,6 +1060,7 @@
       <p class="sc">Буквенные команды — на EN-раскладке. Большинство автозамен от 3 символов и все греческие подтверждаются <kbd>Enter</kbd>. Команды, отмеченные «сразу», рисуются без него.</p>
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
+        <li><strong>Картинка:</strong> кнопка «Картинка», <kbd>Ctrl</kbd>+<kbd>V</kbd> или перетаскивание файла в формулу или текст. Угол меняет размер, с <kbd>Shift</kbd> — ширину и высоту по отдельности.</li>
         <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка · <kbd>Tab</kbd> — пять пробелов · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего · <kbd>Tab</kbd> — пять пробелов, внутри <kbd>\команды</kbd> команда завершается</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
@@ -1123,6 +1138,13 @@
 
     /** @type {{ id: string, type: 'heading'|'text'|'math'|'draw', content: string }[]} */
     let blocks = [];
+    /** id → { src, w, h }. В LaTeX только короткий id: data URL не проходит через \\htmlData. */
+    let sheetImages = {};
+    let imageResizeHandle = null;
+    let imageResizeDrag = null;
+    let imageResizeHideTimer = 0;
+    const sheetImageObservers = new Set();
+    const wiredSheetImageRoots = new WeakSet();
     let saveTimer = null;
     let statusTimer = null;
     let authState = null;
@@ -3696,44 +3718,57 @@
       return parts;
     }
 
+    function isCloseParenAtom(atom) {
+      return atom?.type === 'mclose' && atom.value === ')';
+    }
+
+    /** Закрывающая скобка вызова dls / dlh / dlc, если она им принадлежит. */
+    function limitDefinitionAtClose(close) {
+      const open = findMatchingOpen(close);
+      if (!open || open.value !== '(') return null;
+      let beforeOpen = open.leftSibling;
+      while (beforeOpen && isMathSpaceAtom(beforeOpen)) {
+        if (beforeOpen.isFirstSibling) {
+          beforeOpen = null;
+          break;
+        }
+        beforeOpen = beforeOpen.leftSibling;
+      }
+      for (const name of ['dls', 'dlh', 'dlc']) {
+        const commandStart = matchWordEndingAt(beforeOpen, name);
+        if (commandStart) return { command: name, commandStart, open, close };
+      }
+      return null;
+    }
+
     /**
      * dls(последовательность, предел),
      * dlh / dlc (функция, предельная точка, предел) + Enter.
-     * Курсор может стоять перед закрывающей скобкой или сразу после неё.
+     * Курсор может стоять перед закрывающей скобкой вызова, сразу после неё,
+     * или между двумя последними скобками: f(x_0)|).
      */
     function tryExpandSequenceLimitDefinition(mf) {
       try {
         const model = mf?._mathfield?.model;
         if (!model || model.selectionIsCollapsed === false) return false;
         const atCaret = model.at(model.position);
-        let close = null;
-        if (atCaret?.type === 'mclose' && atCaret.value === ')') close = atCaret;
-        else if (atCaret?.rightSibling?.type === 'mclose' && atCaret.rightSibling.value === ')') {
-          close = atCaret.rightSibling;
-        }
-        if (!close) return false;
-        const open = findMatchingOpen(close);
-        if (!open || open.value !== '(') return false;
-
-        let beforeOpen = open.leftSibling;
-        while (beforeOpen && isMathSpaceAtom(beforeOpen)) {
-          if (beforeOpen.isFirstSibling) {
-            beforeOpen = null;
-            break;
-          }
-          beforeOpen = beforeOpen.leftSibling;
-        }
+        const candidates = [];
+        if (isCloseParenAtom(atCaret?.rightSibling)) candidates.push(atCaret.rightSibling);
+        if (isCloseParenAtom(atCaret)) candidates.push(atCaret);
         let command = '';
         let commandStart = null;
-        for (const name of ['dls', 'dlh', 'dlc']) {
-          const start = matchWordEndingAt(beforeOpen, name);
-          if (start) {
-            command = name;
-            commandStart = start;
-            break;
-          }
+        let open = null;
+        let close = null;
+        for (const candidate of candidates) {
+          const hit = limitDefinitionAtClose(candidate);
+          if (!hit) continue;
+          command = hit.command;
+          commandStart = hit.commandStart;
+          open = hit.open;
+          close = hit.close;
+          break;
         }
-        if (!commandStart) return false;
+        if (!close || !open) return false;
 
         const inner = [];
         let walk = open.rightSibling;
@@ -5298,6 +5333,553 @@
       );
     }
 
+    const SHEET_IMAGE_SRC =
+      /^data:image\/(?:png|jpeg|gif|webp);base64,[a-zA-Z0-9+/=]+$/;
+
+    function loadSheetImages(raw) {
+      const next = {};
+      if (raw && typeof raw === 'object') {
+        for (const [id, img] of Object.entries(raw)) {
+          if (!/^[a-zA-Z0-9]{4,32}$/.test(id)) continue;
+          if (!img || typeof img !== 'object') continue;
+          if (!SHEET_IMAGE_SRC.test(img.src || '')) continue;
+          const w = Number(img.w);
+          const h = Number(img.h);
+          next[id] = {
+            src: img.src,
+            w: Number.isFinite(w) && w > 0 ? Math.round(w) : 1,
+            h: Number.isFinite(h) && h > 0 ? Math.round(h) : 1,
+          };
+        }
+      }
+      sheetImages = next;
+    }
+
+    function imagesSnapshot() {
+      const out = {};
+      for (const id of Object.keys(sheetImages).sort()) {
+        const img = sheetImages[id];
+        out[id] = { src: img.src, w: img.w, h: img.h };
+      }
+      return out;
+    }
+
+    function imagesInLatex(latex) {
+      const out = {};
+      for (const match of String(latex || '').matchAll(/mnimg=([a-zA-Z0-9]+)/g)) {
+        const img = sheetImages[match[1]];
+        if (img) out[match[1]] = { src: img.src, w: img.w, h: img.h };
+      }
+      return out;
+    }
+
+    function absorbCopiedImages(images) {
+      if (!images || typeof images !== 'object') return;
+      for (const [id, img] of Object.entries(images)) {
+        if (sheetImages[id]) continue;
+        if (!/^[a-zA-Z0-9]{4,32}$/.test(id)) continue;
+        if (!img || typeof img !== 'object' || !SHEET_IMAGE_SRC.test(img.src || '')) continue;
+        const w = Number(img.w);
+        const h = Number(img.h);
+        sheetImages[id] = {
+          src: img.src,
+          w: Number.isFinite(w) && w > 0 ? Math.round(w) : 1,
+          h: Number.isFinite(h) && h > 0 ? Math.round(h) : 1,
+        };
+      }
+    }
+
+    function applyRemoteImages(remoteImages) {
+      const previous = sheetImages;
+      const hasRemote =
+        remoteImages &&
+        typeof remoteImages === 'object' &&
+        Object.keys(remoteImages).length > 0;
+      if (hasRemote) loadSheetImages(remoteImages);
+      else sheetImages = { ...previous };
+      for (const block of blocks) {
+        for (const match of String(block.content || '').matchAll(/mnimg=([a-zA-Z0-9]+)/g)) {
+          const id = match[1];
+          if (!sheetImages[id] && previous[id]) sheetImages[id] = previous[id];
+        }
+      }
+    }
+
+    function fieldAcceptsImages(blockId) {
+      const block = blocks.find((item) => item.id === blockId);
+      return !!block && (block.type === 'math' || block.type === 'text');
+    }
+
+    function imageFileFromList(files) {
+      if (!files) return null;
+      for (const file of files) {
+        if (/^image\/(png|jpe?g|gif|webp)$/i.test(file?.type || '')) return file;
+      }
+      return null;
+    }
+
+    function imageLatex(id, w, h) {
+      return `\\htmlData{mnimg=${id}}{\\rule{${w}px}{${h}px}}`;
+    }
+
+    // MathLive переводит px правила в em (1px = 0.75pt, 1em = 10pt), потом умножает на font-size.
+    function mathImageScale(mf) {
+      const fontPx = parseFloat(getComputedStyle(mf).fontSize) || 16;
+      return (fontPx * 0.75) / 10;
+    }
+
+    function imageRuleSpec(mf, id) {
+      const match = String(mf?.value || '').match(
+        new RegExp(
+          `\\\\htmlData\\{mnimg=${id}\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{([0-9.]+)([a-z]*)\\}\\{([0-9.]+)([a-z]*)\\}\\}`
+        )
+      );
+      if (!match) return null;
+      return {
+        w: parseFloat(match[1]),
+        wu: match[2] || 'pt',
+        h: parseFloat(match[3]),
+        hu: match[4] || 'pt',
+      };
+    }
+
+    function prepareSheetImage(file) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const maxEdge = 1280;
+          const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight, 1));
+          const w = Math.max(1, Math.round(img.naturalWidth * scale));
+          const h = Math.max(1, Math.round(img.naturalHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(null);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          const keepPng = /png|webp|gif/i.test(file.type || '');
+          let src = canvas.toDataURL(keepPng ? 'image/png' : 'image/jpeg', 0.82);
+          if (src.length > 900_000) src = canvas.toDataURL('image/jpeg', 0.8);
+          if (!SHEET_IMAGE_SRC.test(src) || src.length > 1_400_000) {
+            resolve(null);
+            return;
+          }
+          resolve({ src, w, h });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(null);
+        };
+        img.src = url;
+      });
+    }
+
+    async function insertSheetImage(mf, blockId, file) {
+      if (!fieldAcceptsImages(blockId) || !file) return false;
+      const bitmap = await prepareSheetImage(file);
+      if (!bitmap) {
+        setStatus('не удалось прочитать картинку', false);
+        return false;
+      }
+      const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+      sheetImages[id] = bitmap;
+      const scale = mathImageScale(mf);
+      const visualW = Math.max(48, Math.min(360, bitmap.w));
+      const visualH = Math.max(24, Math.round((visualW * bitmap.h) / bitmap.w));
+      const displayW = Math.max(8, Math.round(visualW / scale));
+      const displayH = Math.max(8, Math.round(visualH / scale));
+      try {
+        mf.focus({ preventScroll: true });
+        const inserted = mf.insert(imageLatex(id, displayW, displayH), {
+          format: 'latex',
+          mode: 'math',
+          selectionMode: 'after',
+          focus: true,
+          scrollIntoView: false,
+          feedback: false,
+        });
+        if (inserted === false) throw new Error('insert');
+        saveMathField(mf, blockId);
+        paintSheetImages(mf);
+        setStatus('картинка вставлена');
+        return true;
+      } catch {
+        delete sheetImages[id];
+        setStatus('не удалось вставить картинку', false);
+        return false;
+      }
+    }
+
+    function imageRuleElement(box) {
+      if (!box) return null;
+      if (box.classList?.contains('ML__rule')) return box;
+      return box.querySelector?.('.ML__rule') || box;
+    }
+
+    function paintSheetImages(mf) {
+      const root = mf?.shadowRoot;
+      if (!root) return;
+      for (const el of root.querySelectorAll('[data-mnimg]')) {
+        const id = (el.getAttribute('data-mnimg') || '').trim();
+        const img = sheetImages[id];
+        const rule = imageRuleElement(el);
+        if (!rule) continue;
+        if (!img) {
+          rule.style.backgroundImage = '';
+          continue;
+        }
+        rule.style.backgroundImage = `url("${img.src}")`;
+      }
+    }
+
+    function wireSheetImages(mf) {
+      const root = mf?.shadowRoot;
+      if (!root) {
+        requestAnimationFrame(() => {
+          if (mf.isConnected) wireSheetImages(mf);
+        });
+        return;
+      }
+      if (!root.querySelector('style[data-sheet-images]')) {
+        const style = document.createElement('style');
+        style.dataset.sheetImages = '';
+        style.textContent = `
+          [data-mnimg],
+          [data-mnimg] .ML__rule {
+            border-color: transparent !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            background-origin: border-box !important;
+            background-clip: border-box !important;
+            background-size: 100% 100% !important;
+          }
+        `;
+        root.appendChild(style);
+      }
+      if (wiredSheetImageRoots.has(root)) {
+        paintSheetImages(mf);
+        return;
+      }
+      wiredSheetImageRoots.add(root);
+      const observer = new MutationObserver(() => {
+        if (imageResizeDrag) return;
+        paintSheetImages(mf);
+      });
+      observer.observe(root, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'data-mnimg'],
+      });
+      sheetImageObservers.add(observer);
+      root.addEventListener('pointerover', (event) => {
+        const box = event.target?.closest?.('[data-mnimg]');
+        if (box) showImageHandle(mf, box);
+      });
+      root.addEventListener('pointerout', (event) => {
+        const box = event.target?.closest?.('[data-mnimg]');
+        if (!box) return;
+        const next = event.relatedTarget;
+        if (next && (box.contains(next) || next === imageResizeHandle)) return;
+        scheduleHideImageHandle();
+      });
+      paintSheetImages(mf);
+    }
+
+    function ensureImageResizeHandle() {
+      if (imageResizeHandle) return imageResizeHandle;
+      const handle = document.createElement('div');
+      handle.className = 'img-resize-handle';
+      handle.hidden = true;
+      handle.title = 'Потяни, чтобы изменить размер. Shift — ширина и высота по отдельности.';
+      handle.setAttribute('role', 'slider');
+      handle.setAttribute('aria-label', 'Размер картинки');
+      handle.addEventListener('pointerenter', cancelHideImageHandle);
+      handle.addEventListener('pointerleave', scheduleHideImageHandle);
+      handle.addEventListener('pointerdown', onImageResizeDown);
+      handle.addEventListener('pointermove', onImageResizeMove);
+      handle.addEventListener('pointerup', finishImageResize);
+      handle.addEventListener('pointercancel', finishImageResize);
+      document.body.appendChild(handle);
+      window.addEventListener('scroll', positionImageHandle, true);
+      window.addEventListener('resize', positionImageHandle);
+      imageResizeHandle = handle;
+      return handle;
+    }
+
+    function showImageHandle(mf, box) {
+      const id = (box.getAttribute('data-mnimg') || '').trim();
+      if (!id || !sheetImages[id]) return;
+      cancelHideImageHandle();
+      const handle = ensureImageResizeHandle();
+      handle.hidden = false;
+      handle._id = id;
+      handle._mf = mf;
+      handle._box = imageRuleElement(box);
+      handle._blockId = mf.closest('.block')?.dataset.id || '';
+      positionImageHandle();
+    }
+
+    function positionImageHandle() {
+      const handle = imageResizeHandle;
+      const box = handle?._box;
+      if (!handle || !box?.isConnected) {
+        if (handle && !imageResizeDrag) handle.hidden = true;
+        return;
+      }
+      const rect = box.getBoundingClientRect();
+      if (rect.width < 2 || rect.bottom < 0 || rect.top > window.innerHeight) {
+        if (!imageResizeDrag) handle.hidden = true;
+        return;
+      }
+      handle.hidden = false;
+      handle.style.left = `${rect.right - 8}px`;
+      handle.style.top = `${rect.bottom - 8}px`;
+    }
+
+    function scheduleHideImageHandle() {
+      clearTimeout(imageResizeHideTimer);
+      imageResizeHideTimer = setTimeout(() => {
+        if (imageResizeDrag) return;
+        if (imageResizeHandle?.matches(':hover')) return;
+        if (imageResizeHandle) imageResizeHandle.hidden = true;
+      }, 200);
+    }
+
+    function cancelHideImageHandle() {
+      clearTimeout(imageResizeHideTimer);
+    }
+
+    function previewImageSize(box, w, h) {
+      const rule = imageRuleElement(box);
+      if (!rule) return;
+      rule.style.borderRightWidth = `${w}px`;
+      rule.style.borderTopWidth = `${h}px`;
+      let node = rule.parentElement;
+      const root = rule.getRootNode();
+      while (node && node !== root) {
+        if (node.style?.width) node.style.width = `${w}px`;
+        if (node.style?.height) node.style.height = `${h}px`;
+        if (node.classList?.contains('ML__latex')) break;
+        node = node.parentElement;
+      }
+    }
+
+    function onImageResizeDown(event) {
+      const handle = imageResizeHandle;
+      if (!handle || handle.hidden) return;
+      const img = sheetImages[handle._id];
+      const box = handle._box;
+      if (!img || !box) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = box.getBoundingClientRect();
+      const spec = imageRuleSpec(handle._mf, handle._id);
+      const fallback = mathImageScale(handle._mf);
+      imageResizeDrag = {
+        id: handle._id,
+        mf: handle._mf,
+        box,
+        blockId: handle._blockId,
+        aspect: img.w / img.h || rect.width / rect.height || 1,
+        x: event.clientX,
+        y: event.clientY,
+        startW: rect.width,
+        startH: rect.height,
+        w: Math.round(rect.width),
+        h: Math.round(rect.height),
+        scaleX: spec?.wu === 'px' && spec.w ? rect.width / spec.w : fallback,
+        scaleY: spec?.hu === 'px' && spec.h ? rect.height / spec.h : fallback,
+      };
+      try {
+        handle.setPointerCapture(event.pointerId);
+      } catch {
+        /* synthetic pointer */
+      }
+    }
+
+    function onImageResizeMove(event) {
+      const drag = imageResizeDrag;
+      if (!drag) return;
+      event.preventDefault();
+      let w = drag.startW + (event.clientX - drag.x);
+      let h = drag.startH + (event.clientY - drag.y);
+      if (event.shiftKey) {
+        w = Math.max(32, Math.min(1600, w));
+        h = Math.max(32, Math.min(1600, h));
+      } else {
+        w = Math.max(32, Math.min(1600, w));
+        h = w / drag.aspect;
+        if (h > 1600) {
+          h = 1600;
+          w = h * drag.aspect;
+        }
+        if (h < 32) {
+          h = 32;
+          w = h * drag.aspect;
+        }
+      }
+      drag.w = Math.round(w);
+      drag.h = Math.round(h);
+      previewImageSize(drag.box, drag.w, drag.h);
+      positionImageHandle();
+    }
+
+    function finishImageResize() {
+      const drag = imageResizeDrag;
+      if (!drag) return;
+      imageResizeDrag = null;
+      const changed =
+        Math.abs(drag.w - Math.round(drag.startW)) >= 2 ||
+        Math.abs(drag.h - Math.round(drag.startH)) >= 2;
+      if (!changed) {
+        paintSheetImages(drag.mf);
+        positionImageHandle();
+        return;
+      }
+      commitImageSize(drag);
+    }
+
+    function imageRuleRange(mf, id) {
+      const model = mf?._mathfield?.model;
+      if (!model) return null;
+      const last = model.lastOffset ?? 0;
+      const seen = new Set();
+      let rule = null;
+      for (let i = 0; i <= last; i++) {
+        const atom = model.at(i);
+        if (!atom || seen.has(atom)) continue;
+        seen.add(atom);
+        if (atom.command !== '\\htmlData') continue;
+        if (!String(atom.args?.[0] || '').includes(`mnimg=${id}`)) continue;
+        const body = Array.isArray(atom.body) ? atom.body : atom.body ? [atom.body] : [];
+        for (const head of body) {
+          let cur = head;
+          while (cur) {
+            if (cur.command === '\\rule') {
+              rule = cur;
+              break;
+            }
+            cur = cur.rightSibling;
+          }
+          if (rule) break;
+        }
+      }
+      if (!rule) return null;
+      const end = model.offsetOf(rule);
+      const start = rule.leftSibling ? model.offsetOf(rule.leftSibling) : Math.max(0, end - 1);
+      let selected = '';
+      try {
+        selected = mf.getValue(start, end, 'latex') || '';
+      } catch {
+        return null;
+      }
+      if (!/^\\rule(?:\[[^\]]*\])?\{[^}]*\}\{[^}]*\}$/.test(selected.trim())) return null;
+      return [start, end];
+    }
+
+    function commitImageSize(drag) {
+      const mf = drag.mf;
+      const id = drag.id;
+      const blockId = drag.blockId;
+      const w = Math.max(8, Math.round(drag.w / (drag.scaleX || 1)));
+      const h = Math.max(8, Math.round(drag.h / (drag.scaleY || 1)));
+      if (!mf?.isConnected || !fieldAcceptsImages(blockId)) return;
+      const range = imageRuleRange(mf, id);
+      if (range) {
+        const pos = mf.position;
+        try {
+          mf.selection = { ranges: [range] };
+          mf.insert(`\\rule{${w}px}{${h}px}`, {
+            format: 'latex',
+            selectionMode: 'after',
+            scrollIntoView: false,
+            feedback: false,
+          });
+          if (
+            (mf.value || '').includes(`mnimg=${id}`) &&
+            new RegExp(
+              `\\\\htmlData\\{mnimg=${id}\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{`
+            ).test(mf.value || '')
+          ) {
+            try {
+              mf.position = pos;
+            } catch {
+              /* caret stays after the picture */
+            }
+            saveMathField(mf, blockId);
+            paintSheetImages(mf);
+            positionImageHandle();
+            return;
+          }
+        } catch {
+          /* ниже — замена всей формулы */
+        }
+      }
+      const current = mf.value || '';
+      const next = current.replace(
+        new RegExp(
+          `\\\\htmlData\\{mnimg=${id}\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{[^}]*\\}\\{[^}]*\\}\\}`
+        ),
+        imageLatex(id, w, h)
+      );
+      if (next === current) return;
+      const pos = typeof mf.position === 'number' ? mf.position : null;
+      const multiline = /\\\\|\\displaylines\b|\\begin\{/.test(current);
+      if (!multiline) {
+        mf.value = next;
+        if (pos != null) {
+          try {
+            mf.position = pos;
+          } catch {
+            /* ignore */
+          }
+        }
+        saveMathField(mf, blockId);
+        paintSheetImages(mf);
+        return;
+      }
+      const fresh = document.createElement('math-field');
+      fresh.dataset.sheetImageProbe = '1';
+      fresh.setAttribute('virtual-keyboard-mode', 'off');
+      fresh.style.cssText =
+        'position:fixed;left:-9999px;top:0;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;';
+      document.body.appendChild(fresh);
+      fresh.value = next;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try {
+            const state = fresh._mathfield?.model?.getState?.();
+            if (state && mf.isConnected) {
+              ignoreEditorEvents = true;
+              try {
+                mf._mathfield.model.setState(state, true);
+              } finally {
+                ignoreEditorEvents = false;
+              }
+              if (pos != null) {
+                try {
+                  mf.position = pos;
+                } catch {
+                  /* ignore */
+                }
+              }
+              saveMathField(mf, blockId);
+              paintSheetImages(mf);
+            }
+          } finally {
+            fresh.remove();
+            positionImageHandle();
+          }
+        });
+      });
+    }
+
     function copyMathSelection(e, mf, blockId, cut = false) {
       const latex = selectedMathLatex(mf);
       if (!latex || !e.clipboardData) return false;
@@ -5306,13 +5888,13 @@
       e.stopPropagation();
       e.stopImmediatePropagation?.();
       e.clipboardData.setData('application/x-latex', latex);
-      e.clipboardData.setData(
-        'application/x-mathnote-copy',
-        JSON.stringify({
-          full: mathFieldSelectionCoversAll(mf),
-          multiline: isMultilineMathLatex(latex),
-        })
-      );
+      const copyMeta = {
+        full: mathFieldSelectionCoversAll(mf),
+        multiline: isMultilineMathLatex(latex),
+      };
+      const copiedImages = imagesInLatex(latex);
+      if (Object.keys(copiedImages).length) copyMeta.images = copiedImages;
+      e.clipboardData.setData('application/x-mathnote-copy', JSON.stringify(copyMeta));
       // Обёртка позволяет распознать LaTeX даже если браузер отбросит custom MIME.
       e.clipboardData.setData('text/plain', `$$${latex}$$`);
       if (cut) {
@@ -5341,6 +5923,14 @@
 
     function pasteMathSelection(e, mf, blockId) {
       if (!e.clipboardData || isInHashComment(mf)) return false;
+      const imageFile = imageFileFromList(e.clipboardData.files);
+      if (imageFile && fieldAcceptsImages(blockId)) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        void insertSheetImage(mf, blockId, imageFile);
+        return true;
+      }
       let latex = e.clipboardData.getData('application/x-latex');
       const plain = e.clipboardData.getData('text/plain');
       if (!latex) {
@@ -5362,6 +5952,7 @@
           const parsed = JSON.parse(meta);
           copiedWholeBlock = !!parsed.full;
           copiedMultiline = copiedMultiline || !!parsed.multiline;
+          absorbCopiedImages(parsed.images);
         }
       } catch {
         /* ignore */
@@ -5611,6 +6202,23 @@
         (e) => pasteMathSelection(e, mf, block.id),
         true
       );
+      if (fieldAcceptsImages(block.id)) {
+        mf.addEventListener('dragover', (event) => {
+          const types = event.dataTransfer?.types;
+          if (!types || ![...types].includes('Files')) return;
+          event.preventDefault();
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+        });
+        mf.addEventListener('drop', (event) => {
+          const file = imageFileFromList(event.dataTransfer?.files);
+          if (!file) return;
+          event.preventDefault();
+          event.stopPropagation();
+          void insertSheetImage(mf, block.id, file);
+        });
+        mf.addEventListener('mount', () => wireSheetImages(mf), { once: true });
+        queueMicrotask(() => wireSheetImages(mf));
+      }
       wireMathFieldClickCaret(mf);
       wireMathFieldDblClickLineSelect(mf);
       return mf;
@@ -7014,6 +7622,7 @@
         document: {
           schemaVersion: 1,
           blocks: blocks.map(({ id, type, content }) => ({ id, type, content })),
+          images: imagesSnapshot(),
         },
       };
     }
@@ -7030,6 +7639,7 @@
       const doc = {
         title: titleEl.value,
         blocks: blocks.map(({ id, type, content }) => ({ id, type, content })),
+        images: imagesSnapshot(),
         updatedAt: new Date().toISOString(),
       };
       const raw = JSON.stringify(doc);
@@ -7151,6 +7761,7 @@
           : 'Лист 1';
       blocks = normalizeBlocks(notebook.document?.blocks);
       if (!blocks.length) blocks = [{ id: uid(), type: 'math', content: '' }];
+      applyRemoteImages(notebook.document?.images);
       notebookVersion = Number(notebook.version) || 1;
       remoteConflict = false;
       structuralHistory.undo.length = 0;
@@ -7311,6 +7922,7 @@
           { id: uid(), type: 'heading', content: 'Решение' },
           { id: uid(), type: 'math', content: '' },
         ];
+        loadSheetImages(null);
         titleEl.value = 'Лист 1';
         return;
       }
@@ -7323,9 +7935,11 @@
         if (!blocks.length) {
           blocks = [{ id: uid(), type: 'math', content: '' }];
         }
+        loadSheetImages(doc.images);
       } catch {
         setStatus('не удалось прочитать localStorage', false);
         blocks = [{ id: uid(), type: 'math', content: '' }];
+        loadSheetImages(null);
       }
     }
 
@@ -7945,6 +8559,7 @@
       return {
         title: titleEl.value,
         blocks: blocks.map(({ id, type, content }) => ({ id, type, content })),
+        images: imagesSnapshot(),
       };
     }
 
@@ -7965,6 +8580,7 @@
       if (!a || !b || a.title !== b.title || a.blocks.length !== b.blocks.length) {
         return false;
       }
+      if (JSON.stringify(a.images || {}) !== JSON.stringify(b.images || {})) return false;
       return a.blocks.every((block, i) => {
         const other = b.blocks[i];
         return (
@@ -7982,6 +8598,7 @@
         type,
         content,
       }));
+      loadSheetImages(snapshot.images);
       const liveIds = new Set(blocks.map((block) => block.id));
       for (const id of mathHistoryByBlockId.keys()) {
         if (!liveIds.has(id)) mathHistoryByBlockId.delete(id);
@@ -8121,6 +8738,9 @@
     }
 
     function render() {
+      for (const observer of sheetImageObservers) observer.disconnect();
+      sheetImageObservers.clear();
+      if (imageResizeHandle) imageResizeHandle.hidden = true;
       clearingMath = false;
       closeSymbolPicker();
       drawPadEpoch += 1;
@@ -9351,6 +9971,33 @@
       insertBlock('text', blocks.at(-1)?.id ?? null);
     document.getElementById('btn-math').onclick = () =>
       insertBlock('math', blocks.at(-1)?.id ?? null);
+    document.getElementById('insert-image').addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      const active = document.activeElement;
+      let target = null;
+      if (active?.tagName === 'MATH-FIELD') {
+        const blockId = active.closest('.block')?.dataset.id;
+        if (fieldAcceptsImages(blockId)) target = { mf: active, blockId };
+      }
+      if (!target) {
+        for (let i = blocks.length - 1; i >= 0; i--) {
+          const block = blocks[i];
+          if (block.type !== 'math' && block.type !== 'text') continue;
+          const mf = document.querySelector(`.block[data-id="${block.id}"] math-field`);
+          if (mf) {
+            target = { mf, blockId: block.id };
+            break;
+          }
+        }
+      }
+      if (!target) {
+        setStatus('сначала поставь курсор в формулу или текст', false);
+        return;
+      }
+      void insertSheetImage(target.mf, target.blockId, file);
+    });
     document.getElementById('btn-draw').onclick = () =>
       insertBlock('draw', blocks.at(-1)?.id ?? null);
 
@@ -9378,6 +10025,7 @@
         drawHistoryByBlockId.clear();
         blocks = normalizeBlocks(doc.blocks);
         if (!blocks.length) blocks = [{ id: uid(), type: 'math', content: '' }];
+        loadSheetImages(doc.images);
         render();
         save();
         recordStructuralChange(
@@ -9399,6 +10047,7 @@
       titleEl.value = 'Лист 1';
       mathHistoryByBlockId.clear();
       drawHistoryByBlockId.clear();
+      loadSheetImages(null);
       blocks = [
         { id: uid(), type: 'heading', content: 'Решение' },
         { id: uid(), type: 'math', content: '' },
