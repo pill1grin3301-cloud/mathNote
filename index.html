@@ -154,7 +154,26 @@
       cursor: nwse-resize;
       touch-action: none;
     }
+    .img-resize-handle[data-axis="width"] {
+      width: 8px;
+      height: 18px;
+      border-radius: 2px;
+      cursor: ew-resize;
+    }
+    .img-resize-handle[data-axis="height"] {
+      width: 18px;
+      height: 8px;
+      border-radius: 2px;
+      cursor: ns-resize;
+    }
     .img-resize-handle[hidden] { display: none !important; }
+    .img-resize-preview {
+      position: fixed;
+      z-index: 59;
+      pointer-events: none;
+      object-fit: fill;
+    }
+    .img-resize-preview[hidden] { display: none !important; }
 
     .auth-controls {
       display: inline-flex;
@@ -1060,7 +1079,7 @@
       <p class="sc">Буквенные команды — на EN-раскладке. Большинство автозамен от 3 символов и все греческие подтверждаются <kbd>Enter</kbd>. Команды, отмеченные «сразу», рисуются без него.</p>
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
-        <li><strong>Картинка:</strong> кнопка «Картинка», <kbd>Ctrl</kbd>+<kbd>V</kbd> или перетаскивание файла в формулу или текст. Угол меняет размер, с <kbd>Shift</kbd> — ширину и высоту по отдельности.</li>
+        <li><strong>Картинка:</strong> кнопка «Картинка», <kbd>Ctrl</kbd>+<kbd>V</kbd> или перетаскивание файла в формулу или текст. Картинка лежит поверх блока своим прямоугольником, строка под ней не раздвигается. Рядом можно писать, в том числе в начале строки, если картинка стоит в другом конце. Угол сохраняет пропорции, правый край меняет ширину, нижний — высоту. Правая кнопка двигает картинку: у левого, правого и верхнего края она останавливается, вниз блок удлиняется. Удаление текста не сдвигает картинку, удаление картинки не сдвигает текст.</li>
         <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка · <kbd>Tab</kbd> — пять пробелов · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего · <kbd>Tab</kbd> — пять пробелов, внутри <kbd>\команды</kbd> команда завершается</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
@@ -1069,7 +1088,7 @@
         <li><strong>Предел по Коши:</strong> <kbd>dlc</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0: ∃δ&gt;0: ∀x, следующая: 0&lt;|x−точка|&lt;δ → |функция − предел|&lt;ε.</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
-        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω</li>
+        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω. Курсор сразу после комбинации в строке: <kbd>dphi</kbd>+<kbd>Enter</kbd> → dφ.</li>
         <li><strong>Сравнения:</strong> <kbd>lt</kbd> &lt; · <kbd>gt</kbd> &gt; · <kbd>le</kbd>/<kbd>&lt;=</kbd> ≤ · <kbd>ge</kbd>/<kbd>&gt;=</kbd> ≥ · <kbd>!=</kbd> ≠ · <kbd>~~</kbd> ≈ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>Alt</kbd>+<kbd>=</kbd> / <kbd>iff</kbd> ⇔ сразу</li>
         <li><strong>Стрелки:</strong> <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>harr</kbd> ↔ · <kbd>larr</kbd> ← · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓</li>
         <li><strong>Множества и логика:</strong> <kbd>RR</kbd> ℝ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>ems</kbd> ∅ · <kbd>in</kbd>+<kbd>Enter</kbd> ∈ · <kbd>!in</kbd> ∉ сразу · <kbd>!EE</kbd> ∄ сразу · <kbd>sub</kbd> ⊂ · <kbd>!sub</kbd> ⊄ · <kbd>sube</kbd> ⊆ · <kbd>!sube</kbd> ⊈ · <kbd>sup</kbd> ⊃ · <kbd>!sup</kbd> ⊅ · <kbd>supe</kbd> ⊇ · <kbd>!supe</kbd> ⊉ · <kbd>uu</kbd>/<kbd>union</kbd> ∪ · <kbd>nn</kbd> ∩ · <kbd>xx</kbd> × (умножение / декартово произведение) · <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA/forall</kbd> ∀ · <kbd>EE/exists</kbd> ∃</li>
@@ -1141,8 +1160,14 @@
     /** id → { src, w, h }. В LaTeX только короткий id: data URL не проходит через \\htmlData. */
     let sheetImages = {};
     let imageResizeHandle = null;
+    let imageHandles = null;
+    let imageMoveDrag = null;
+    let imagePointerWired = false;
+    let suppressImageMenu = false;
+    let imageResizePreview = null;
     let imageResizeDrag = null;
     let imageResizeHideTimer = 0;
+    let imagePointer = null;
     const sheetImageObservers = new Set();
     const wiredSheetImageRoots = new WeakSet();
     let saveTimer = null;
@@ -1175,7 +1200,7 @@
       { latex: '\\nsubseteq', sym: '⊈', name: 'не подмножество' },
     ];
 
-    /** Акценты над символом слева — Shift+~ */
+    /** Акценты над символом слева — Shift+~. Повтор того же знака тянет его на строку слева. */
     const ACCENT_PICKER = [
       { latex: '\\vec', sym: 'x⃗', name: '→' },
       { latex: '\\dot', sym: 'ẋ', name: '·' },
@@ -1183,6 +1208,15 @@
       { latex: '\\bar', sym: 'x̄', name: '−' },
       { latex: '\\tilde', sym: 'x̃', name: '~' },
     ];
+
+    /** Короткий знак и его растягиваемая форма. Точка не имеет длинного варианта. */
+    const ACCENT_STRETCH = {
+      '\\vec': { wide: '\\overrightarrow', family: ['\\overrightarrow', '\\vec'] },
+      '\\hat': { wide: '\\widehat', family: ['\\widehat', '\\hat'] },
+      '\\tilde': { wide: '\\widetilde', family: ['\\widetilde', '\\tilde'] },
+      '\\bar': { wide: '\\overline', family: ['\\overline', '\\bar'] },
+      '\\dot': { wide: '\\dot', family: ['\\dot'] },
+    };
 
     /** Равенства / эквивалентности — Ctrl+Alt+= */
     const EQ_OP_PICKER = [
@@ -1944,10 +1978,115 @@
       return [start, end];
     }
 
-    /** Стрелка / точка / крышка / черта / тильда — только над символом слева от курсора. */
+    function atomLatex(model, atom) {
+      try {
+        const end = model.offsetOf(atom);
+        const start = atom.leftSibling ? model.offsetOf(atom.leftSibling) : 0;
+        if (typeof start !== 'number' || typeof end !== 'number' || start >= end) return '';
+        return model.getValue(start, end, 'latex') || '';
+      } catch {
+        return '';
+      }
+    }
+
+    function accentInnerLatex(latex, commands) {
+      const text = String(latex || '').trim();
+      const ordered = [...commands].sort((a, b) => b.length - a.length);
+      for (const cmd of ordered) {
+        if (!text.startsWith(cmd)) continue;
+        let i = cmd.length;
+        while (text[i] === ' ') i += 1;
+        if (text[i] !== '{') continue;
+        let depth = 0;
+        for (let j = i; j < text.length; j += 1) {
+          if (text[j] === '{') depth += 1;
+          else if (text[j] === '}') {
+            depth -= 1;
+            if (depth === 0) {
+              return j === text.length - 1 ? text.slice(i + 1, j) : null;
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    /** Буква, цифра, индекс или уже стоящий над ней знак — без операторов и пробелов. */
+    function isSymbolRunAtom(atom) {
+      if (!atom || atom.type === 'first' || isMathSpaceAtom(atom)) return false;
+      if (atom.command === '\\placeholder') return false;
+      const type = atom.type || '';
+      if (
+        /^(binop|rel|punct|mopen|mclose|leftright|genfrac|surd|extensible|enclose|sizeddelim|macro|tooltip|overlap|op|spacing|root|array|line|environment|rule)$/.test(
+          type
+        )
+      ) {
+        return false;
+      }
+      const cmd = String(atom.command || '');
+      if (
+        /^\\(times|cdot|pm|mp|div|to|rightarrow|leftarrow|mapsto|le|ge|leq|geq|neq|approx|equiv|sim|in|subset|supset|cup|cap|land|lor|forall|exists|sum|prod|int|lim)$/.test(
+          cmd
+        )
+      ) {
+        return false;
+      }
+      return /^(mord|subsup|accent|overunder)?$/.test(type);
+    }
+
+    /**
+     * Повтор того же акцента: знак накрывает непрерывную строку символов слева от курсора.
+     * Возвращает true, если слева уже этот знак (даже если расширять больше некуда).
+     */
+    function stretchAccentOverRun(mf, accentCmd) {
+      const spec = ACCENT_STRETCH[accentCmd];
+      if (!spec) return false;
+      const model = mf._mathfield?.model;
+      if (!model || model.selectionIsCollapsed === false) return false;
+      const atom = model.at(model.position);
+      const cmd = String(atom?.command || '');
+      if (!spec.family.includes(cmd)) return false;
+
+      const chunks = [];
+      let walk = atom;
+      let leftmost = null;
+      for (let guard = 0; walk && walk.type !== 'first' && guard < 80; guard += 1) {
+        const latex = atomLatex(model, walk).trim();
+        const walkCmd = String(walk.command || '');
+        if (spec.family.includes(walkCmd)) {
+          const inner = accentInnerLatex(latex, spec.family);
+          if (inner == null) return true;
+          chunks.unshift(inner);
+        } else if (latex && isSymbolRunAtom(walk)) {
+          chunks.unshift(latex);
+        } else break;
+        leftmost = walk;
+        if (walk.isFirstSibling) break;
+        walk = walk.leftSibling;
+      }
+      if (!leftmost || !chunks.length) return true;
+      if (cmd === spec.wide && leftmost === atom) return true;
+      const start = leftmost.leftSibling ? model.offsetOf(leftmost.leftSibling) : 0;
+      const end = model.offsetOf(atom);
+      if (typeof start !== 'number' || typeof end !== 'number' || start >= end) return true;
+      try {
+        model.extendSelectionTo(start, end);
+        mf.insert(`${spec.wide}{${chunks.join('')}}`, {
+          insertionMode: 'replaceSelection',
+          selectionMode: 'after',
+          format: 'latex',
+        });
+      } catch {
+        /* ignore */
+      }
+      return true;
+    }
+
+    /** Первый раз — над символом слева. Второй раз тот же знак — на всю строку слева. */
     function wrapPreviousWithAccent(mf, accentCmd) {
       const model = mf._mathfield?.model;
       if (!model) return;
+      if (stretchAccentOverRun(mf, accentCmd)) return;
       const insertWrapped = (body) =>
         mf.insert(`${accentCmd}{${body}}`, {
           insertionMode: 'replaceSelection',
@@ -2635,7 +2774,11 @@
       if (!atom) return false;
       if (atom.type === 'spacing') return true;
       const raw = `${atom.value ?? ''} ${atom.command ?? ''} ${atom.verbatimLatex ?? ''}`;
-      return /\\(:|,|;|quad|qquad)\b/.test(raw) || raw.includes('\\ ') || atom.value === ' ';
+      return (
+        /\\(:|,|;|quad|qquad)\b/.test(raw) ||
+        raw.includes('\\ ') ||
+        atom.value === ' '
+      );
     }
 
     function findAncestorAtom(atom, predicate) {
@@ -3179,6 +3322,38 @@
       psi: ['\\psi', '\\Psi'],
       ome: ['\\omega', '\\Omega'],
     };
+
+    const GREEK_LETTER_LATEX =
+      /^\\(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)$/;
+
+    /** phi / PHI / длинные имена вроде varphi, alpha, theta. */
+    function greekLatexForToken(token) {
+      if (!token || /[^A-Za-z]/.test(token)) return '';
+      const pair = GREEK_ABBREV[token.toLowerCase()];
+      if (pair) return token === token.toUpperCase() ? pair[1] : pair[0];
+      if (token.toLowerCase() === 'theta') {
+        return token === token.toUpperCase() ? '\\Theta' : '\\theta';
+      }
+      const via = lookupEnterInline(token);
+      return GREEK_LETTER_LATEX.test(via) ? via : '';
+    }
+
+    /**
+     * Самая длинная греческая комбинация в конце букв перед курсором.
+     * dphi → phi, но menu не теряет nu: короткое из двух букв берём
+     * только если перед ним не больше одной буквы.
+     */
+    function greekSuffixToken(letters) {
+      const token = letters.join('');
+      if (token.length < 3) return '';
+      for (let len = token.length - 1; len >= 2; len--) {
+        const slice = token.slice(token.length - len);
+        if (!greekLatexForToken(slice)) continue;
+        if (len === 2 && token.length - len > 1) continue;
+        return slice;
+      }
+      return '';
+    }
 
     /** Сокращения, доступные по Enter; часть из них ниже возвращается в мгновенный режим. */
     const ENTER_INLINE_ABBREV = {
@@ -3846,6 +4021,14 @@
               return false;
             }
           }
+        }
+      }
+      if (!latex && letters.length && extra === 0) {
+        const suffix = greekSuffixToken(letters);
+        const suffixLatex = greekLatexForToken(suffix);
+        if (suffixLatex) {
+          latex = suffixLatex;
+          extra = suffix.length - letters.length;
         }
       }
       if (!latex || !letters.length) return false;
@@ -5418,8 +5601,56 @@
       return null;
     }
 
-    function imageLatex(id, w, h) {
-      return `\\htmlData{mnimg=${id}}{\\rule{${w}px}{${h}px}}`;
+    function imageDataString(id, ox = 0, oy = 0, w = 0, h = 0) {
+      const parts = [`mnimg=${id}`];
+      parts.push(`ox=${Math.round(ox)}`);
+      parts.push(`oy=${Math.round(oy)}`);
+      if (w) parts.push(`w=${Math.round(w)}`);
+      if (h) parts.push(`h=${Math.round(h)}`);
+      return parts.join(',');
+    }
+
+    /** w/h — видимые пиксели. Правило нулевое: картинка не занимает место в строке. */
+    function imageLatex(id, w, h, ox = 0, oy = 0) {
+      return `\\htmlData{${imageDataString(id, ox, oy, w, h)}}{\\rule{0px}{0px}}`;
+    }
+
+    function imageFrameOf(el) {
+      const w = parseFloat(el?.getAttribute?.('data-w') || '');
+      const h = parseFloat(el?.getAttribute?.('data-h') || '');
+      if (!(w > 0) || !(h > 0)) return null;
+      return {
+        w,
+        h,
+        ox: parseFloat(el.getAttribute('data-ox') || '0') || 0,
+        oy: parseFloat(el.getAttribute('data-oy') || '0') || 0,
+      };
+    }
+
+    function imageFrameFromLatex(mf, id) {
+      const match = String(mf?.value || '').match(
+        new RegExp(`\\\\htmlData\\{([^}]*mnimg=${id}[^}]*)\\}`)
+      );
+      if (!match) return null;
+      const num = (key) => {
+        const found = match[1].match(new RegExp(`${key}=(-?\\d+(?:\\.\\d+)?)`));
+        return found ? parseFloat(found[1]) : 0;
+      };
+      const w = num('w');
+      const h = num('h');
+      if (!(w > 0) || !(h > 0)) return null;
+      return { w, h, ox: num('ox'), oy: num('oy') };
+    }
+
+    function imageDataApplied(value, id, ox, oy) {
+      const match = String(value || '').match(
+        new RegExp(`\\\\htmlData\\{([^}]*mnimg=${id}[^}]*)\\}`)
+      );
+      if (!match) return false;
+      const data = match[1];
+      const gotOx = Math.round(parseFloat((data.match(/ox=(-?\d+)/) || [])[1] || '0') || 0);
+      const gotOy = Math.round(parseFloat((data.match(/oy=(-?\d+)/) || [])[1] || '0') || 0);
+      return gotOx === Math.round(ox) && gotOy === Math.round(oy);
     }
 
     // MathLive переводит px правила в em (1px = 0.75pt, 1em = 10pt), потом умножает на font-size.
@@ -5431,7 +5662,7 @@
     function imageRuleSpec(mf, id) {
       const match = String(mf?.value || '').match(
         new RegExp(
-          `\\\\htmlData\\{mnimg=${id}\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{([0-9.]+)([a-z]*)\\}\\{([0-9.]+)([a-z]*)\\}\\}`
+          `\\\\htmlData\\{[^}]*mnimg=${id}[^}]*\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{([0-9.]+)([a-z]*)\\}\\{([0-9.]+)([a-z]*)\\}\\}`
         )
       );
       if (!match) return null;
@@ -5479,6 +5710,14 @@
       });
     }
 
+    function caretClientBox(mf) {
+      const caret = mf?.shadowRoot?.querySelector('.ML__caret');
+      if (!caret) return null;
+      const rect = caret.getBoundingClientRect();
+      if (!rect.height && !rect.width) return null;
+      return rect;
+    }
+
     async function insertSheetImage(mf, blockId, file) {
       if (!fieldAcceptsImages(blockId) || !file) return false;
       const bitmap = await prepareSheetImage(file);
@@ -5488,14 +5727,20 @@
       }
       const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
       sheetImages[id] = bitmap;
-      const scale = mathImageScale(mf);
       const visualW = Math.max(48, Math.min(360, bitmap.w));
       const visualH = Math.max(24, Math.round((visualW * bitmap.h) / bitmap.w));
-      const displayW = Math.max(8, Math.round(visualW / scale));
-      const displayH = Math.max(8, Math.round(visualH / scale));
+      const origin = mf.getBoundingClientRect();
+      const caret = caretClientBox(mf);
+      let ox = 8;
+      let oy = 8;
+      if (caret) {
+        ox = Math.max(0, Math.round(caret.left - origin.left));
+        oy = Math.max(0, Math.round(caret.top - origin.top));
+      }
+      ox = Math.min(ox, Math.max(0, origin.width - visualW - 4));
       try {
         mf.focus({ preventScroll: true });
-        const inserted = mf.insert(imageLatex(id, displayW, displayH), {
+        const inserted = mf.insert(imageLatex(id, visualW, visualH, ox, oy), {
           format: 'latex',
           mode: 'math',
           selectionMode: 'after',
@@ -5521,20 +5766,133 @@
       return box.querySelector?.('.ML__rule') || box;
     }
 
+    function imageLayer(mf) {
+      const root = mf?.shadowRoot;
+      if (!root) return null;
+      const layers = [...root.children].filter((el) => el.classList?.contains('mn-float-layer'));
+      let layer = layers[0];
+      if (!layer) {
+        layer = document.createElement('div');
+        layer.className = 'mn-float-layer';
+        root.appendChild(layer);
+        if (getComputedStyle(mf).position === 'static') mf.style.position = 'relative';
+        layer.addEventListener('pointerover', (event) => {
+          const box = event.target?.closest?.('.mn-float');
+          if (box) showImageHandle(mf, box);
+        });
+      }
+      for (const extra of layers.slice(1)) extra.remove();
+      return layer;
+    }
+
     function paintSheetImages(mf) {
       const root = mf?.shadowRoot;
       if (!root) return;
-      for (const el of root.querySelectorAll('[data-mnimg]')) {
+      const layer = imageLayer(mf);
+      if (!layer) return;
+      const seen = new Set();
+      const pending = [];
+      for (const el of root.querySelectorAll('[data-mnimg]:not(.mn-float)')) {
         const id = (el.getAttribute('data-mnimg') || '').trim();
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
         const img = sheetImages[id];
-        const rule = imageRuleElement(el);
-        if (!rule) continue;
-        if (!img) {
-          rule.style.backgroundImage = '';
+        const frame = imageFrameFromLatex(mf, id) || imageFrameOf(el);
+        if (!frame) {
+          const rule = imageRuleElement(el);
+          if (img && rule && !imageMigratePending.has(id)) pending.push({ id, rule });
           continue;
         }
-        rule.style.backgroundImage = `url("${img.src}")`;
+        let node = layer.querySelector(`.mn-float[data-mnimg="${id}"]`);
+        if (!node) {
+          node = document.createElement('div');
+          node.className = 'mn-float';
+          node.dataset.mnimg = id;
+          layer.appendChild(node);
+        }
+        node.dataset.ox = String(Math.round(frame.ox));
+        node.dataset.oy = String(Math.round(frame.oy));
+        node.dataset.w = String(Math.round(frame.w));
+        node.dataset.h = String(Math.round(frame.h));
+        node.style.left = `${frame.ox}px`;
+        node.style.top = `${frame.oy}px`;
+        node.style.width = `${frame.w}px`;
+        node.style.height = `${frame.h}px`;
+        node.style.backgroundImage = img ? `url("${img.src}")` : '';
       }
+      for (const node of [...layer.querySelectorAll('.mn-float')]) {
+        if (!seen.has(node.dataset.mnimg)) node.remove();
+      }
+      if (pending.length && !imageResizeDrag && !imageMoveDrag) {
+        migrateInlineImages(mf, root.querySelector('.ML__content') || mf, pending);
+      }
+      growFieldBelowImages(mf);
+    }
+
+    const imageMigratePending = new Set();
+
+    /** Старая картинка была правилом в строке. Запоминаем, где она видна, и вынимаем из потока. */
+    function migrateInlineImages(mf, content, pending) {
+      const origin = mf.getBoundingClientRect();
+      const scale = mathImageScale(mf) || 1;
+      let next = mf.value || '';
+      let changed = false;
+      for (const item of pending) {
+        const spec = imageRuleSpec(mf, item.id);
+        const rect = item.rule.getBoundingClientRect();
+        const w =
+          spec && spec.w > 1
+            ? Math.max(8, Math.round(spec.w * (spec.wu === 'px' ? scale : 1)))
+            : Math.max(8, Math.round(rect.width) || 48);
+        const h =
+          spec && spec.h > 1
+            ? Math.max(8, Math.round(spec.h * (spec.hu === 'px' ? scale : 1)))
+            : Math.max(8, Math.round(rect.height) || 32);
+        const ox = Math.round(rect.left - origin.left);
+        const oy = Math.round(rect.top - origin.top);
+        const replaced = next.replace(
+          new RegExp(
+            `\\\\htmlData\\{[^}]*mnimg=${item.id}[^}]*\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{[^}]*\\}\\{[^}]*\\}\\}`
+          ),
+          imageLatex(item.id, w, h, ox, oy)
+        );
+        if (replaced === next) continue;
+        next = replaced;
+        changed = true;
+        imageMigratePending.add(item.id);
+      }
+      if (!changed) return;
+      const blockId = mf.closest('.block')?.dataset.id || '';
+      commitImageLatex(mf, blockId, next, () => {
+        for (const item of pending) imageMigratePending.delete(item.id);
+      });
+    }
+
+    /** Нижний край блока догоняет картинку, чтобы следующая рамка её не закрывала. */
+    function growFieldBelowImages(mf, liveBottom) {
+      const content = mf?.shadowRoot?.querySelector('.ML__content');
+      if (!content) return;
+      if (mf._imageContentPadBottom == null) {
+        const inline = content.style.paddingBottom;
+        content.style.paddingBottom = '';
+        mf._imageContentPadBottom = parseFloat(getComputedStyle(content).paddingBottom) || 0;
+        content.style.paddingBottom = inline;
+      }
+      const base = mf._imageContentPadBottom;
+      const box = content.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(content).paddingBottom) || 0;
+      const contentBottom = box.bottom - pad;
+      const gap = 8;
+      let below = 0;
+      for (const el of mf.shadowRoot.querySelectorAll('.mn-float, [data-mnimg]:not(.mn-float)')) {
+        const rule = el.classList?.contains('mn-float') ? el : imageRuleElement(el);
+        if (!rule || rule.style.visibility === 'hidden') continue;
+        below = Math.max(below, rule.getBoundingClientRect().bottom + gap - contentBottom);
+      }
+      if (typeof liveBottom === 'number') below = Math.max(below, liveBottom + gap - contentBottom);
+      const next = Math.max(base, below);
+      if (next <= base + 0.5) content.style.paddingBottom = '';
+      else content.style.paddingBottom = `${Math.ceil(next)}px`;
     }
 
     function wireSheetImages(mf) {
@@ -5549,14 +5907,56 @@
         const style = document.createElement('style');
         style.dataset.sheetImages = '';
         style.textContent = `
-          [data-mnimg],
-          [data-mnimg] .ML__rule {
-            border-color: transparent !important;
-            background-repeat: no-repeat !important;
-            background-position: center !important;
-            background-origin: border-box !important;
-            background-clip: border-box !important;
-            background-size: 100% 100% !important;
+          .mn-float-layer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 0;
+            overflow: visible;
+            pointer-events: none;
+            z-index: 4;
+          }
+          .mn-float {
+            position: absolute;
+            pointer-events: auto;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
+            z-index: 4;
+          }
+          [data-mnimg]:not(.mn-float),
+          .ML__latex > .ML__mtable > .col-align-l > .ML__vlist-t > .ML__vlist-r > .ML__vlist > span > span[data-mnimg] {
+            display: inline !important;
+            width: 0 !important;
+            height: 0 !important;
+            max-width: 0 !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            position: static !important;
+            vertical-align: baseline !important;
+            pointer-events: none !important;
+          }
+          [data-mnimg]:not(.mn-float) .ML__rule,
+          .ML__latex > .ML__mtable > .col-align-l > .ML__vlist-t > .ML__vlist-r > .ML__vlist > span > span[data-mnimg] .ML__rule {
+            width: 0 !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+          }
+          /* Пустая нижняя распорка displaylines лежит поверх последней
+             строки и перехватывает клик. После Enter на непустой строке
+             картинка из-за неё не берётся. */
+          .ML__vlist-t2 > .ML__vlist-r:last-child,
+          .ML__vlist-t2 > .ML__vlist-r:last-child .ML__vlist {
+            pointer-events: none !important;
           }
         `;
         root.appendChild(style);
@@ -5566,136 +5966,275 @@
         return;
       }
       wiredSheetImageRoots.add(root);
-      const observer = new MutationObserver(() => {
-        if (imageResizeDrag) return;
+      const observer = new MutationObserver((records) => {
+        const fromLayer = records.every((record) => {
+          const node = record.target;
+          if (node?.classList?.contains('mn-float') || node?.classList?.contains('mn-float-layer')) {
+            return true;
+          }
+          if (node?.closest?.('.mn-float-layer')) return true;
+          const added = [...(record.addedNodes || [])];
+          return (
+            added.length > 0 &&
+            added.every(
+              (item) =>
+                item.classList?.contains('mn-float') || item.classList?.contains('mn-float-layer')
+            )
+          );
+        });
+        if (fromLayer) return;
+        if (imageResizeDrag?.mf === mf || imageMoveDrag?.mf === mf) {
+          const box = currentImageBox(imageResizeHandle);
+          if (box) box.style.visibility = 'hidden';
+          return;
+        }
         paintSheetImages(mf);
+        if (imageResizeHandle && !imageResizeHandle.hidden && imageResizeHandle._mf === mf) {
+          positionImageHandle();
+        }
       });
       observer.observe(root, {
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ['style', 'data-mnimg'],
+        attributeFilter: ['style', 'data-mnimg', 'data-ox', 'data-oy', 'data-w', 'data-h'],
       });
       sheetImageObservers.add(observer);
       root.addEventListener('pointerover', (event) => {
         const box = event.target?.closest?.('[data-mnimg]');
         if (box) showImageHandle(mf, box);
       });
-      root.addEventListener('pointerout', (event) => {
-        const box = event.target?.closest?.('[data-mnimg]');
-        if (!box) return;
-        const next = event.relatedTarget;
-        if (next && (box.contains(next) || next === imageResizeHandle)) return;
-        scheduleHideImageHandle();
-      });
+      wireImagePointer();
       paintSheetImages(mf);
     }
 
     function ensureImageResizeHandle() {
-      if (imageResizeHandle) return imageResizeHandle;
-      const handle = document.createElement('div');
-      handle.className = 'img-resize-handle';
-      handle.hidden = true;
-      handle.title = 'Потяни, чтобы изменить размер. Shift — ширина и высота по отдельности.';
-      handle.setAttribute('role', 'slider');
-      handle.setAttribute('aria-label', 'Размер картинки');
-      handle.addEventListener('pointerenter', cancelHideImageHandle);
-      handle.addEventListener('pointerleave', scheduleHideImageHandle);
-      handle.addEventListener('pointerdown', onImageResizeDown);
-      handle.addEventListener('pointermove', onImageResizeMove);
-      handle.addEventListener('pointerup', finishImageResize);
-      handle.addEventListener('pointercancel', finishImageResize);
-      document.body.appendChild(handle);
+      if (imageHandles) return imageHandles.corner;
+      const make = (axis, label) => {
+        const handle = document.createElement('div');
+        handle.className = 'img-resize-handle';
+        handle.dataset.axis = axis;
+        handle.hidden = true;
+        handle.title = label;
+        handle.setAttribute('role', 'slider');
+        handle.setAttribute('aria-label', label);
+        handle.addEventListener('pointerenter', cancelHideImageHandle);
+        handle.addEventListener('pointerdown', onImageResizeDown);
+        handle.addEventListener('pointermove', onImageResizeMove);
+        handle.addEventListener('pointerup', finishImageResize);
+        handle.addEventListener('pointercancel', finishImageResize);
+        document.body.appendChild(handle);
+        return handle;
+      };
+      imageHandles = {
+        corner: make('corner', 'Пропорции'),
+        width: make('width', 'Только ширина'),
+        height: make('height', 'Только высота'),
+      };
+      window.addEventListener('pointermove', trackImagePointer, true);
       window.addEventListener('scroll', positionImageHandle, true);
       window.addEventListener('resize', positionImageHandle);
-      imageResizeHandle = handle;
-      return handle;
+      imageResizeHandle = imageHandles.corner;
+      return imageHandles.corner;
+    }
+
+    function hideImageHandles() {
+      if (!imageHandles) return;
+      imageHandles.corner.hidden = true;
+      imageHandles.width.hidden = true;
+      imageHandles.height.hidden = true;
+    }
+
+    function imageOffsetOf(box) {
+      const host = box?.closest?.('[data-mnimg]') || box;
+      return {
+        ox: Math.round(parseFloat(host?.getAttribute?.('data-ox') || '0') || 0),
+        oy: Math.round(parseFloat(host?.getAttribute?.('data-oy') || '0') || 0),
+      };
     }
 
     function showImageHandle(mf, box) {
       const id = (box.getAttribute('data-mnimg') || '').trim();
       if (!id || !sheetImages[id]) return;
       cancelHideImageHandle();
-      const handle = ensureImageResizeHandle();
-      handle.hidden = false;
-      handle._id = id;
-      handle._mf = mf;
-      handle._box = imageRuleElement(box);
-      handle._blockId = mf.closest('.block')?.dataset.id || '';
+      ensureImageResizeHandle();
+      const rule = imageRuleElement(box);
+      const blockId = mf.closest('.block')?.dataset.id || '';
+      for (const el of [imageHandles.corner, imageHandles.width, imageHandles.height]) {
+        el._id = id;
+        el._mf = mf;
+        el._box = rule;
+        el._blockId = blockId;
+      }
       positionImageHandle();
     }
 
+    function currentImageBox(handle) {
+      if (!handle?._id) return null;
+      const live =
+        handle._mf?.shadowRoot?.querySelector(`.mn-float[data-mnimg="${handle._id}"]`) ||
+        handle._mf?.shadowRoot?.querySelector(`[data-mnimg="${handle._id}"]`);
+      const box = live?.classList?.contains('mn-float') ? live : live ? imageRuleElement(live) : null;
+      if (box) handle._box = box;
+      return handle._box?.isConnected ? handle._box : null;
+    }
+
+    function placeImageHandles(rect) {
+      if (!imageHandles) return;
+      const put = (el, x, y) => {
+        el.hidden = false;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+      };
+      put(imageHandles.corner, rect.right - 8, rect.bottom - 8);
+      put(imageHandles.width, rect.right - 4, rect.top + rect.height / 2 - 9);
+      put(imageHandles.height, rect.left + rect.width / 2 - 9, rect.bottom - 4);
+    }
+
     function positionImageHandle() {
-      const handle = imageResizeHandle;
-      const box = handle?._box;
-      if (!handle || !box?.isConnected) {
-        if (handle && !imageResizeDrag) handle.hidden = true;
+      if (!imageHandles) return;
+      if (imageMoveDrag) {
+        hideImageHandles();
+        return;
+      }
+      if (imageResizeDrag && imageResizePreview && !imageResizePreview.hidden) {
+        placeImageHandles({
+          left: parseFloat(imageResizePreview.style.left),
+          top: parseFloat(imageResizePreview.style.top),
+          width: parseFloat(imageResizePreview.style.width),
+          height: parseFloat(imageResizePreview.style.height),
+          right: parseFloat(imageResizePreview.style.left) + parseFloat(imageResizePreview.style.width),
+          bottom: parseFloat(imageResizePreview.style.top) + parseFloat(imageResizePreview.style.height),
+        });
+        return;
+      }
+      const box = currentImageBox(imageResizeHandle);
+      if (!box) {
+        if (!imageResizeDrag) hideImageHandles();
         return;
       }
       const rect = box.getBoundingClientRect();
-      if (rect.width < 2 || rect.bottom < 0 || rect.top > window.innerHeight) {
-        if (!imageResizeDrag) handle.hidden = true;
+      if (
+        rect.width < 2 ||
+        rect.bottom < 0 ||
+        rect.top > window.innerHeight ||
+        rect.right < 0 ||
+        rect.left > window.innerWidth
+      ) {
+        if (!imageResizeDrag) hideImageHandles();
         return;
       }
-      handle.hidden = false;
-      handle.style.left = `${rect.right - 8}px`;
-      handle.style.top = `${rect.bottom - 8}px`;
+      placeImageHandles(rect);
+    }
+
+    function pointerOutsideImage(x, y) {
+      const box = currentImageBox(imageResizeHandle);
+      if (!box) return true;
+      const rect = box.getBoundingClientRect();
+      const pad = 24;
+      return (
+        x < rect.left - pad ||
+        x > rect.right + pad ||
+        y < rect.top - pad ||
+        y > rect.bottom + pad
+      );
+    }
+
+    function trackImagePointer(event) {
+      imagePointer = { x: event.clientX, y: event.clientY };
+      if (imageResizeDrag || !imageResizeHandle || imageResizeHandle.hidden) return;
+      if (pointerOutsideImage(event.clientX, event.clientY)) scheduleHideImageHandle();
+      else {
+        cancelHideImageHandle();
+        positionImageHandle();
+      }
     }
 
     function scheduleHideImageHandle() {
       clearTimeout(imageResizeHideTimer);
       imageResizeHideTimer = setTimeout(() => {
         if (imageResizeDrag) return;
-        if (imageResizeHandle?.matches(':hover')) return;
-        if (imageResizeHandle) imageResizeHandle.hidden = true;
-      }, 200);
+        if (imagePointer && !pointerOutsideImage(imagePointer.x, imagePointer.y)) return;
+        hideImageHandles();
+      }, 280);
     }
 
     function cancelHideImageHandle() {
       clearTimeout(imageResizeHideTimer);
     }
 
-    function previewImageSize(box, w, h) {
-      const rule = imageRuleElement(box);
-      if (!rule) return;
-      rule.style.borderRightWidth = `${w}px`;
-      rule.style.borderTopWidth = `${h}px`;
-      let node = rule.parentElement;
-      const root = rule.getRootNode();
-      while (node && node !== root) {
-        if (node.style?.width) node.style.width = `${w}px`;
-        if (node.style?.height) node.style.height = `${h}px`;
-        if (node.classList?.contains('ML__latex')) break;
-        node = node.parentElement;
-      }
+    function ensureImagePreview() {
+      if (imageResizePreview) return imageResizePreview;
+      const preview = document.createElement('img');
+      preview.className = 'img-resize-preview';
+      preview.alt = '';
+      preview.draggable = false;
+      preview.hidden = true;
+      document.body.appendChild(preview);
+      imageResizePreview = preview;
+      return preview;
+    }
+
+    function layoutImagePreviewAt(left, top, w, h) {
+      const preview = imageResizePreview;
+      if (!preview) return;
+      preview.hidden = false;
+      preview.style.left = `${left}px`;
+      preview.style.top = `${top}px`;
+      preview.style.width = `${w}px`;
+      preview.style.height = `${h}px`;
+    }
+
+    function layoutImagePreview(left, bottom, w, h) {
+      layoutImagePreviewAt(left, bottom - h, w, h);
+    }
+
+    function hideImagePreview() {
+      if (imageResizePreview) imageResizePreview.hidden = true;
     }
 
     function onImageResizeDown(event) {
-      const handle = imageResizeHandle;
+      if (event.button !== 0) return;
+      const handle = event.currentTarget;
       if (!handle || handle.hidden) return;
       const img = sheetImages[handle._id];
-      const box = handle._box;
+      const box = currentImageBox(handle);
       if (!img || !box) return;
       event.preventDefault();
       event.stopPropagation();
       const rect = box.getBoundingClientRect();
       const spec = imageRuleSpec(handle._mf, handle._id);
       const fallback = mathImageScale(handle._mf);
+      const frame = imageFrameOf(box.closest?.('[data-mnimg]') || box);
+      const offset = frame || imageOffsetOf(box);
+      const preview = ensureImagePreview();
+      preview.src = img.src;
       imageResizeDrag = {
         id: handle._id,
         mf: handle._mf,
         box,
         blockId: handle._blockId,
+        axis: handle.dataset.axis || 'corner',
         aspect: img.w / img.h || rect.width / rect.height || 1,
         x: event.clientX,
         y: event.clientY,
+        anchorLeft: rect.left,
+        anchorTop: rect.top,
+        anchorBottom: rect.bottom,
         startW: rect.width,
         startH: rect.height,
         w: Math.round(rect.width),
         h: Math.round(rect.height),
-        scaleX: spec?.wu === 'px' && spec.w ? rect.width / spec.w : fallback,
-        scaleY: spec?.hu === 'px' && spec.h ? rect.height / spec.h : fallback,
+        startOx: offset.ox,
+        startOy: offset.oy,
+        ox: offset.ox,
+        oy: offset.oy,
+        float: !!frame,
+        scaleX: frame ? 1 : spec?.wu === 'px' && spec.w ? rect.width / spec.w : fallback,
+        scaleY: frame ? 1 : spec?.hu === 'px' && spec.h ? rect.height / spec.h : fallback,
       };
+      layoutImagePreviewAt(rect.left, rect.top, rect.width, rect.height);
+      box.style.visibility = 'hidden';
       try {
         handle.setPointerCapture(event.pointerId);
       } catch {
@@ -5707,13 +6246,18 @@
       const drag = imageResizeDrag;
       if (!drag) return;
       event.preventDefault();
-      let w = drag.startW + (event.clientX - drag.x);
-      let h = drag.startH + (event.clientY - drag.y);
-      if (event.shiftKey) {
-        w = Math.max(32, Math.min(1600, w));
-        h = Math.max(32, Math.min(1600, h));
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      let w = drag.startW;
+      let h = drag.startH;
+      drag.ox = drag.startOx;
+      drag.oy = drag.startOy;
+      if (drag.axis === 'width') {
+        w = Math.max(32, Math.min(1600, drag.startW + dx));
+      } else if (drag.axis === 'height') {
+        h = Math.max(32, Math.min(1600, drag.startH + dy));
       } else {
-        w = Math.max(32, Math.min(1600, w));
+        w = Math.max(32, Math.min(1600, drag.startW + dx));
         h = w / drag.aspect;
         if (h > 1600) {
           h = 1600;
@@ -5724,9 +6268,26 @@
           w = h * drag.aspect;
         }
       }
+      const card = drag.mf.closest('.block')?.getBoundingClientRect();
+      if (card && drag.axis !== 'height') {
+        const maxW = Math.max(32, card.right - drag.anchorLeft);
+        if (w > maxW) {
+          w = maxW;
+          if (drag.axis === 'corner') h = w / drag.aspect;
+        }
+      }
       drag.w = Math.round(w);
       drag.h = Math.round(h);
-      previewImageSize(drag.box, drag.w, drag.h);
+      layoutImagePreviewAt(drag.anchorLeft, drag.anchorTop, drag.w, drag.h);
+      positionImageHandle();
+      growFieldBelowImages(drag.mf, drag.anchorTop + drag.h);
+    }
+
+    function releaseImageDrag(drag) {
+      if (drag?.box?.isConnected) drag.box.style.visibility = '';
+      hideImagePreview();
+      paintSheetImages(drag?.mf);
+      requestAnimationFrame(() => paintSheetImages(drag?.mf));
       positionImageHandle();
     }
 
@@ -5736,13 +6297,147 @@
       imageResizeDrag = null;
       const changed =
         Math.abs(drag.w - Math.round(drag.startW)) >= 2 ||
-        Math.abs(drag.h - Math.round(drag.startH)) >= 2;
+        Math.abs(drag.h - Math.round(drag.startH)) >= 2 ||
+        drag.ox !== drag.startOx ||
+        drag.oy !== drag.startOy;
       if (!changed) {
-        paintSheetImages(drag.mf);
-        positionImageHandle();
+        releaseImageDrag(drag);
         return;
       }
       commitImageSize(drag);
+    }
+
+    function imageHostFromEvent(event) {
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      for (const node of path) {
+        if (node?.nodeType === 1 && node.hasAttribute?.('data-mnimg')) return node;
+      }
+      return null;
+    }
+
+    function mathFieldFromEvent(event) {
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      for (const node of path) {
+        if (node?.tagName === 'MATH-FIELD') return node;
+      }
+      return null;
+    }
+
+    function wireImagePointer() {
+      if (imagePointerWired) return;
+      imagePointerWired = true;
+      window.addEventListener(
+        'pointerdown',
+        (event) => {
+          if (event.button !== 2 || imageResizeDrag || imageMoveDrag) return;
+          const host = imageHostFromEvent(event);
+          const mf = mathFieldFromEvent(event);
+          if (!host || !mf) return;
+          onImageMoveDown(mf, event, host);
+        },
+        true
+      );
+      window.addEventListener(
+        'contextmenu',
+        (event) => {
+          if (!suppressImageMenu && !imageMoveDrag && !imageHostFromEvent(event)) return;
+          event.preventDefault();
+          event.stopPropagation();
+        },
+        true
+      );
+    }
+
+    function onImageMoveDown(mf, event, host = imageHostFromEvent(event)) {
+      if (event.button !== 2 || imageResizeDrag || imageMoveDrag) return;
+      if (!host) return;
+      const id = (host.getAttribute('data-mnimg') || '').trim();
+      const img = sheetImages[id];
+      const box = imageRuleElement(host);
+      if (!img || !box || !fieldAcceptsImages(mf.closest('.block')?.dataset.id || '')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      suppressImageMenu = true;
+      const rect = box.getBoundingClientRect();
+      const spec = imageRuleSpec(mf, id);
+      const fallback = mathImageScale(mf);
+      const frame = imageFrameOf(host);
+      const offset = frame || imageOffsetOf(host);
+      const preview = ensureImagePreview();
+      preview.src = img.src;
+      imageMoveDrag = {
+        id,
+        mf,
+        box,
+        blockId: mf.closest('.block')?.dataset.id || '',
+        x: event.clientX,
+        y: event.clientY,
+        originLeft: rect.left,
+        originTop: rect.top,
+        startW: rect.width,
+        startH: rect.height,
+        w: rect.width,
+        h: rect.height,
+        startOx: offset.ox,
+        startOy: offset.oy,
+        ox: offset.ox,
+        oy: offset.oy,
+        float: !!frame,
+        scaleX: frame ? 1 : spec?.wu === 'px' && spec.w ? rect.width / spec.w : fallback,
+        scaleY: frame ? 1 : spec?.hu === 'px' && spec.h ? rect.height / spec.h : fallback,
+      };
+      layoutImagePreviewAt(rect.left, rect.top, rect.width, rect.height);
+      box.style.visibility = 'hidden';
+      hideImageHandles();
+      try {
+        mf.setPointerCapture(event.pointerId);
+      } catch {
+        /* синтетический клик или указатель уже отпущен */
+      }
+      window.addEventListener('pointermove', onImageMoveMove, true);
+      window.addEventListener('pointerup', finishImageMove, true);
+      window.addEventListener('pointercancel', finishImageMove, true);
+      window.addEventListener(
+        'contextmenu',
+        (menuEvent) => {
+          menuEvent.preventDefault();
+          menuEvent.stopPropagation();
+        },
+        { capture: true, once: true }
+      );
+    }
+
+    function onImageMoveMove(event) {
+      const drag = imageMoveDrag;
+      if (!drag) return;
+      event.preventDefault();
+      const card = drag.mf.closest('.block')?.getBoundingClientRect() || drag.mf.getBoundingClientRect();
+      let left = drag.originLeft + (event.clientX - drag.x);
+      let top = drag.originTop + (event.clientY - drag.y);
+      const maxLeft = Math.max(card.left, card.right - drag.w);
+      left = Math.max(card.left, Math.min(left, maxLeft));
+      top = Math.max(card.top, Math.min(top, window.innerHeight - drag.h - 8));
+      drag.ox = drag.startOx + Math.round(left - drag.originLeft);
+      drag.oy = drag.startOy + Math.round(top - drag.originTop);
+      layoutImagePreviewAt(left, top, drag.w, drag.h);
+      growFieldBelowImages(drag.mf, top + drag.h);
+    }
+
+    function finishImageMove() {
+      const drag = imageMoveDrag;
+      if (!drag) return;
+      imageMoveDrag = null;
+      window.removeEventListener('pointermove', onImageMoveMove, true);
+      window.removeEventListener('pointerup', finishImageMove, true);
+      window.removeEventListener('pointercancel', finishImageMove, true);
+      if (drag.ox === drag.startOx && drag.oy === drag.startOy) {
+        releaseImageDrag(drag);
+      } else {
+        commitImageSize(drag);
+      }
+      setTimeout(() => {
+        suppressImageMenu = false;
+      }, 400);
     }
 
     function imageRuleRange(mf, id) {
@@ -5783,53 +6478,36 @@
       return [start, end];
     }
 
-    function commitImageSize(drag) {
-      const mf = drag.mf;
-      const id = drag.id;
-      const blockId = drag.blockId;
-      const w = Math.max(8, Math.round(drag.w / (drag.scaleX || 1)));
-      const h = Math.max(8, Math.round(drag.h / (drag.scaleY || 1)));
-      if (!mf?.isConnected || !fieldAcceptsImages(blockId)) return;
-      const range = imageRuleRange(mf, id);
-      if (range) {
-        const pos = mf.position;
-        try {
-          mf.selection = { ranges: [range] };
-          mf.insert(`\\rule{${w}px}{${h}px}`, {
-            format: 'latex',
-            selectionMode: 'after',
-            scrollIntoView: false,
-            feedback: false,
-          });
-          if (
-            (mf.value || '').includes(`mnimg=${id}`) &&
-            new RegExp(
-              `\\\\htmlData\\{mnimg=${id}\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{`
-            ).test(mf.value || '')
-          ) {
-            try {
-              mf.position = pos;
-            } catch {
-              /* caret stays after the picture */
-            }
-            saveMathField(mf, blockId);
-            paintSheetImages(mf);
-            positionImageHandle();
-            return;
-          }
-        } catch {
-          /* ниже — замена всей формулы */
-        }
+    function writeImageDataAtom(mf, id, ox, oy, w = 0, h = 0) {
+      const model = mf?._mathfield?.model;
+      if (!model) return;
+      const last = model.lastOffset ?? 0;
+      const seen = new Set();
+      const data = imageDataString(id, ox, oy, w, h);
+      for (let i = 0; i <= last; i++) {
+        const atom = model.at(i);
+        if (!atom || seen.has(atom)) continue;
+        seen.add(atom);
+        if (atom.command !== '\\htmlData') continue;
+        if (!String(atom.args?.[0] || '').includes(`mnimg=${id}`)) continue;
+        atom.args[0] = data;
+        return;
       }
+    }
+
+    function commitImageLatex(mf, blockId, next, done) {
       const current = mf.value || '';
-      const next = current.replace(
-        new RegExp(
-          `\\\\htmlData\\{mnimg=${id}\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{[^}]*\\}\\{[^}]*\\}\\}`
-        ),
-        imageLatex(id, w, h)
-      );
-      if (next === current) return;
+      if (!mf?.isConnected || next === current) {
+        done?.();
+        return;
+      }
       const pos = typeof mf.position === 'number' ? mf.position : null;
+      const finish = () => {
+        if (blockId) saveMathField(mf, blockId);
+        paintSheetImages(mf);
+        requestAnimationFrame(() => paintSheetImages(mf));
+        done?.();
+      };
       const multiline = /\\\\|\\displaylines\b|\\begin\{/.test(current);
       if (!multiline) {
         mf.value = next;
@@ -5840,8 +6518,7 @@
             /* ignore */
           }
         }
-        saveMathField(mf, blockId);
-        paintSheetImages(mf);
+        finish();
         return;
       }
       const fresh = document.createElement('math-field');
@@ -5869,15 +6546,76 @@
                   /* ignore */
                 }
               }
-              saveMathField(mf, blockId);
-              paintSheetImages(mf);
+              finish();
+            } else {
+              done?.();
             }
           } finally {
             fresh.remove();
-            positionImageHandle();
           }
         });
       });
+    }
+
+    function commitImageSize(drag) {
+      const mf = drag.mf;
+      const id = drag.id;
+      const blockId = drag.blockId;
+      const w = drag.float
+        ? Math.max(8, Math.round(drag.w))
+        : Math.max(8, Math.round(drag.w / (drag.scaleX || 1)));
+      const h = drag.float
+        ? Math.max(8, Math.round(drag.h))
+        : Math.max(8, Math.round(drag.h / (drag.scaleY || 1)));
+      if (!mf?.isConnected || !fieldAcceptsImages(blockId)) {
+        releaseImageDrag(drag);
+        return;
+      }
+      const ox = drag.ox || 0;
+      const oy = drag.oy || 0;
+      writeImageDataAtom(mf, id, ox, oy, drag.float ? w : 0, drag.float ? h : 0);
+      const range = imageRuleRange(mf, id);
+      if (range) {
+        const pos = mf.position;
+        try {
+          mf.selection = { ranges: [range] };
+          mf.insert(drag.float ? '\\rule{0px}{0px}' : `\\rule{${w}px}{${h}px}`, {
+            format: 'latex',
+            selectionMode: 'after',
+            scrollIntoView: false,
+            feedback: false,
+          });
+          if (
+            imageDataApplied(mf.value || '', id, ox, oy) &&
+            new RegExp(
+              `\\\\htmlData\\{[^}]*mnimg=${id}[^}]*\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{`
+            ).test(mf.value || '')
+          ) {
+            try {
+              mf.position = pos;
+            } catch {
+              /* caret stays after the picture */
+            }
+            saveMathField(mf, blockId);
+            releaseImageDrag(drag);
+            return;
+          }
+        } catch {
+          /* ниже — замена всей формулы */
+        }
+      }
+      const current = mf.value || '';
+      const next = current.replace(
+        new RegExp(
+          `\\\\htmlData\\{[^}]*mnimg=${id}[^}]*\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{[^}]*\\}\\{[^}]*\\}\\}`
+        ),
+        imageLatex(id, w, h, ox, oy)
+      );
+      if (next === current) {
+        releaseImageDrag(drag);
+        return;
+      }
+      commitImageLatex(mf, blockId, next, () => releaseImageDrag(drag));
     }
 
     function copyMathSelection(e, mf, blockId, cut = false) {
@@ -7853,15 +8591,17 @@
           const token = authState.token;
           const snapshot = currentDocument();
           const baseVersion = notebookVersion;
+          const body = JSON.stringify({
+            ...snapshot,
+            baseVersion,
+          });
+          // keepalive живёт только до 64 КБ. Картинка больше — обычный запрос, иначе Failed to fetch.
           const response = await apiRequest(
             `/api/notebooks/${encodeURIComponent(notebookId)}`,
             {
               method: 'PUT',
-              keepalive: true,
-              body: JSON.stringify({
-                ...snapshot,
-                baseVersion,
-              }),
+              keepalive: body.length <= 60_000,
+              body,
             }
           );
           if (authState?.token !== token || authState?.notebookId !== notebookId) {
@@ -7894,8 +8634,10 @@
         }
       } catch (error) {
         if (authState) {
+          const raw = error?.message || '';
+          const message = /failed to fetch/i.test(raw) ? 'сервер недоступен' : raw;
           setStatus(
-            `сохранено локально — ${error?.message || 'сервер недоступен'}`,
+            `сохранено локально — ${message || 'сервер недоступен'}`,
             false
           );
         }
@@ -8740,7 +9482,7 @@
     function render() {
       for (const observer of sheetImageObservers) observer.disconnect();
       sheetImageObservers.clear();
-      if (imageResizeHandle) imageResizeHandle.hidden = true;
+      hideImageHandles();
       clearingMath = false;
       closeSymbolPicker();
       drawPadEpoch += 1;
@@ -8968,13 +9710,22 @@
           token = '(mod';
           extra = 1;
         }
-        const latex = enterLatexForTextRun(token);
+        let latex = enterLatexForTextRun(token);
+        let deleteCount = letters.length + extra;
+        if (!latex && letters.length && extra === 0) {
+          const suffix = greekSuffixToken(letters);
+          const suffixLatex = greekLatexForToken(suffix);
+          if (suffixLatex) {
+            latex = suffixLatex;
+            deleteCount = suffix.length;
+          }
+        }
         if (!latex || !letters.length) return false;
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         try {
-          commitTextRunLatex(mf, block, letters.length + extra, latex);
+          commitTextRunLatex(mf, block, deleteCount, latex);
           resumeTextAfterSymbol(mf, block, latex);
         } catch {
           /* ignore */
