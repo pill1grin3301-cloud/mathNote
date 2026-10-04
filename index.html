@@ -454,6 +454,27 @@
       user-select: none;
       cursor: grab;
     }
+    .library-group-head {
+      user-select: none;
+    }
+    .library.section-dragging,
+    .library.section-dragging .library-group-head {
+      cursor: grabbing;
+    }
+    .library-group.is-dragging {
+      opacity: 0.55;
+    }
+    .library-group.is-dragging > .library-notes {
+      display: none;
+    }
+    .library-group.drag-before,
+    .library-note.drag-before {
+      box-shadow: inset 0 2px 0 var(--accent);
+    }
+    .library-group.drag-after,
+    .library-note.drag-after {
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
 
     @media (max-width: 800px) {
       :root { --library-width: min(78vw, 22rem); }
@@ -1080,8 +1101,8 @@
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
         <li><strong>Картинка:</strong> кнопка «Картинка», <kbd>Ctrl</kbd>+<kbd>V</kbd> или перетаскивание файла в формулу или текст. Картинка лежит поверх блока своим прямоугольником, строка под ней не раздвигается. Рядом можно писать, в том числе в начале строки, если картинка стоит в другом конце. Угол сохраняет пропорции, правый край меняет ширину, нижний — высоту. Правая кнопка двигает картинку: у левого, правого и верхнего края она останавливается, вниз блок удлиняется. Удаление текста не сдвигает картинку, удаление картинки не сдвигает текст.</li>
-        <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка · <kbd>Tab</kbd> — пять пробелов · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
-        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего · <kbd>Tab</kbd> — пять пробелов, внутри <kbd>\команды</kbd> команда завершается</li>
+        <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка с тем же отступом · клик в пустом месте строки или под текстом ставит курсор в эту точку · <kbd>Tab</kbd> — пять пробелов · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
+        <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки. Пустой модуль и сразу <kbd>_</kbd> — ⊥ · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего · <kbd>Tab</kbd> — пять пробелов, внутри <kbd>\команды</kbd> команда завершается</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
         <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε. В скобках подсказка показывает, какой аргумент сейчас вводится.</li>
         <li><strong>Предел по Гейне:</strong> <kbd>dlh</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — ∀{x<sub>n</sub>}⊂D\{точка}, x<sub>n</sub>→точка: f(x<sub>n</sub>)→предел. Буква x в функции становится x<sub>n</sub>.</li>
@@ -2414,6 +2435,40 @@
       }
     }
 
+    function isSubscriptKey(e) {
+      return e.key === '_' || (e.shiftKey && e.code === 'Minus');
+    }
+
+    /** Пустой модуль, который только что открыли. С числом внутри это уже не он. */
+    function emptyModulusFence(mf) {
+      if (!mathSelectionCollapsed(mf)) return null;
+      const fence = nearestOpenLeftright(mf);
+      if (!fence) return null;
+      if (String(fence.leftDelim || '') !== '|' || String(fence.rightDelim || '') !== '|') {
+        return null;
+      }
+      const filled = atomBranchKids(fence, 'body').some(
+        (atom) => atom && atom.type !== 'first' && !isPlaceholderMathAtom(atom)
+      );
+      return filled ? null : fence;
+    }
+
+    function replaceEmptyModulusWithPerp(mf) {
+      const fence = emptyModulusFence(mf);
+      const model = mf?._mathfield?.model;
+      if (!fence || !model) return false;
+      const end = model.offsetOf(fence);
+      const start = fence.leftSibling ? model.offsetOf(fence.leftSibling) : 0;
+      if (typeof start !== 'number' || typeof end !== 'number' || start >= end) return false;
+      setMathSelection(mf, start, end);
+      mf.insert('\\perp', {
+        format: 'latex',
+        insertionMode: 'replaceSelection',
+        selectionMode: 'after',
+      });
+      return true;
+    }
+
     function tightestOpenFence(mf) {
       const parenEnd = openSiblingParenEnd(mf);
       const leftright = nearestOpenLeftright(mf);
@@ -3210,6 +3265,15 @@
       return raw ? true : bareLatexBackslash.has(mf);
     }
 
+    /** `\` и сразу пробел или Enter — буквальный слеш, не начало команды. */
+    function isLiteralBackslashCommit(e, mf) {
+      if (!e || e.ctrlKey || e.metaKey || e.altKey) return false;
+      const space = e.key === ' ' || e.code === 'Space';
+      const enter = e.key === 'Enter' && !e.shiftKey;
+      if (!space && !enter) return false;
+      return isBareLatexBackslash(mf);
+    }
+
     function clearLatexCommandBuffer(mf) {
       try {
         const field = mf?._mathfield;
@@ -3295,6 +3359,54 @@
         });
         if (blockId) saveMathField(mf, blockId);
       }
+    }
+
+    /**
+     * Сырой `\\` вне строки таблицы — атом-ошибка: после обновления
+     * страницы MathLive подчёркивает его красным. Настоящий слеш — `\backslash`.
+     */
+    function repairStoredBackslashErrors(mf, blockId) {
+      const model = mf?._mathfield?.model;
+      if (!model) return;
+      const before = mf.value ?? '';
+      let changed = false;
+      for (let guard = 0; guard < 12; guard++) {
+        let atom = null;
+        const seen = new Set();
+        for (let i = 0; i <= model.lastOffset; i++) {
+          const item = model.at(i);
+          if (!item || seen.has(item) || item.type === 'first') continue;
+          seen.add(item);
+          if (item.type !== 'error') continue;
+          const raw = String(item.verbatimLatex || item.command || item.value || '');
+          if (/^\\+$/.test(raw)) {
+            atom = item;
+            break;
+          }
+        }
+        if (!atom) break;
+        const end = model.offsetOf(atom);
+        const start = atom.leftSibling ? model.offsetOf(atom.leftSibling) : 0;
+        if (typeof start !== 'number' || typeof end !== 'number' || start >= end) break;
+        setMathSelection(mf, start, end);
+        mf.insert('\\backslash', {
+          format: 'latex',
+          insertionMode: 'replaceSelection',
+          selectionMode: 'after',
+        });
+        changed = true;
+      }
+      if (!changed || !blockId) return;
+      const next = mf.value ?? '';
+      const history = mathHistory.get(mf);
+      if (history) {
+        history.undo = history.undo.filter((item) => item !== before);
+        if (history.last === before) history.last = next;
+      }
+      const block = blocks.find((item) => item.id === blockId);
+      if (!block || block.content === next) return;
+      block.content = next;
+      if (!ignoreEditorEvents) scheduleSave();
     }
 
     /** Сокращения греческих: psi + Enter → ψ, PSI + Enter → Ψ. */
@@ -4485,6 +4597,9 @@
           });
         }
       }
+      for (const row of result) {
+        if (row.bounds) row.contentBox = { ...row.bounds };
+      }
       extendLowestMathRow(mf, result);
       return finishMathRows(mf, result);
     }
@@ -5207,6 +5322,7 @@
     }
 
     const mathPtrDown = new WeakMap();
+    const textBlockClickWired = new WeakSet();
 
     function wireMathFieldClickCaret(mf) {
       mf.addEventListener('pointerdown', (e) => {
@@ -5214,15 +5330,41 @@
         const anchor = withMathRowCache(() =>
           caretAnchorAtPoint(mf, e.clientX, e.clientY)
         );
+        const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+        const onFloat = path.some((node) => node?.classList?.contains?.('mn-float'));
         mathPtrDown.set(mf, {
           x: e.clientX,
           y: e.clientY,
           anchor: anchor?.position ?? null,
+          onFloat,
         });
         // Host bubble идёт после внутреннего pointerdown MathLive: успеваем
         // поправить anchor до первого pointermove при drag-выделении.
         applyCaretAnchor(mf, anchor);
-      });
+        if (
+          !onFloat &&
+          mf.mode === 'text' &&
+          mf.defaultMode === 'text'
+        ) {
+          const originX = e.clientX;
+          const originY = e.clientY;
+          const finish = (ev) => {
+            window.removeEventListener('pointerup', finish, true);
+            window.removeEventListener('pointercancel', finish, true);
+            if (ev.type !== 'pointerup') return;
+            if (Math.hypot(ev.clientX - originX, ev.clientY - originY) > 6) return;
+            const x = ev.clientX;
+            const y = ev.clientY;
+            requestAnimationFrame(() => {
+              if (!mf.isConnected) return;
+              mf.focus({ preventScroll: true });
+              placeTextCaretInEmptySpace(mf, x, y);
+            });
+          };
+          window.addEventListener('pointerup', finish, true);
+          window.addEventListener('pointercancel', finish, true);
+        }
+      }, true);
       mf.addEventListener('pointermove', (e) => {
         const down = mathPtrDown.get(mf);
         if (
@@ -5254,9 +5396,11 @@
         requestAnimationFrame(() => {
           // Фокус у MathLive внутри shadow: хост совпадает с :focus-within,
           // но не с :focus, и проверка :focus пропускала поправку каретки.
-          if (mf.matches(':focus-within')) snapCaretToClickedRow(mf, x, y);
+          if (!mf.matches(':focus-within')) return;
+          if (mf.mode === 'text' && mf.defaultMode === 'text') return;
+          snapCaretToClickedRow(mf, x, y);
         });
-      });
+      }, true);
       mf.addEventListener('pointercancel', () => {
         mathPtrDown.delete(mf);
       });
@@ -5711,11 +5855,17 @@
     }
 
     function caretClientBox(mf) {
-      const caret = mf?.shadowRoot?.querySelector('.ML__caret');
-      if (!caret) return null;
-      const rect = caret.getBoundingClientRect();
-      if (!rect.height && !rect.width) return null;
-      return rect;
+      const root = mf?.shadowRoot;
+      if (!root) return null;
+      const pick = (selector) => {
+        for (const caret of root.querySelectorAll(selector)) {
+          const rect = caret.getBoundingClientRect();
+          if (rect.height >= 1 || rect.width >= 1) return rect;
+        }
+        return null;
+      };
+      if (mf.mode === 'text') return pick('.ML__text-caret') || pick('.ML__caret');
+      return pick('.ML__caret') || pick('.ML__text-caret');
     }
 
     async function insertSheetImage(mf, blockId, file) {
@@ -6795,6 +6945,30 @@
         mf.smartMode = false;
         mf.placeholder = 'Пояснение к шагу…';
         applyTextFieldMetrics(mf);
+        const wireTextBlockClick = () => {
+          const host = mf.closest('.block');
+          if (!host || textBlockClickWired.has(host)) return;
+          textBlockClickWired.add(host);
+          let down = null;
+          host.addEventListener('pointerdown', (event) => {
+            if (event.button !== 0) return;
+            if (event.target?.closest?.('math-field, button, a, input, textarea')) return;
+            down = { x: event.clientX, y: event.clientY };
+          });
+          host.addEventListener('pointerup', (event) => {
+            const start = down;
+            down = null;
+            if (!start || event.button !== 0) return;
+            if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return;
+            if (event.target?.closest?.('math-field, button, a, input, textarea')) return;
+            mf.focus({ preventScroll: true });
+            requestAnimationFrame(() => {
+              if (mf.mode === 'text') placeTextCaretInEmptySpace(mf, event.clientX, event.clientY);
+            });
+          });
+        };
+        mf.addEventListener('mount', wireTextBlockClick, { once: true });
+        queueMicrotask(wireTextBlockClick);
       }
       // MathLive на каждый символ вызывает scrollIntoView всего поля.
       // У блока выше экрана это поднимает страницу так, что конец блока
@@ -6846,6 +7020,11 @@
         block.type === 'text'
           ? textContentToLatex(block.content || '')
           : block.content || '';
+      if (block.type !== 'text') {
+        const repairBackslash = () => repairStoredBackslashErrors(mf, block.id);
+        mf.addEventListener('mount', repairBackslash, { once: true });
+        queueMicrotask(repairBackslash);
+      }
       const savedHistory = mathHistoryByBlockId.get(block.id);
       const currentValue = mf.value ?? '';
       const history =
@@ -9655,19 +9834,342 @@
       });
     }
 
+    function ensureTextMode(mf) {
+      if (!mf || mf.mode === 'text') return;
+      try {
+        mf.executeCommand(['switchMode', 'text', '', '']);
+      } catch {
+        try {
+          mf.mode = 'text';
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    function textAtomChars(atom) {
+      if (!atom || atom.type === 'first' || isPlaceholderMathAtom(atom)) return '';
+      if (atom.mode && atom.mode !== 'text') return null;
+      if (typeof atom.value === 'string' && atom.value) return atom.value;
+      const command = String(atom.command ?? '');
+      if (command === ' ' || command === '\\ ' || command === '~') return ' ';
+      const plain = atomPlainChar(atom);
+      return plain || null;
+    }
+
+    /** Пробелы в начале строки, на которой стоит курсор. */
+    function leadingTextIndent(mf) {
+      const model = mf?._mathfield?.model;
+      if (!model || model.selectionIsCollapsed === false) return '';
+      const rows = renderedMathRows(mf);
+      const pos = model.position;
+      const row =
+        rows.find((item) => item.range && pos >= item.range[0] && pos <= item.range[1]) ||
+        (rows.length === 1 ? rows[0] : null);
+      const atoms = [];
+      const seen = new Set();
+      if (row?.parent) {
+        for (const atom of multilineRowAtoms(row.parent, row.rowIndex)) {
+          if (atom && atom.type !== 'first' && !seen.has(atom)) {
+            seen.add(atom);
+            atoms.push(atom);
+          }
+        }
+      }
+      if (!atoms.length && row?.range) {
+        for (let i = 0; i <= model.lastOffset; i++) {
+          const atom = model.at(i);
+          if (!atom || seen.has(atom) || atom.type === 'first') continue;
+          const after = model.offsetOf(atom);
+          if (typeof after !== 'number' || after < row.range[0] || after > row.range[1]) continue;
+          seen.add(atom);
+          atoms.push(atom);
+        }
+      }
+      let indent = '';
+      for (const atom of atoms) {
+        const chars = textAtomChars(atom);
+        if (chars == null) break;
+        for (const ch of chars) {
+          if (ch === ' ' || ch === '\u00a0') indent += ' ';
+          else return indent;
+        }
+      }
+      return indent;
+    }
+
+    function rowGlyphInk(mf, row) {
+      const root = mf?.shadowRoot;
+      const model = mf?._mathfield?.model;
+      if (!root || !model || !row?.range) return row?.ink || null;
+      const probe = document.createRange();
+      let left = Infinity;
+      let right = -Infinity;
+      let top = Infinity;
+      let bottom = -Infinity;
+      const seen = new Set();
+      for (let i = 0; i <= model.lastOffset; i++) {
+        const atom = model.at(i);
+        if (!atom || seen.has(atom) || atom.type === 'first' || atom.id == null) continue;
+        const after = model.offsetOf(atom);
+        if (typeof after !== 'number' || after < row.range[0] || after > row.range[1]) continue;
+        seen.add(atom);
+        for (const el of root.querySelectorAll(`[data-atom-id="${atom.id}"]`)) {
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          let text = walker.nextNode();
+          while (text) {
+            if (text.textContent) {
+              probe.selectNodeContents(text);
+              for (const rect of probe.getClientRects()) {
+                if (rect.width < 0.2 || rect.height < 0.5) continue;
+                left = Math.min(left, rect.left);
+                right = Math.max(right, rect.right);
+                top = Math.min(top, rect.top);
+                bottom = Math.max(bottom, rect.bottom);
+              }
+            }
+            text = walker.nextNode();
+          }
+        }
+      }
+      if (!Number.isFinite(left)) return null;
+      return { left, right, top, bottom };
+    }
+
+    function moveCaretToRowEnd(mf, row) {
+      const end = row?.range?.[1];
+      if (typeof end !== 'number') return false;
+      applyCaretAnchor(mf, { position: end });
+      return mf._mathfield?.model?.position === end;
+    }
+
+    function padTextSpacesToX(mf, clientX) {
+      ensureTextMode(mf);
+      const gen = (mf._textPadGen = (mf._textPadGen || 0) + 1);
+      const target = Math.min(clientX, mf.getBoundingClientRect().right - 12);
+      const step = (retry) => {
+        if (!mf.isConnected || mf._textPadGen !== gen) return;
+        const caret = caretClientBox(mf);
+        if (!caret) {
+          if (retry < 3) requestAnimationFrame(() => step(retry + 1));
+          return;
+        }
+        if (caret.left >= target - 1) return;
+        const before = caret.left;
+        const valueBefore = String(mf.value || '');
+        mf.insert(' ', { format: 'text', mode: 'text', selectionMode: 'after' });
+        ensureTextMode(mf);
+        requestAnimationFrame(() => {
+          if (!mf.isConnected || mf._textPadGen !== gen) return;
+          const after = caretClientBox(mf);
+          const inserted = String(mf.value || '') !== valueBefore;
+          if (!after || after.left <= before + 0.25) {
+            if (inserted) {
+              try {
+                mf.executeCommand('deleteBackward');
+              } catch {
+                /* пробел не сдвинул каретку */
+              }
+            }
+            return;
+          }
+          const spaceW = after.left - before;
+          if (after.left > target + spaceW * 0.35) {
+            if (inserted) {
+              try {
+                mf.executeCommand('deleteBackward');
+              } catch {
+                /* ignore */
+              }
+            }
+            return;
+          }
+          const count = Math.max(0, Math.min(120, Math.round((target - after.left) / spaceW)));
+          for (let i = 0; i < count; i++) {
+            mf.insert(' ', { format: 'text', mode: 'text', selectionMode: 'after' });
+          }
+          ensureTextMode(mf);
+        });
+      };
+      step(0);
+    }
+
+    function openTextRowsUntilY(mf, clientY, done, guard = 0) {
+      const finish = () => done?.();
+      if (!mf?.isConnected || guard > 16) {
+        finish();
+        return;
+      }
+      const caret = caretClientBox(mf);
+      if (!caret) {
+        if (guard < 3) requestAnimationFrame(() => openTextRowsUntilY(mf, clientY, done, guard + 1));
+        else finish();
+        return;
+      }
+      const lineH = Math.max(caret.height || 0, 18);
+      if (clientY <= caret.top + lineH * 0.7) {
+        finish();
+        return;
+      }
+      const model = mf._mathfield?.model;
+      const pos = model?.position;
+      const rows = renderedMathRows(mf);
+      const row = rows.find((item) => item.range && pos >= item.range[0] && pos <= item.range[1]);
+      if (row && pos < row.range[1] && !moveCaretToRowEnd(mf, row)) {
+        finish();
+        return;
+      }
+      const top = caret.top;
+      const before = String(mf.value || '');
+      try {
+        mf.executeCommand('addRowAfter');
+      } catch {
+        finish();
+        return;
+      }
+      ensureTextMode(mf);
+      requestAnimationFrame(() => {
+        if (!mf.isConnected) return;
+        const next = caretClientBox(mf);
+        if (String(mf.value || '') === before || !next || next.top <= top + 1) {
+          finish();
+          return;
+        }
+        openTextRowsUntilY(mf, clientY, done, guard + 1);
+      });
+    }
+
+    /**
+     * Позиция каретки по глифам строки. Рамки атомов в тексте растянуты
+     * на всю ширину, поэтому попадание MathLive само по себе врёт.
+     * false — клик правее последнего глифа, строку нужно добить пробелами.
+     */
+    function placeCaretByGlyphX(mf, row, clientX) {
+      const model = mf?._mathfield?.model;
+      const root = mf?.shadowRoot;
+      if (!model || !root || !row?.range) return false;
+      const start = row.range[0];
+      const end = row.range[1];
+      const probe = document.createRange();
+      let bestPos = null;
+      let bestDist = Infinity;
+      let inkRight = -Infinity;
+      const seen = new Set();
+      for (let i = 0; i <= model.lastOffset; i++) {
+        const atom = model.at(i);
+        if (!atom || seen.has(atom) || atom.type === 'first' || atom.id == null) continue;
+        const after = model.offsetOf(atom);
+        if (typeof after !== 'number' || after < start || after > end) continue;
+        seen.add(atom);
+        let before = start;
+        if (atom.leftSibling) {
+          const left = model.offsetOf(atom.leftSibling);
+          if (typeof left === 'number' && left >= start && left < after) before = left;
+        }
+        for (const el of root.querySelectorAll(`[data-atom-id="${atom.id}"]`)) {
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          let text = walker.nextNode();
+          while (text) {
+            if (text.textContent) {
+              probe.selectNodeContents(text);
+              for (const rect of probe.getClientRects()) {
+                if (rect.width < 0.2 || rect.height < 0.5) continue;
+                inkRight = Math.max(inkRight, rect.right);
+                const mid = (rect.left + rect.right) / 2;
+                const pos = clientX < mid ? before : after;
+                const edge = pos === before ? rect.left : rect.right;
+                const dist = Math.abs(clientX - edge);
+                if (dist < bestDist) {
+                  bestDist = dist;
+                  bestPos = pos;
+                }
+              }
+            }
+            text = walker.nextNode();
+          }
+        }
+      }
+      if (!Number.isFinite(inkRight) || clientX > inkRight + 2) return false;
+      if (typeof bestPos !== 'number') return false;
+      applyCaretAnchor(mf, { position: bestPos });
+      return true;
+    }
+
+    /**
+     * Клик в пустое место текста. Пробелы дописываются только в конец строки,
+     * новая строка открывается только с конца предыдущей — буква посредине не режется.
+     */
+    function placeTextCaretInEmptySpace(mf, clientX, clientY) {
+      if (!mf || mf.defaultMode !== 'text') return;
+      if (mf.mode !== 'text') ensureTextMode(mf);
+      if (mf.mode !== 'text') return;
+      if (!mathSelectionCollapsed(mf)) {
+        const pos = mf._mathfield?.model?.position;
+        if (typeof pos === 'number') applyCaretAnchor(mf, { position: pos });
+        if (!mathSelectionCollapsed(mf)) return;
+      }
+      const field = mf.getBoundingClientRect();
+      if (clientY < field.top - 8) return;
+      if (clientX < field.left - 4 || clientX > field.right + 4) return;
+      const rows = renderedMathRows(mf).filter((row) => row.contentBox || row.bounds);
+      const glyphOf = (row) => rowGlyphInk(mf, row);
+      const lineBand = (row) => {
+        const ink = glyphOf(row);
+        if (ink && ink.bottom - ink.top >= 4) {
+          return { top: ink.top, bottom: ink.bottom };
+        }
+        const box = row.contentBox || row.bounds;
+        if (!box) return null;
+        return { top: box.top, bottom: box.top + Math.min(box.bottom - box.top, 34) };
+      };
+      let line = null;
+      let lineDist = Infinity;
+      let lowest = null;
+      for (const row of rows) {
+        const box = lineBand(row);
+        const lowBox = lowest ? lineBand(lowest) : null;
+        if (box && (!lowBox || box.bottom > lowBox.bottom)) lowest = row;
+        if (!box) continue;
+        const dist =
+          clientY < box.top ? box.top - clientY : clientY > box.bottom ? clientY - box.bottom : 0;
+        if (dist < lineDist) {
+          lineDist = dist;
+          line = row;
+        }
+      }
+      const band = line ? lineBand(line) : null;
+      const lastBand = lowest ? lineBand(lowest) : null;
+      const belowLast = lastBand && clientY > lastBand.bottom + 12;
+      const aboveFirst = band && clientY < band.top - 8;
+      if (line && !belowLast && (aboveFirst || lineDist <= 20)) {
+        if (placeCaretByGlyphX(mf, line, clientX)) return;
+        if (!moveCaretToRowEnd(mf, line)) return;
+        padTextSpacesToX(mf, clientX);
+        return;
+      }
+      if (lowest && !moveCaretToRowEnd(mf, lowest)) return;
+      openTextRowsUntilY(mf, clientY, () => padTextSpacesToX(mf, clientX));
+    }
+
     /** Enter в тексте. addRowAfter уводит поле в формулу и мельчит следующий набор. */
     function insertTextLineBreak(mf) {
       scrollDownForNewLine(mf);
+      const indent = leadingTextIndent(mf);
       mf.executeCommand('addRowAfter');
-      if (mf.mode !== 'text') {
+      ensureTextMode(mf);
+      if (!indent) return;
+      const already = leadingTextIndent(mf);
+      if (!indent.startsWith(already)) return;
+      const missing = indent.slice(already.length);
+      for (const ch of missing) {
+        mf.insert(ch, { format: 'text', mode: 'text', selectionMode: 'after' });
+      }
+      if (missing) ensureTextMode(mf);
+      for (let i = 0; i < already.length; i++) {
         try {
-          mf.executeCommand(['switchMode', 'text', '', '']);
+          mf.executeCommand('moveToNextChar');
         } catch {
-          try {
-            mf.mode = 'text';
-          } catch {
-            /* ignore */
-          }
+          break;
         }
       }
     }
@@ -9914,14 +10416,9 @@
 
         if (handleAccentPickerShortcut(e, mf, block.id)) return;
 
+        const literalBackslash = isLiteralBackslashCommit(e, mf);
         noteLatexBackslashKey(mf, e);
-        if (
-          (e.key === ' ' || e.code === 'Space') &&
-          !e.ctrlKey &&
-          !e.metaKey &&
-          !e.altKey &&
-          isBareLatexBackslash(mf)
-        ) {
+        if (literalBackslash) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation?.();
@@ -10434,13 +10931,9 @@
         // Сессия комментария — до проверки mode (там как раз text)
         if (handleCommentTyping(e, mf, blockId)) return;
 
+        const literalBackslash = isLiteralBackslashCommit(e, mf);
         noteLatexBackslashKey(mf, e);
-        if (
-          (e.key === ' ' || e.code === 'Space') &&
-          !e.ctrlKey &&
-          !e.altKey &&
-          isBareLatexBackslash(mf)
-        ) {
+        if (literalBackslash) {
           e.preventDefault();
           e.stopImmediatePropagation?.();
           e.stopPropagation();
@@ -10460,7 +10953,26 @@
         if (handleAccentPickerShortcut(e, mf, blockId)) return;
 
         if (
-          (e.key === '_' || (e.shiftKey && e.code === 'Minus')) &&
+          isSubscriptKey(e) &&
+          !e.altKey &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          emptyModulusFence(mf)
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation?.();
+          e.stopPropagation();
+          try {
+            replaceEmptyModulusWithPerp(mf);
+            saveMathField(mf, blockId);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
+        if (
+          isSubscriptKey(e) &&
           !e.altKey &&
           caretScriptBranch(mf)
         ) {
@@ -10884,6 +11396,166 @@
       return { type: '', id: '' };
     }
 
+    let sectionPointer = null;
+    let suppressSectionToggle = false;
+
+    function sectionShelfBoxes() {
+      return [...libraryTree.querySelectorAll('.library-group')].filter(
+        (box) => box.dataset.sectionId
+      );
+    }
+
+    function clearSectionDragMarks() {
+      libraryEl.classList.remove('section-dragging');
+      libraryTree.querySelectorAll('.library-group').forEach((box) => {
+        box.classList.remove('drag-before', 'drag-after', 'is-dragging');
+      });
+    }
+
+    function sectionHeadRect(box) {
+      const head = box.querySelector('.library-group-head');
+      return (head || box).getBoundingClientRect();
+    }
+
+    function sectionDropPlan(draggedId, clientY) {
+      const boxes = sectionShelfBoxes();
+      const ids = boxes.map((box) => box.dataset.sectionId);
+      const from = ids.indexOf(draggedId);
+      if (from < 0) return null;
+      // Место считается по заголовкам, не по листам внутри раздела.
+      // Свой заголовок пропускается: иначе курсор остаётся «на себе», пока не
+      // протащишь всю раскрытую карточку.
+      let insertBefore = ids.length;
+      for (let i = 0; i < boxes.length; i++) {
+        if (i === from) continue;
+        const rect = sectionHeadRect(boxes[i]);
+        if (clientY < rect.top + rect.height / 2) {
+          insertBefore = i;
+          break;
+        }
+      }
+      const next = ids.slice();
+      next.splice(from, 1);
+      next.splice(insertBefore > from ? insertBefore - 1 : insertBefore, 0, draggedId);
+      let markerIndex = insertBefore;
+      let markerAfter = false;
+      if (insertBefore >= ids.length) {
+        markerIndex = ids.length - 1 === from ? ids.length - 2 : ids.length - 1;
+        markerAfter = true;
+      }
+      return {
+        boxes,
+        from,
+        markerIndex,
+        markerAfter,
+        next,
+        changed: next.some((id, index) => id !== ids[index]),
+      };
+    }
+
+    function markSectionDrop(draggedId, clientY) {
+      const dragged = sectionShelfBoxes().find((box) => box.dataset.sectionId === draggedId);
+      libraryTree.querySelectorAll('.library-group').forEach((box) => {
+        box.classList.remove('drag-before', 'drag-after');
+      });
+      dragged?.classList.add('is-dragging');
+      libraryEl.classList.add('section-dragging');
+      const plan = sectionDropPlan(draggedId, clientY);
+      if (!plan?.changed || plan.markerIndex < 0) return;
+      plan.boxes[plan.markerIndex]?.classList.add(
+        plan.markerAfter ? 'drag-after' : 'drag-before'
+      );
+    }
+
+    function scrollLibraryWhileDragging(clientY) {
+      const panel = libraryEl.getBoundingClientRect();
+      if (clientY < panel.top + 36) libraryEl.scrollTop -= 14;
+      else if (clientY > panel.bottom - 36) libraryEl.scrollTop += 14;
+    }
+
+    function eatNextSummaryClick() {
+      const eat = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        document.removeEventListener('click', eat, true);
+        suppressSectionToggle = false;
+      };
+      document.addEventListener('click', eat, true);
+      setTimeout(() => {
+        document.removeEventListener('click', eat, true);
+        suppressSectionToggle = false;
+      }, 400);
+    }
+
+    async function persistSectionOrder(ids) {
+      const previous = new Map(librarySections.map((item) => [item.id, item.position]));
+      for (let position = 0; position < ids.length; position++) {
+        const section = librarySections.find((item) => item.id === ids[position]);
+        if (section) section.position = position;
+      }
+      renderLibrary();
+      for (let position = 0; position < ids.length; position++) {
+        if (previous.get(ids[position]) === position) continue;
+        const response = await apiRequest(
+          `/api/sections/${encodeURIComponent(ids[position])}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ position }),
+          }
+        );
+        if (!response.ok) {
+          setStatus(await responseMessage(response), false);
+          await refreshLibrary();
+          return;
+        }
+      }
+    }
+
+    function bindSectionReorder(head, sectionId) {
+      head.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        if (event.target.closest('button')) return;
+        sectionPointer = {
+          id: sectionId,
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          moved: false,
+        };
+        const move = (ev) => {
+          const drag = sectionPointer;
+          if (!drag || drag.pointerId !== ev.pointerId) return;
+          if (!drag.moved) {
+            if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 5) return;
+            drag.moved = true;
+            suppressSectionToggle = true;
+          }
+          scrollLibraryWhileDragging(ev.clientY);
+          markSectionDrop(drag.id, ev.clientY);
+        };
+        const finish = (ev) => {
+          const drag = sectionPointer;
+          if (!drag || drag.pointerId !== ev.pointerId) return;
+          window.removeEventListener('pointermove', move, true);
+          window.removeEventListener('pointerup', finish, true);
+          window.removeEventListener('pointercancel', finish, true);
+          sectionPointer = null;
+          const moved = drag.moved;
+          const y = ev.clientY;
+          const plan =
+            moved && ev.type !== 'pointercancel' ? sectionDropPlan(sectionId, y) : null;
+          clearSectionDragMarks();
+          if (!moved) return;
+          eatNextSummaryClick();
+          if (ev.type === 'pointercancel' || !plan?.changed) return;
+          void persistSectionOrder(plan.next);
+        };
+        window.addEventListener('pointermove', move, true);
+        window.addEventListener('pointerup', finish, true);
+        window.addEventListener('pointercancel', finish, true);
+      });
+    }
+
     function renderLibrary() {
       const loggedIn = !!authState?.token;
       libraryActions.hidden = !loggedIn;
@@ -10916,11 +11588,7 @@
           grip.className = 'drag-grip';
           grip.textContent = '⋮⋮';
           head.append(grip);
-          head.draggable = true;
-          head.addEventListener('dragstart', (event) => {
-            event.dataTransfer.setData('text/plain', `section:${group.id}`);
-            event.dataTransfer.effectAllowed = 'move';
-          });
+          bindSectionReorder(head, group.id);
         }
         const name = document.createElement('strong');
         name.textContent = group.title;
@@ -10948,6 +11616,7 @@
         }
         box.append(head, notes);
         box.addEventListener('toggle', () => {
+          if (suppressSectionToggle) return;
           setSectionCollapsed(group.id, !box.open);
         });
         box.addEventListener('dragover', onLibraryDragOver);
@@ -10985,8 +11654,8 @@
         event.dataTransfer.setData('text/plain', `notebook:${note.id}`);
         event.dataTransfer.effectAllowed = 'move';
       });
-      row.addEventListener('dragover', onLibraryDragOver);
-      row.addEventListener('dragleave', onLibraryDragLeave);
+      row.addEventListener('dragover', onNotebookDragOver);
+      row.addEventListener('dragleave', onNotebookDragLeave);
       row.addEventListener('drop', (event) => {
         void onLibraryDrop(event, note.sectionId, note.id);
       });
@@ -11033,6 +11702,8 @@
 
     function onLibraryDragOver(event) {
       event.preventDefault();
+      const row = event.target?.closest?.('.library-note');
+      if (row) return;
       event.currentTarget.classList.add('drag-over');
     }
 
@@ -11042,51 +11713,110 @@
       }
     }
 
+    function clearNotebookDragMarks() {
+      libraryTree.querySelectorAll('.library-note, .library-group').forEach((el) => {
+        el.classList.remove('drag-before', 'drag-after', 'drag-over');
+      });
+    }
+
+    function onNotebookDragOver(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      const row = event.currentTarget;
+      const rect = row.getBoundingClientRect();
+      const after = event.clientY >= rect.top + rect.height / 2;
+      row.classList.toggle('drag-after', after);
+      row.classList.toggle('drag-before', !after);
+    }
+
+    function onNotebookDragLeave(event) {
+      if (event.currentTarget.contains(event.relatedTarget)) return;
+      event.currentTarget.classList.remove('drag-before', 'drag-after', 'drag-over');
+    }
+
+    function notebookInsertIndex(sectionId, draggedId, beforeNotebookId, clientY, row) {
+      if (beforeNotebookId && beforeNotebookId === draggedId) return null;
+      const group = notebooksInSection(sectionId).filter((note) => note.id !== draggedId);
+      if (!beforeNotebookId || !row) return group.length;
+      const index = group.findIndex((note) => note.id === beforeNotebookId);
+      if (index < 0) return null;
+      const rect = row.getBoundingClientRect();
+      const after = clientY >= rect.top + rect.height / 2;
+      return after ? index + 1 : index;
+    }
+
+    async function persistNotebookPlacement(draggedId, sectionId, index) {
+      const dragged = libraryNotebooks.find((note) => note.id === draggedId);
+      if (!dragged) return;
+      const sourceId = dragged.sectionId || null;
+      const targetId = sectionId || null;
+      const sourceNotes = notebooksInSection(sourceId).filter((note) => note.id !== draggedId);
+      const targetNotes = notebooksInSection(targetId).filter((note) => note.id !== draggedId);
+      const ordered = targetNotes.slice();
+      const at = Math.max(0, Math.min(index, ordered.length));
+      ordered.splice(at, 0, dragged);
+      const current = notebooksInSection(targetId);
+      if (
+        (sourceId || null) === targetId &&
+        current.length === ordered.length &&
+        current.every((note, i) => note.id === ordered[i].id)
+      ) {
+        return;
+      }
+      const previous = new Map(
+        libraryNotebooks.map((note) => [
+          note.id,
+          { sectionId: note.sectionId || null, position: note.position },
+        ])
+      );
+      ordered.forEach((note, position) => {
+        note.sectionId = targetId;
+        note.position = position;
+      });
+      if (sourceId !== targetId) {
+        sourceNotes.forEach((note, position) => {
+          note.position = position;
+        });
+      }
+      renderLibrary();
+      const changed = libraryNotebooks.filter((note) => {
+        const prev = previous.get(note.id);
+        const nextSection = note.sectionId || null;
+        return !prev || prev.sectionId !== nextSection || prev.position !== note.position;
+      });
+      for (const note of changed) {
+        const response = await apiRequest(`/api/notebooks/${encodeURIComponent(note.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            sectionId: note.sectionId,
+            position: note.position,
+          }),
+        });
+        if (!response.ok) {
+          setStatus(await responseMessage(response), false);
+          await refreshLibrary();
+          return;
+        }
+      }
+    }
+
     async function onLibraryDrop(event, sectionId, beforeNotebookId) {
       event.preventDefault();
       event.stopPropagation();
-      event.currentTarget.classList.remove('drag-over');
+      clearNotebookDragMarks();
       if (!authState?.token) return;
       const dragged = dragKind(event);
-      if (dragged.type === 'section') {
-        if (!sectionId) return;
-        const group = sortedSections().filter((item) => item.id !== dragged.id);
-        let position = group.length;
-        const index = group.findIndex((item) => item.id === sectionId);
-        if (index >= 0) position = index;
-        const response = await apiRequest(
-          `/api/sections/${encodeURIComponent(dragged.id)}`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({ position }),
-          }
-        );
-        if (!response.ok) {
-          setStatus(await responseMessage(response), false);
-          return;
-        }
-        await refreshLibrary();
-        return;
-      }
+      if (dragged.type === 'section') return;
       if (dragged.type !== 'notebook' || !dragged.id) return;
-      const group = notebooksInSection(sectionId).filter((note) => note.id !== dragged.id);
-      let position = group.length;
-      if (beforeNotebookId) {
-        const index = group.findIndex((note) => note.id === beforeNotebookId);
-        if (index >= 0) position = index;
-      }
-      const response = await apiRequest(
-        `/api/notebooks/${encodeURIComponent(dragged.id)}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ sectionId, position }),
-        }
+      const index = notebookInsertIndex(
+        sectionId,
+        dragged.id,
+        beforeNotebookId,
+        event.clientY,
+        beforeNotebookId ? event.currentTarget : null
       );
-      if (!response.ok) {
-        setStatus(await responseMessage(response), false);
-        return;
-      }
-      await refreshLibrary();
+      if (index == null) return;
+      await persistNotebookPlacement(dragged.id, sectionId, index);
     }
 
     async function refreshLibrary() {
