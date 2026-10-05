@@ -1125,7 +1125,7 @@
         <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε. Без аргументов: x<sub>n</sub>, A. В скобках подсказка показывает, какой аргумент сейчас вводится.</li>
         <li><strong>Предел по Гейне:</strong> <kbd>dlh</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — ∀{x<sub>n</sub>}⊂D\{точка}, x<sub>n</sub>→точка: f(x<sub>n</sub>)→предел. Буква x в функции становится x<sub>n</sub>. Без аргументов: f(x), x<sub>0</sub>, a.</li>
         <li><strong>Предел по Коши:</strong> <kbd>dlc</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0: ∃δ&gt;0: ∀x, следующая: 0&lt;|x−точка|&lt;δ → |функция − предел|&lt;ε. Без аргументов: f(x), x<sub>0</sub>, a.</li>
-        <li><strong>Производная:</strong> <kbd>der</kbd>(функция)+<kbd>Enter</kbd> — для f(x) штрих у имени: f′(x). Для cos, ln и других функций штрих у всего выражения: (cos x)′. Без аргумента берётся f(x).</li>
+        <li><strong>Производная:</strong> <kbd>der</kbd>(функция)+<kbd>Enter</kbd> — только определение: lim<sub>Δx→0</sub> (f(x+Δx) − f(x)) / Δx. Для cos, ln и других функций та же дробь с ними. Без аргумента берётся f(x).</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω. Курсор сразу после комбинации в строке: <kbd>dphi</kbd>+<kbd>Enter</kbd> → dφ.</li>
@@ -2213,6 +2213,11 @@
       return e.code === code && allowedKeys.includes(e.key);
     }
 
+    /** Ctrl+S и на RU: та же клавиша даёт «ы», code остаётся KeyS. */
+    function isSaveChord(e) {
+      return e.code === 'KeyS' || e.key.toLowerCase() === 's';
+    }
+
     /** Как в VS Code: `( [ {` → пара с курсором между; выделение оборачивается. */
     function insertAutoFence(mf, open, close) {
       const model = mf._mathfield?.model;
@@ -2436,16 +2441,27 @@
       return !(typeof offset === 'number' && model.position >= offset);
     }
 
+    function closeJustAfterCaret(model, atom) {
+      let next = atom?.rightSibling;
+      while (next && isMathSpaceAtom(next)) next = next.rightSibling;
+      if (next?.type !== 'mclose') return null;
+      const endOff = model.offsetOf(next);
+      if (typeof endOff !== 'number' || model.position >= endOff) return null;
+      return next;
+    }
+
     function openSiblingParenEnd(mf) {
       try {
         const model = mf?._mathfield?.model;
         const atom = model?.at(model.position);
         if (!atom || !model) return null;
         const group = siblingParenGroupContaining(atom);
-        if (!group?.end) return null;
-        const endOff = model.offsetOf(group.end);
-        if (typeof endOff !== 'number' || model.position >= endOff) return null;
-        return group.end;
+        if (group?.end) {
+          const endOff = model.offsetOf(group.end);
+          if (typeof endOff === 'number' && model.position < endOff) return group.end;
+        }
+        // Курсор уже после одной «)», а дальше их ещё сколько угодно: x)|)|)
+        return closeJustAfterCaret(model, atom);
       } catch {
         return null;
       }
@@ -4023,10 +4039,7 @@
       const delta = `\\Delta ${variable}`;
       const applied = `${head}(${variable})`;
       const shifted = `${head}(${variable}+${delta})`;
-      return (
-        `${head}^{\\prime}(${variable})\\:=\\:\\lim_{${delta}\\to 0}` +
-        `\\frac{${shifted}\\:-\\:${applied}}{${delta}}`
-      );
+      return `\\lim_{${delta}\\to 0}\\frac{${shifted}\\:-\\:${applied}}{${delta}}`;
     }
 
     /** Буква переменной в выражении становится (переменная + приращение). */
@@ -4063,24 +4076,14 @@
       return out;
     }
 
-    /** cos, ln и прочие готовые функции: штрих у всего выражения. */
-    function concreteDerivative(head, variable) {
-      const delta = `\\Delta ${variable}`;
-      return (
-        `(${head} ${variable})^{\\prime}=\\:\\lim_{${delta}\\to0}` +
-        `\\frac{${head}(${variable}+${delta})\\:-\\:${head}(${variable})}{${delta}}`
-      );
-    }
-
     function derivativeDefinitionLatex(fnLatex) {
       const parsed = parseFunctionOfVariable(fnLatex);
       const bare = looseCallLatex(fnLatex).replace(/ /g, '');
-      if (parsed && isGenericFunctionName(parsed.head)) return derivativeOf(parsed.head, parsed.variable);
-      if (!parsed && isGenericFunctionName(bare)) return derivativeOf(bare, 'x');
-      if (parsed) return concreteDerivative(parsed.head, parsed.variable);
+      if (parsed) return derivativeOf(parsed.head, parsed.variable);
+      if (isGenericFunctionName(bare)) return derivativeOf(bare, 'x');
       const delta = '\\Delta x';
       const shifted = substitutePlainVariable(bare, 'x', `x+${delta}`);
-      return `(${bare})^{\\prime}=\\:\\lim_{${delta}\\to0}\\frac{${shifted}\\:-\\:${bare}}{${delta}}`;
+      return `\\lim_{${delta}\\to 0}\\frac{${shifted}\\:-\\:${bare}}{${delta}}`;
     }
 
     function fillDefinitionArgs(command, args) {
@@ -4168,8 +4171,8 @@
      * dlh / dlc (функция, предельная точка, предел),
      * der(функция) + Enter.
      * Пустые аргументы берутся по умолчанию. Команда без скобок тоже.
-     * Курсор может стоять перед закрывающей скобкой вызова, сразу после неё,
-     * или между двумя последними скобками: f(x_0)|).
+     * Курсор может стоять перед закрывающей скобкой вызова, сразу после неё
+     * или между скобками цепочки любой длины: f(g(x|))).
      */
     function tryExpandSequenceLimitDefinition(mf) {
       try {
@@ -11623,7 +11626,7 @@
         (e.target?.closest?.('input, textarea, select') &&
           !e.target?.closest?.('.block'))
       ) {
-        if (e.key.toLowerCase() === 's') {
+        if (isSaveChord(e)) {
           e.preventDefault();
           save();
         }
@@ -11645,7 +11648,7 @@
       } else if (k === 'h') {
         e.preventDefault();
         insertBlock('text', after);
-      } else if (k === 's') {
+      } else if (isSaveChord(e)) {
         e.preventDefault();
         save();
       }
