@@ -167,6 +167,24 @@
       cursor: ns-resize;
     }
     .img-resize-handle[hidden] { display: none !important; }
+    .img-rotate-button {
+      position: fixed;
+      z-index: 61;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      line-height: 1;
+      box-shadow: 0 0 0 1px var(--accent);
+      cursor: pointer;
+      touch-action: none;
+    }
+    .img-rotate-button:hover { border-color: #fff; color: #fff; }
+    .img-rotate-button[hidden] { display: none !important; }
     .img-resize-preview {
       position: fixed;
       z-index: 59;
@@ -1100,13 +1118,14 @@
       <p class="sc">Буквенные команды — на EN-раскладке. Большинство автозамен от 3 символов и все греческие подтверждаются <kbd>Enter</kbd>. Команды, отмеченные «сразу», рисуются без него.</p>
       <ul>
         <li><strong>Блоки:</strong> <kbd>Ctrl</kbd>+<kbd>M</kbd> — формула · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — новый шаг · <kbd>Ctrl</kbd>+<kbd>H</kbd> — текст</li>
-        <li><strong>Картинка:</strong> кнопка «Картинка», <kbd>Ctrl</kbd>+<kbd>V</kbd> или перетаскивание файла в формулу или текст. Картинка лежит поверх блока своим прямоугольником, строка под ней не раздвигается. Рядом можно писать, в том числе в начале строки, если картинка стоит в другом конце. Угол сохраняет пропорции, правый край меняет ширину, нижний — высоту. Правая кнопка двигает картинку: у левого, правого и верхнего края она останавливается, вниз блок удлиняется. Удаление текста не сдвигает картинку, удаление картинки не сдвигает текст.</li>
+        <li><strong>Картинка:</strong> кнопка «Картинка», <kbd>Ctrl</kbd>+<kbd>V</kbd> или перетаскивание файла в формулу или текст. Картинка лежит поверх блока своим прямоугольником, строка под ней не раздвигается. Рядом можно писать, в том числе в начале строки, если картинка стоит в другом конце. Угол сохраняет пропорции, правый край меняет ширину, нижний — высоту. Кнопка в правом верхнем углу поворачивает картинку. Правая кнопка двигает картинку: у левого, правого и верхнего края она останавливается, вниз блок удлиняется. Удаление текста не сдвигает картинку, удаление картинки не сдвигает текст.</li>
         <li><strong>Текст и комментарии:</strong> <kbd>Enter</kbd> — новая строка с тем же отступом · клик в пустом месте строки или под текстом ставит курсор в эту точку · <kbd>Tab</kbd> — пять пробелов · в тексте те же шорткаты, что в формуле · <kbd>$</kbd> начинает длинную формулу, повторный <kbd>$</kbd> или <kbd>Enter</kbd> снаружи неё возвращает в текст</li>
         <li><strong>Базовый ввод:</strong> <kbd>^</kbd> / <kbd>Alt</kbd>+цифра — степень · <kbd>_</kbd> — индекс · <kbd>/</kbd> / <kbd>frac</kbd> — дробь сразу. В показателе, индексе, модуле, корне и системе дробь остаётся внутри · <kbd>(</kbd> <kbd>{</kbd> <kbd>|</kbd> — парные скобки. Пустой модуль и сразу <kbd>_</kbd> — ⊥ · <kbd>Alt</kbd>+<kbd>[</kbd> — ⟨⟩ для среднего · <kbd>Tab</kbd> — пять пробелов, внутри <kbd>\команды</kbd> команда завершается</li>
         <li><strong>Конструкции:</strong> <kbd>Alt</kbd>+<kbd>R</kbd> / <kbd>sqrt</kbd>+<kbd>Enter</kbd> — корень · <kbd>int</kbd> ∫ · <kbd>sum</kbd> ∑ · <kbd>lim</kbd> — предел сразу · <kbd>prod</kbd> ∏ · <kbd>Alt</kbd>+<kbd>S</kbd> — система</li>
-        <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε. В скобках подсказка показывает, какой аргумент сейчас вводится.</li>
-        <li><strong>Предел по Гейне:</strong> <kbd>dlh</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — ∀{x<sub>n</sub>}⊂D\{точка}, x<sub>n</sub>→точка: f(x<sub>n</sub>)→предел. Буква x в функции становится x<sub>n</sub>.</li>
-        <li><strong>Предел по Коши:</strong> <kbd>dlc</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0: ∃δ&gt;0: ∀x, следующая: 0&lt;|x−точка|&lt;δ → |функция − предел|&lt;ε.</li>
+        <li><strong>Предел последовательности:</strong> <kbd>dls</kbd>(последовательность, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0, ∃N<sub>ε</sub>∈ℕ: ∀n∈ℕ, следующая: n≥N<sub>ε</sub>: |последовательность − предел| &lt; ε. Без аргументов: x<sub>n</sub>, A. В скобках подсказка показывает, какой аргумент сейчас вводится.</li>
+        <li><strong>Предел по Гейне:</strong> <kbd>dlh</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — ∀{x<sub>n</sub>}⊂D\{точка}, x<sub>n</sub>→точка: f(x<sub>n</sub>)→предел. Буква x в функции становится x<sub>n</sub>. Без аргументов: f(x), x<sub>0</sub>, a.</li>
+        <li><strong>Предел по Коши:</strong> <kbd>dlc</kbd>(функция, точка, предел)+<kbd>Enter</kbd> — первая строка ∀ε&gt;0: ∃δ&gt;0: ∀x, следующая: 0&lt;|x−точка|&lt;δ → |функция − предел|&lt;ε. Без аргументов: f(x), x<sub>0</sub>, a.</li>
+        <li><strong>Производная:</strong> <kbd>der</kbd>(функция)+<kbd>Enter</kbd> — для f(x) штрих у имени: f′(x). Для cos, ln и других функций штрих у всего выражения: (cos x)′. Без аргумента берётся f(x).</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
         <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω. Курсор сразу после комбинации в строке: <kbd>dphi</kbd>+<kbd>Enter</kbd> → dφ.</li>
@@ -1265,6 +1284,15 @@
       dls: ['последовательность', 'предел'],
       dlh: ['функция', 'точка', 'предел'],
       dlc: ['функция', 'точка', 'предел'],
+      der: ['функция'],
+    };
+
+    /** Если аргумент вызова пустой, подставляется это значение. */
+    const DEFINITION_DEFAULTS = {
+      dls: ['x_{n}', 'A'],
+      dlh: ['f(x)', 'x_{0}', 'a'],
+      dlc: ['f(x)', 'x_{0}', 'a'],
+      der: ['f(x)'],
     };
 
     /** @type {null | { el: HTMLElement, mf: HTMLElement }} */
@@ -3958,7 +3986,114 @@
       return out;
     }
 
+    function isSimpleVariable(src) {
+      return /^(\\[A-Za-z]+|[A-Za-z])(?:_\{[^{}]+\}|_[A-Za-z0-9])?$/.test(src);
+    }
+
+    function looseCallLatex(latex) {
+      return String(latex || '')
+        .replace(/\\left/g, '')
+        .replace(/\\right/g, '')
+        .replace(/\\[ ,:;!]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    /** Буква вроде f или f_1 — общее имя. cos, ln и выражение — нет. */
+    function isGenericFunctionName(head) {
+      return /^[A-Za-z](?:_\{[^{}]+\}|_[A-Za-z0-9])?$/.test(head);
+    }
+
+    /** f(x), g(t), \cos(x), \cos x: имя и переменная. */
+    function parseFunctionOfVariable(latex) {
+      const loose = looseCallLatex(latex);
+      const compact = loose.replace(/ /g, '');
+      const match = compact.match(/^(.*)\(([^()]*)\)$/);
+      if (match && match[1] && isSimpleVariable(match[2])) {
+        return { head: match[1], variable: match[2] };
+      }
+      const op = loose.match(/^(\\[A-Za-z]+(?:_\{[^{}]+\})?)\s+(.+)$/);
+      if (op && isSimpleVariable(op[2].replace(/ /g, ''))) {
+        return { head: op[1], variable: op[2].replace(/ /g, '') };
+      }
+      return null;
+    }
+
+    function derivativeOf(head, variable) {
+      const delta = `\\Delta ${variable}`;
+      const applied = `${head}(${variable})`;
+      const shifted = `${head}(${variable}+${delta})`;
+      return (
+        `${head}^{\\prime}(${variable})\\:=\\:\\lim_{${delta}\\to 0}` +
+        `\\frac{${shifted}\\:-\\:${applied}}{${delta}}`
+      );
+    }
+
+    /** Буква переменной в выражении становится (переменная + приращение). */
+    function substitutePlainVariable(latex, variable, replacement) {
+      if (!/^[A-Za-z]$/.test(variable)) return latex;
+      let out = '';
+      for (let i = 0; i < latex.length; ) {
+        if (latex[i] === '\\') {
+          out += '\\';
+          i += 1;
+          if (i < latex.length && /[A-Za-z]/.test(latex[i])) {
+            while (i < latex.length && /[A-Za-z]/.test(latex[i])) {
+              out += latex[i];
+              i += 1;
+            }
+          } else if (i < latex.length) {
+            out += latex[i];
+            i += 1;
+          }
+          continue;
+        }
+        if (latex[i] === variable) {
+          const prev = i > 0 ? latex[i - 1] : '';
+          const next = latex[i + 1] || '';
+          if (prev !== '_' && !/[A-Za-z]/.test(prev) && next !== '_') {
+            out += `(${replacement})`;
+            i += 1;
+            continue;
+          }
+        }
+        out += latex[i];
+        i += 1;
+      }
+      return out;
+    }
+
+    /** cos, ln и прочие готовые функции: штрих у всего выражения. */
+    function concreteDerivative(head, variable) {
+      const delta = `\\Delta ${variable}`;
+      return (
+        `(${head} ${variable})^{\\prime}=\\:\\lim_{${delta}\\to0}` +
+        `\\frac{${head}(${variable}+${delta})\\:-\\:${head}(${variable})}{${delta}}`
+      );
+    }
+
+    function derivativeDefinitionLatex(fnLatex) {
+      const parsed = parseFunctionOfVariable(fnLatex);
+      const bare = looseCallLatex(fnLatex).replace(/ /g, '');
+      if (parsed && isGenericFunctionName(parsed.head)) return derivativeOf(parsed.head, parsed.variable);
+      if (!parsed && isGenericFunctionName(bare)) return derivativeOf(bare, 'x');
+      if (parsed) return concreteDerivative(parsed.head, parsed.variable);
+      const delta = '\\Delta x';
+      const shifted = substitutePlainVariable(bare, 'x', `x+${delta}`);
+      return `(${bare})^{\\prime}=\\:\\lim_{${delta}\\to0}\\frac{${shifted}\\:-\\:${bare}}{${delta}}`;
+    }
+
+    function fillDefinitionArgs(command, args) {
+      const defaults = DEFINITION_DEFAULTS[command];
+      if (!defaults || args.length > defaults.length) return null;
+      return defaults.map((item, i) => {
+        const given = String(args[i] || '').trim();
+        return given || item;
+      });
+    }
+
     function limitDefinitionLines(command, args) {
+      if (command === 'der') return [derivativeDefinitionLatex(args[0])];
       if (command === 'dls') return sequenceLimitDefinitionLines(args[0], args[1]);
       const [fn, point, limit] = args;
       if (command === 'dlh') {
@@ -4009,7 +4144,7 @@
       return atom?.type === 'mclose' && atom.value === ')';
     }
 
-    /** Закрывающая скобка вызова dls / dlh / dlc, если она им принадлежит. */
+    /** Закрывающая скобка вызова dls / dlh / dlc / der, если она им принадлежит. */
     function limitDefinitionAtClose(close) {
       const open = findMatchingOpen(close);
       if (!open || open.value !== '(') return null;
@@ -4021,7 +4156,7 @@
         }
         beforeOpen = beforeOpen.leftSibling;
       }
-      for (const name of ['dls', 'dlh', 'dlc']) {
+      for (const name of Object.keys(DEFINITION_DEFAULTS)) {
         const commandStart = matchWordEndingAt(beforeOpen, name);
         if (commandStart) return { command: name, commandStart, open, close };
       }
@@ -4030,7 +4165,9 @@
 
     /**
      * dls(последовательность, предел),
-     * dlh / dlc (функция, предельная точка, предел) + Enter.
+     * dlh / dlc (функция, предельная точка, предел),
+     * der(функция) + Enter.
+     * Пустые аргументы берутся по умолчанию. Команда без скобок тоже.
      * Курсор может стоять перед закрывающей скобкой вызова, сразу после неё,
      * или между двумя последними скобками: f(x_0)|).
      */
@@ -4044,32 +4181,52 @@
         if (isCloseParenAtom(atCaret)) candidates.push(atCaret);
         let command = '';
         let commandStart = null;
-        let open = null;
-        let close = null;
+        let endAtom = null;
+        let args = null;
         for (const candidate of candidates) {
           const hit = limitDefinitionAtClose(candidate);
           if (!hit) continue;
           command = hit.command;
           commandStart = hit.commandStart;
-          open = hit.open;
-          close = hit.close;
+          endAtom = hit.close;
+          const inner = [];
+          let walk = hit.open.rightSibling;
+          while (walk && walk !== hit.close) {
+            inner.push(walk);
+            if (walk.isLastSibling) break;
+            walk = walk.rightSibling;
+          }
+          args = splitCallArguments(model, inner);
           break;
         }
-        if (!close || !open) return false;
-
-        const inner = [];
-        let walk = open.rightSibling;
-        while (walk && walk !== close) {
-          inner.push(walk);
-          if (walk.isLastSibling) break;
-          walk = walk.rightSibling;
+        if (!endAtom) {
+          let wordAtom = atCaret;
+          while (wordAtom && isMathSpaceAtom(wordAtom)) {
+            if (wordAtom.isFirstSibling) {
+              wordAtom = null;
+              break;
+            }
+            wordAtom = wordAtom.leftSibling;
+          }
+          for (const name of Object.keys(DEFINITION_DEFAULTS)) {
+            const start = matchWordEndingAt(wordAtom, name);
+            if (!start) continue;
+            let next = wordAtom.rightSibling;
+            while (next && isMathSpaceAtom(next)) next = next.rightSibling;
+            if (next?.type === 'mopen' && next.value === '(') break;
+            command = name;
+            commandStart = start;
+            endAtom = wordAtom;
+            args = [];
+            break;
+          }
         }
-        const args = splitCallArguments(model, inner);
-        const arity = command === 'dls' ? 2 : 3;
-        if (args.length !== arity || args.some((part) => !part)) return false;
+        if (!endAtom) return false;
+        args = fillDefinitionArgs(command, args || []);
+        if (!args) return false;
         const lines = limitDefinitionLines(command, args);
         if (!lines?.length) return false;
-        if (!deleteAtomsInclusive(mf, commandStart, close)) return false;
+        if (!deleteAtomsInclusive(mf, commandStart, endAtom)) return false;
         mf.insert(lines[0], { format: 'latex', selectionMode: 'after' });
         for (let i = 1; i < lines.length; i += 1) {
           mf.executeCommand('addRowAfter');
@@ -5745,18 +5902,20 @@
       return null;
     }
 
-    function imageDataString(id, ox = 0, oy = 0, w = 0, h = 0) {
+    function imageDataString(id, ox = 0, oy = 0, w = 0, h = 0, rot = 0) {
       const parts = [`mnimg=${id}`];
       parts.push(`ox=${Math.round(ox)}`);
       parts.push(`oy=${Math.round(oy)}`);
       if (w) parts.push(`w=${Math.round(w)}`);
       if (h) parts.push(`h=${Math.round(h)}`);
+      const turns = ((Math.round(rot) % 360) + 360) % 360;
+      if (turns) parts.push(`rot=${turns}`);
       return parts.join(',');
     }
 
     /** w/h — видимые пиксели. Правило нулевое: картинка не занимает место в строке. */
-    function imageLatex(id, w, h, ox = 0, oy = 0) {
-      return `\\htmlData{${imageDataString(id, ox, oy, w, h)}}{\\rule{0px}{0px}}`;
+    function imageLatex(id, w, h, ox = 0, oy = 0, rot = 0) {
+      return `\\htmlData{${imageDataString(id, ox, oy, w, h, rot)}}{\\rule{0px}{0px}}`;
     }
 
     function imageFrameOf(el) {
@@ -5768,6 +5927,7 @@
         h,
         ox: parseFloat(el.getAttribute('data-ox') || '0') || 0,
         oy: parseFloat(el.getAttribute('data-oy') || '0') || 0,
+        rot: parseFloat(el.getAttribute('data-rot') || '0') || 0,
       };
     }
 
@@ -5783,10 +5943,10 @@
       const w = num('w');
       const h = num('h');
       if (!(w > 0) || !(h > 0)) return null;
-      return { w, h, ox: num('ox'), oy: num('oy') };
+      return { w, h, ox: num('ox'), oy: num('oy'), rot: num('rot') };
     }
 
-    function imageDataApplied(value, id, ox, oy) {
+    function imageDataApplied(value, id, ox, oy, rot = 0) {
       const match = String(value || '').match(
         new RegExp(`\\\\htmlData\\{([^}]*mnimg=${id}[^}]*)\\}`)
       );
@@ -5794,7 +5954,9 @@
       const data = match[1];
       const gotOx = Math.round(parseFloat((data.match(/ox=(-?\d+)/) || [])[1] || '0') || 0);
       const gotOy = Math.round(parseFloat((data.match(/oy=(-?\d+)/) || [])[1] || '0') || 0);
-      return gotOx === Math.round(ox) && gotOy === Math.round(oy);
+      const gotRot = Math.round(parseFloat((data.match(/rot=(-?\d+)/) || [])[1] || '0') || 0);
+      const wantRot = ((Math.round(rot) % 360) + 360) % 360;
+      return gotOx === Math.round(ox) && gotOy === Math.round(oy) && gotRot === wantRot;
     }
 
     // MathLive переводит px правила в em (1px = 0.75pt, 1em = 10pt), потом умножает на font-size.
@@ -5964,10 +6126,13 @@
         node.dataset.oy = String(Math.round(frame.oy));
         node.dataset.w = String(Math.round(frame.w));
         node.dataset.h = String(Math.round(frame.h));
+        node.dataset.rot = String(frame.rot || 0);
         node.style.left = `${frame.ox}px`;
         node.style.top = `${frame.oy}px`;
         node.style.width = `${frame.w}px`;
         node.style.height = `${frame.h}px`;
+        node.style.transformOrigin = 'center center';
+        node.style.transform = frame.rot ? `rotate(${frame.rot}deg)` : '';
         node.style.backgroundImage = img ? `url("${img.src}")` : '';
       }
       for (const node of [...layer.querySelectorAll('.mn-float')]) {
@@ -6176,10 +6341,24 @@
         document.body.appendChild(handle);
         return handle;
       };
+      const rotate = document.createElement('button');
+      rotate.type = 'button';
+      rotate.className = 'img-rotate-button';
+      rotate.hidden = true;
+      rotate.title = 'Повернуть изображение';
+      rotate.setAttribute('aria-label', 'Повернуть изображение');
+      rotate.textContent = '↻';
+      rotate.addEventListener('pointerenter', cancelHideImageHandle);
+      rotate.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+      });
+      rotate.addEventListener('click', onImageRotate);
+      document.body.appendChild(rotate);
       imageHandles = {
         corner: make('corner', 'Пропорции'),
         width: make('width', 'Только ширина'),
         height: make('height', 'Только высота'),
+        rotate,
       };
       window.addEventListener('pointermove', trackImagePointer, true);
       window.addEventListener('scroll', positionImageHandle, true);
@@ -6193,6 +6372,7 @@
       imageHandles.corner.hidden = true;
       imageHandles.width.hidden = true;
       imageHandles.height.hidden = true;
+      imageHandles.rotate.hidden = true;
     }
 
     function imageOffsetOf(box) {
@@ -6210,7 +6390,7 @@
       ensureImageResizeHandle();
       const rule = imageRuleElement(box);
       const blockId = mf.closest('.block')?.dataset.id || '';
-      for (const el of [imageHandles.corner, imageHandles.width, imageHandles.height]) {
+      for (const el of [imageHandles.corner, imageHandles.width, imageHandles.height, imageHandles.rotate]) {
         el._id = id;
         el._mf = mf;
         el._box = rule;
@@ -6239,6 +6419,7 @@
       put(imageHandles.corner, rect.right - 8, rect.bottom - 8);
       put(imageHandles.width, rect.right - 4, rect.top + rect.height / 2 - 9);
       put(imageHandles.height, rect.left + rect.width / 2 - 9, rect.bottom - 4);
+      put(imageHandles.rotate, rect.right - 30, rect.top + 6);
     }
 
     function positionImageHandle() {
@@ -6248,14 +6429,12 @@
         return;
       }
       if (imageResizeDrag && imageResizePreview && !imageResizePreview.hidden) {
-        placeImageHandles({
-          left: parseFloat(imageResizePreview.style.left),
-          top: parseFloat(imageResizePreview.style.top),
-          width: parseFloat(imageResizePreview.style.width),
-          height: parseFloat(imageResizePreview.style.height),
-          right: parseFloat(imageResizePreview.style.left) + parseFloat(imageResizePreview.style.width),
-          bottom: parseFloat(imageResizePreview.style.top) + parseFloat(imageResizePreview.style.height),
-        });
+        const left = parseFloat(imageResizePreview.style.left);
+        const top = parseFloat(imageResizePreview.style.top);
+        const width = parseFloat(imageResizePreview.style.width);
+        const height = parseFloat(imageResizePreview.style.height);
+        const rot = parseFloat(imageResizePreview.dataset.rot || '0') || 0;
+        placeImageHandles(visualImageRect(left, top, width, height, rot));
         return;
       }
       const box = currentImageBox(imageResizeHandle);
@@ -6325,14 +6504,53 @@
       return preview;
     }
 
-    function layoutImagePreviewAt(left, top, w, h) {
+    function visualImageRect(left, top, width, height, rot) {
+      const angle = ((rot % 360) + 360) % 360;
+      const plain = {
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+      };
+      if (!angle) return plain;
+      const rad = (angle * Math.PI) / 180;
+      const cx = left + width / 2;
+      const cy = top + height / 2;
+      const c = Math.cos(rad);
+      const s = Math.sin(rad);
+      const xs = [];
+      const ys = [];
+      for (const [x, y] of [
+        [0, 0],
+        [width, 0],
+        [width, height],
+        [0, height],
+      ]) {
+        const dx = x - width / 2;
+        const dy = y - height / 2;
+        xs.push(cx + dx * c - dy * s);
+        ys.push(cy + dx * s + dy * c);
+      }
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      return { left: minX, top: minY, right: maxX, bottom: maxY, width: maxX - minX, height: maxY - minY };
+    }
+
+    function layoutImagePreviewAt(left, top, w, h, rot = 0) {
       const preview = imageResizePreview;
       if (!preview) return;
       preview.hidden = false;
+      preview.dataset.rot = String(rot || 0);
       preview.style.left = `${left}px`;
       preview.style.top = `${top}px`;
       preview.style.width = `${w}px`;
       preview.style.height = `${h}px`;
+      preview.style.transformOrigin = 'center center';
+      preview.style.transform = rot ? `rotate(${rot}deg)` : '';
     }
 
     function layoutImagePreview(left, bottom, w, h) {
@@ -6341,6 +6559,45 @@
 
     function hideImagePreview() {
       if (imageResizePreview) imageResizePreview.hidden = true;
+    }
+
+    function imageLayoutClientRect(box, frame) {
+      const rect = box.getBoundingClientRect();
+      if (!frame?.rot) {
+        return { left: rect.left, top: rect.top, width: rect.width, height: rect.height, rot: 0 };
+      }
+      const layer = box.parentElement?.getBoundingClientRect();
+      return {
+        left: layer ? layer.left + frame.ox : rect.left,
+        top: layer ? layer.top + frame.oy : rect.top,
+        width: frame.w,
+        height: frame.h,
+        rot: frame.rot,
+      };
+    }
+
+    function onImageRotate(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      const button = event.currentTarget;
+      const mf = button?._mf;
+      const id = button?._id;
+      if (!mf || !id) return;
+      const frame = imageFrameFromLatex(mf, id) || imageFrameOf(button._box);
+      if (!frame) return;
+      const rot = ((frame.rot || 0) + 90) % 360;
+      const current = mf.value || '';
+      const next = current.replace(
+        new RegExp(
+          `\\\\htmlData\\{[^}]*mnimg=${id}[^}]*\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{[^}]*\\}\\{[^}]*\\}\\}`
+        ),
+        imageLatex(id, frame.w, frame.h, frame.ox, frame.oy, rot)
+      );
+      if (next === current) return;
+      commitImageLatex(mf, button._blockId, next, () => {
+        positionImageHandle();
+        growFieldBelowImages(mf);
+      });
     }
 
     function onImageResizeDown(event) {
@@ -6357,6 +6614,7 @@
       const fallback = mathImageScale(handle._mf);
       const frame = imageFrameOf(box.closest?.('[data-mnimg]') || box);
       const offset = frame || imageOffsetOf(box);
+      const layout = imageLayoutClientRect(box, frame);
       const preview = ensureImagePreview();
       preview.src = img.src;
       imageResizeDrag = {
@@ -6365,25 +6623,26 @@
         box,
         blockId: handle._blockId,
         axis: handle.dataset.axis || 'corner',
-        aspect: img.w / img.h || rect.width / rect.height || 1,
+        aspect: img.w / img.h || layout.width / layout.height || 1,
         x: event.clientX,
         y: event.clientY,
-        anchorLeft: rect.left,
-        anchorTop: rect.top,
-        anchorBottom: rect.bottom,
-        startW: rect.width,
-        startH: rect.height,
-        w: Math.round(rect.width),
-        h: Math.round(rect.height),
+        anchorLeft: layout.left,
+        anchorTop: layout.top,
+        anchorBottom: layout.top + layout.height,
+        startW: layout.width,
+        startH: layout.height,
+        w: Math.round(layout.width),
+        h: Math.round(layout.height),
         startOx: offset.ox,
         startOy: offset.oy,
         ox: offset.ox,
         oy: offset.oy,
+        rot: frame?.rot || 0,
         float: !!frame,
         scaleX: frame ? 1 : spec?.wu === 'px' && spec.w ? rect.width / spec.w : fallback,
         scaleY: frame ? 1 : spec?.hu === 'px' && spec.h ? rect.height / spec.h : fallback,
       };
-      layoutImagePreviewAt(rect.left, rect.top, rect.width, rect.height);
+      layoutImagePreviewAt(layout.left, layout.top, layout.width, layout.height, layout.rot);
       box.style.visibility = 'hidden';
       try {
         handle.setPointerCapture(event.pointerId);
@@ -6428,7 +6687,7 @@
       }
       drag.w = Math.round(w);
       drag.h = Math.round(h);
-      layoutImagePreviewAt(drag.anchorLeft, drag.anchorTop, drag.w, drag.h);
+      layoutImagePreviewAt(drag.anchorLeft, drag.anchorTop, drag.w, drag.h, drag.rot || 0);
       positionImageHandle();
       growFieldBelowImages(drag.mf, drag.anchorTop + drag.h);
     }
@@ -6513,6 +6772,7 @@
       const fallback = mathImageScale(mf);
       const frame = imageFrameOf(host);
       const offset = frame || imageOffsetOf(host);
+      const layout = imageLayoutClientRect(box, frame);
       const preview = ensureImagePreview();
       preview.src = img.src;
       imageMoveDrag = {
@@ -6522,21 +6782,22 @@
         blockId: mf.closest('.block')?.dataset.id || '',
         x: event.clientX,
         y: event.clientY,
-        originLeft: rect.left,
-        originTop: rect.top,
-        startW: rect.width,
-        startH: rect.height,
-        w: rect.width,
-        h: rect.height,
+        originLeft: layout.left,
+        originTop: layout.top,
+        startW: layout.width,
+        startH: layout.height,
+        w: layout.width,
+        h: layout.height,
         startOx: offset.ox,
         startOy: offset.oy,
         ox: offset.ox,
         oy: offset.oy,
+        rot: frame?.rot || 0,
         float: !!frame,
         scaleX: frame ? 1 : spec?.wu === 'px' && spec.w ? rect.width / spec.w : fallback,
         scaleY: frame ? 1 : spec?.hu === 'px' && spec.h ? rect.height / spec.h : fallback,
       };
-      layoutImagePreviewAt(rect.left, rect.top, rect.width, rect.height);
+      layoutImagePreviewAt(layout.left, layout.top, layout.width, layout.height, layout.rot);
       box.style.visibility = 'hidden';
       hideImageHandles();
       try {
@@ -6569,7 +6830,7 @@
       top = Math.max(card.top, Math.min(top, window.innerHeight - drag.h - 8));
       drag.ox = drag.startOx + Math.round(left - drag.originLeft);
       drag.oy = drag.startOy + Math.round(top - drag.originTop);
-      layoutImagePreviewAt(left, top, drag.w, drag.h);
+      layoutImagePreviewAt(left, top, drag.w, drag.h, drag.rot || 0);
       growFieldBelowImages(drag.mf, top + drag.h);
     }
 
@@ -6628,12 +6889,12 @@
       return [start, end];
     }
 
-    function writeImageDataAtom(mf, id, ox, oy, w = 0, h = 0) {
+    function writeImageDataAtom(mf, id, ox, oy, w = 0, h = 0, rot = 0) {
       const model = mf?._mathfield?.model;
       if (!model) return;
       const last = model.lastOffset ?? 0;
       const seen = new Set();
-      const data = imageDataString(id, ox, oy, w, h);
+      const data = imageDataString(id, ox, oy, w, h, rot);
       for (let i = 0; i <= last; i++) {
         const atom = model.at(i);
         if (!atom || seen.has(atom)) continue;
@@ -6723,7 +6984,8 @@
       }
       const ox = drag.ox || 0;
       const oy = drag.oy || 0;
-      writeImageDataAtom(mf, id, ox, oy, drag.float ? w : 0, drag.float ? h : 0);
+      const rot = drag.rot || 0;
+      writeImageDataAtom(mf, id, ox, oy, drag.float ? w : 0, drag.float ? h : 0, rot);
       const range = imageRuleRange(mf, id);
       if (range) {
         const pos = mf.position;
@@ -6736,7 +6998,7 @@
             feedback: false,
           });
           if (
-            imageDataApplied(mf.value || '', id, ox, oy) &&
+            imageDataApplied(mf.value || '', id, ox, oy, rot) &&
             new RegExp(
               `\\\\htmlData\\{[^}]*mnimg=${id}[^}]*\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{`
             ).test(mf.value || '')
@@ -6759,7 +7021,7 @@
         new RegExp(
           `\\\\htmlData\\{[^}]*mnimg=${id}[^}]*\\}\\{\\\\rule(?:\\[[^\\]]*\\])?\\{[^}]*\\}\\{[^}]*\\}\\}`
         ),
-        imageLatex(id, w, h, ox, oy)
+        imageLatex(id, w, h, ox, oy, rot)
       );
       if (next === current) {
         releaseImageDrag(drag);
@@ -6809,6 +7071,190 @@
       return true;
     }
 
+    /** Строка из кусков \\text{}. null — это не обычный текст. */
+    function textCommandLine(src) {
+      const re = /\\text\{([^{}]*)\}/g;
+      let match;
+      let last = 0;
+      let any = false;
+      let out = '';
+      while ((match = re.exec(src))) {
+        if (src.slice(last, match.index).trim()) return null;
+        any = true;
+        out += match[1];
+        last = match.index + match[0].length;
+      }
+      if (!any || src.slice(last).trim()) return null;
+      return out
+        .replace(/\\ /g, ' ')
+        .replace(/\\,/g, ' ')
+        .replace(/~/g, ' ')
+        .replace(/\\textbackslash\{\}/g, '\\')
+        .replace(/\\([{}#$%&_^~])/g, '$1');
+    }
+
+    /**
+     * Обычные слова, в том числе скопированные из текстового блока
+     * (\\displaylines{\\text{...}\\\\ ...}). Формула — null.
+     */
+    function proseLinesFromLatex(latex) {
+      let t = String(latex ?? '').trim();
+      if (!t) return null;
+      t = t.replace(/^\${1,3}\s*/, '').replace(/\s*\${1,3}$/, '').trim();
+      if (!t) return null;
+      t = stripOuterMathWrapper(t);
+      const parts = splitTopLevelRowBreaks(t) || [t];
+      const lines = [];
+      for (let part of parts) {
+        part = part.trim();
+        if (!part) {
+          lines.push('');
+          continue;
+        }
+        const extracted = textCommandLine(part);
+        if (extracted == null) {
+          if (/\\[a-zA-Z]/.test(part) || /[_^{}&]/.test(part)) return null;
+          lines.push(part);
+        } else {
+          lines.push(extracted);
+        }
+      }
+      return lines;
+    }
+
+    function clipboardTextLines(latex, plain) {
+      const fromLatex = proseLinesFromLatex(latex);
+      if (fromLatex) return fromLatex;
+      const raw = String(plain ?? '');
+      if (!raw) return null;
+      const trimmed = raw.trim();
+      if (!trimmed) return raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+      const unwrapped = unwrapClipboardLatex(trimmed);
+      if (unwrapped !== trimmed) return proseLinesFromLatex(unwrapped);
+      if (looksLikeStructuredLatex(trimmed) || /\\[a-zA-Z]/.test(trimmed)) return null;
+      return raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    }
+
+    /** Курсор внутри дроби, степени, корня или другой формулы, а не в строке текста. */
+    function caretInsideFormula(mf) {
+      if (!mf || mf.mode !== 'math') return false;
+      try {
+        const model = mf._mathfield?.model;
+        if (!model) return false;
+        let atom = model.at(model.position);
+        while (atom) {
+          if (
+            atom.type === 'genfrac' ||
+            atom.type === 'leftright' ||
+            atom.type === 'surd' ||
+            atom.type === 'subsup' ||
+            atom.parentBranch === 'superscript' ||
+            atom.parentBranch === 'subscript'
+          ) {
+            return true;
+          }
+          const env = String(atom.environmentName || '').toLowerCase();
+          if (env && env !== 'lines' && env !== 'displaylines') return true;
+          atom = atom.parent;
+        }
+        const here = model.at(model.position);
+        return !!(
+          here &&
+          here.mode === 'math' &&
+          here.type !== 'first' &&
+          here.type !== 'text' &&
+          here.type !== 'array' &&
+          here.type !== 'placeholder'
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    function pastedTextLatex(lines) {
+      const body = lines
+        .map((line) => (line ? `\\text{${escapePlainTextLatex(line)}}` : ''))
+        .join('\\\\ ');
+      return `\\displaylines{${body}}`;
+    }
+
+    function insertPastedTextLines(mf, lines) {
+      ensureTextMode(mf);
+      if (!mathSelectionCollapsed(mf)) {
+        try {
+          mf.executeCommand('deleteBackward');
+        } catch {
+          /* ignore */
+        }
+      }
+      // Пустые ряды displaylines после очистки не принимают текст:
+      // вставка пропадает, а mf.value заново красит блок шрифтом формулы.
+      // Значение при этом часто обёрнуто в $...$, и обычная проверка его не узнаёт.
+      const stored = String(mf.value || '').trim().replace(/^\$+\s*/, '').replace(/\s*\$+$/, '');
+      if (isVisuallyEmptyMath(mf.value || '') || isVisuallyEmptyMath(stored)) {
+        mf.value = pastedTextLatex(lines);
+        ensureTextMode(mf);
+        try {
+          mf.executeCommand('moveToMathfieldEnd');
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      const write = (text) => {
+        if (!text) return;
+        mf.insert(text, {
+          format: 'text',
+          mode: 'text',
+          selectionMode: 'after',
+          scrollIntoView: false,
+          feedback: false,
+        });
+      };
+      write(lines[0] || '');
+      for (let i = 1; i < lines.length; i++) {
+        mf.executeCommand('addRowAfter');
+        ensureTextMode(mf);
+        write(lines[i] || '');
+      }
+      ensureTextMode(mf);
+    }
+
+    /** Формула внутри текста, не переписывая весь блок в математический шрифт. */
+    function insertFormulaIntoText(mf, latex) {
+      const inline = stripOuterMathWrapper(latex);
+      if (!inline) return;
+      try {
+        mf.executeCommand(['switchMode', 'math', '', '']);
+      } catch {
+        /* ignore */
+      }
+      insertLatexKeepingRows(mf, inline);
+      ensureTextMode(mf);
+    }
+
+    /**
+     * В текстовом блоке вставка остаётся текстом того же шрифта.
+     * Иначе mf.value заново разбирает слова как формулу (KaTeX).
+     */
+    function pasteIntoTextBlock(e, mf, blockId, latex, plain) {
+      const block = blocks.find((b) => b.id === blockId);
+      if (block?.type !== 'text' || mf.mode === 'latex' || caretInsideFormula(mf)) return false;
+      const lines = clipboardTextLines(latex, plain);
+      if (!lines && !latex) return false;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      try {
+        if (lines) insertPastedTextLines(mf, lines);
+        else insertFormulaIntoText(mf, latex);
+        saveMathField(mf, blockId);
+      } catch {
+        return false;
+      }
+      return true;
+    }
+
     function pasteMathSelection(e, mf, blockId) {
       if (!e.clipboardData || isInHashComment(mf)) return false;
       const imageFile = imageFileFromList(e.clipboardData.files);
@@ -6824,10 +7270,13 @@
       if (!latex) {
         const unwrapped = unwrapClipboardLatex(plain);
         const wasWrapped = unwrapped !== String(plain ?? '').trim();
-        if (!wasWrapped && !looksLikeStructuredLatex(unwrapped)) return false;
+        if (!wasWrapped && !looksLikeStructuredLatex(unwrapped)) {
+          return pasteIntoTextBlock(e, mf, blockId, '', plain);
+        }
         latex = unwrapped;
       }
       if (!latex) return false;
+      if (pasteIntoTextBlock(e, mf, blockId, latex, plain)) return true;
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation?.();
@@ -6930,6 +7379,19 @@
           max-width: 100% !important;
           white-space: pre-wrap !important;
           line-height: 1.45 !important;
+        }
+        /* Распорки MathLive держат абсолютные строки. В потоке они
+           оставляют дыру над текстом после Enter. */
+        .ML__latex:has(> .ML__mtable) > .ML__strut,
+        .ML__latex:has(> .ML__mtable) > .ML__strut--bottom {
+          display: none !important;
+        }
+        /* Иначе колонка сжимается до самого длинного слова и короткая
+           строка после Enter переносится посередине. */
+        .ML__latex:has(> .ML__mtable) > .ML__mtable,
+        .ML__latex > .ML__mtable > .col-align-l {
+          display: block !important;
+          width: 100% !important;
         }
       `;
       root.appendChild(style);
