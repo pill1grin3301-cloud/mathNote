@@ -1845,16 +1845,66 @@
       return true;
     }
 
-    function isFractionLeftAtom(atom) {
-      if (!atom) return false;
-      try {
-        if (typeof atom.isDigit === 'function' && atom.isDigit()) return true;
-      } catch {
-        /* ignore */
+    const FRACTION_CLOSE_TO_OPEN = {
+      ')': '(',
+      ']': '[',
+      '}': '{',
+      '\\}': '\\{',
+      '\\rangle': '\\langle',
+    };
+
+    /** Плюс, равно и запятая на верхнем уровне режут числитель. Внутри скобок — нет. */
+    function isFractionTermSeparator(atom) {
+      if (!atom || atom.type === 'first' || isMathSpaceAtom(atom)) return false;
+      if (atom.type === 'mbin' || atom.type === 'mrel') return true;
+      return isCommaSeparatorAtom(atom);
+    }
+
+    /**
+     * Левая граница числителя. Скобки любой вложенности — одна конструкция,
+     * поэтому (f+g) целиком уходит в дробь, а f+g — только g.
+     */
+    function fractionNumeratorAnchor(model) {
+      let atom = model.at(model.position);
+      const stack = [];
+      let startAtom = null;
+      while (atom && atom.type !== 'first') {
+        if (isMathSpaceAtom(atom)) {
+          if (!stack.length) {
+            let probe = atom.leftSibling;
+            while (probe && probe.type !== 'first' && isMathSpaceAtom(probe)) probe = probe.leftSibling;
+            if (!startAtom) {
+              atom = atom.isFirstSibling ? null : atom.leftSibling;
+              continue;
+            }
+            if (!probe || probe.type === 'first' || isFractionTermSeparator(probe)) break;
+          }
+          startAtom = atom;
+          if (atom.isFirstSibling) break;
+          atom = atom.leftSibling;
+          continue;
+        }
+        if (atom.type === 'mclose') {
+          stack.push(FRACTION_CLOSE_TO_OPEN[atom.value] || '(');
+          startAtom = atom;
+          if (atom.isFirstSibling) break;
+          atom = atom.leftSibling;
+          continue;
+        }
+        if (atom.type === 'mopen') {
+          if (!stack.length || stack[stack.length - 1] !== atom.value) break;
+          stack.pop();
+          startAtom = atom;
+          if (atom.isFirstSibling) break;
+          atom = atom.leftSibling;
+          continue;
+        }
+        if (!stack.length && isFractionTermSeparator(atom)) break;
+        startAtom = atom;
+        if (atom.isFirstSibling) break;
+        atom = atom.leftSibling;
       }
-      const t = atom.type;
-      if (!t || t === 'extensible-symbol') return false;
-      return /^(mord|surd|subsup|leftright|mop|mclose)$/.test(t);
+      return startAtom;
     }
 
     /**
@@ -1907,49 +1957,13 @@
       }
 
       const end = model.position;
-      let atom = model.at(end);
-
-      if (atom?.type === 'mclose') {
-        const opens = { ')': '(', ']': '[', '}': '{', '\\rangle': '\\langle' };
-        const open = opens[atom.value];
-        while (
-          atom &&
-          !atom.isFirstSibling &&
-          !(atom.type === 'mopen' && atom.value === open)
-        ) {
-          atom = atom.leftSibling;
-        }
-        if (
-          atom &&
-          !atom.isFirstSibling &&
-          atom.leftSibling &&
-          atom.leftSibling.type !== 'first'
-        ) {
-          atom = atom.leftSibling;
-        }
-      } else if (atom?.type === 'leftright') {
-        atom = atom.leftSibling;
-      }
-
-      while (
-        atom?.leftSibling &&
-        atom.leftSibling.type !== 'first' &&
-        isFractionLeftAtom(atom.leftSibling)
-      ) {
-        atom = atom.leftSibling;
-      }
-
-      const numeratorIncludesAtom =
-        !!atom &&
-        atom.type !== 'first' &&
-        (isFractionLeftAtom(atom) ||
-          atom.type === 'mopen' ||
-          atom.type === 'leftright');
-      const start = numeratorIncludesAtom
-        ? atom.leftSibling
-          ? model.offsetOf(atom.leftSibling)
-          : 0
-        : model.offsetOf(atom);
+      const atom = fractionNumeratorAnchor(model);
+      const start =
+        atom && atom.type !== 'first'
+          ? atom.leftSibling
+            ? model.offsetOf(atom.leftSibling)
+            : 0
+          : model.offsetOf(atom);
 
       if (!atom || atom.type === 'first' || typeof start !== 'number' || start >= end) {
         mf.insert('\\frac{#?}{#?}', {
