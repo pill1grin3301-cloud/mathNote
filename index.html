@@ -1853,16 +1853,35 @@
       '\\rangle': '\\langle',
     };
 
-    /** Плюс, равно и запятая на верхнем уровне режут числитель. Внутри скобок — нет. */
+    /** Плюс, минус, равно и запятая на верхнем уровне режут числитель. Внутри скобок — нет. */
     function isFractionTermSeparator(atom) {
       if (!atom || atom.type === 'first' || isMathSpaceAtom(atom)) return false;
+      const name = atomCommandName(atom);
+      if (name === '+' || name === '-' || name === 'pm' || name === 'mp' || name === 'plus' || name === 'minus') {
+        return true;
+      }
       if (atom.type === 'mbin' || atom.type === 'mrel') return true;
       return isCommaSeparatorAtom(atom);
     }
 
+    /** lim, sum, int — знак, а не значение. В числитель берём только то, что после него. */
+    function isBigOperatorAtom(atom) {
+      if (!atom) return false;
+      const re = /^(lim|liminf|limsup|sup|inf|max|min|sum|prod|coprod|int|iint|iiint|oint)$/i;
+      if (re.test(atomCommandName(atom))) return true;
+      for (const key of ['body', 'nucleus']) {
+        const branch = atom[key];
+        const list = Array.isArray(branch) ? branch : branch ? [branch] : [];
+        for (const child of list) {
+          if (child && child.type !== 'first' && re.test(atomCommandName(child))) return true;
+        }
+      }
+      return false;
+    }
+
     /**
-     * Левая граница числителя. Скобки любой вложенности — одна конструкция,
-     * поэтому (f+g) целиком уходит в дробь, а f+g — только g.
+     * Левая граница числителя. Скобки — одна конструкция: (f+g) целиком,
+     * а f+g — только g. Пробел, + и - снаружи скобок режут. lim остаётся слева.
      */
     function fractionNumeratorAnchor(model) {
       let atom = model.at(model.position);
@@ -1870,19 +1889,18 @@
       let startAtom = null;
       while (atom && atom.type !== 'first') {
         if (isMathSpaceAtom(atom)) {
-          if (!stack.length) {
-            let probe = atom.leftSibling;
-            while (probe && probe.type !== 'first' && isMathSpaceAtom(probe)) probe = probe.leftSibling;
-            if (!startAtom) {
-              atom = atom.isFirstSibling ? null : atom.leftSibling;
-              continue;
-            }
-            if (!probe || probe.type === 'first' || isFractionTermSeparator(probe)) break;
+          if (stack.length) {
+            startAtom = atom;
+            if (atom.isFirstSibling) break;
+            atom = atom.leftSibling;
+            continue;
           }
-          startAtom = atom;
-          if (atom.isFirstSibling) break;
-          atom = atom.leftSibling;
-          continue;
+          // Пробел снаружи скобок отделяет числитель. Хвост пробелов после значения пропускаем.
+          if (!startAtom) {
+            atom = atom.isFirstSibling ? null : atom.leftSibling;
+            continue;
+          }
+          break;
         }
         if (atom.type === 'mclose') {
           stack.push(FRACTION_CLOSE_TO_OPEN[atom.value] || '(');
@@ -1899,7 +1917,7 @@
           atom = atom.leftSibling;
           continue;
         }
-        if (!stack.length && isFractionTermSeparator(atom)) break;
+        if (!stack.length && (isFractionTermSeparator(atom) || isBigOperatorAtom(atom))) break;
         startAtom = atom;
         if (atom.isFirstSibling) break;
         atom = atom.leftSibling;
