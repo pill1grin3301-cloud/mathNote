@@ -1128,7 +1128,7 @@
         <li><strong>Производная:</strong> <kbd>der</kbd>(функция)+<kbd>Enter</kbd> — только определение: lim<sub>Δx→0</sub> (f(x+Δx) − f(x)) / Δx. Для cos, ln и других функций та же дробь с ними. Без аргумента берётся f(x).</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
-        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω. Курсор сразу после комбинации в строке: <kbd>dphi</kbd>+<kbd>Enter</kbd> → dφ.</li>
+        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω. Заглавная — только первая буква большая: <kbd>Del</kbd> Δ, <kbd>Phi</kbd> Φ. Курсор сразу после комбинации в строке: <kbd>dphi</kbd>+<kbd>Enter</kbd> → dφ, <kbd>dPhi</kbd>+<kbd>Enter</kbd> → dΦ.</li>
         <li><strong>Сравнения:</strong> <kbd>lt</kbd> &lt; · <kbd>gt</kbd> &gt; · <kbd>le</kbd>/<kbd>&lt;=</kbd> ≤ · <kbd>ge</kbd>/<kbd>&gt;=</kbd> ≥ · <kbd>!=</kbd> ≠ · <kbd>~~</kbd> ≈ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>Alt</kbd>+<kbd>=</kbd> / <kbd>iff</kbd> ⇔ сразу</li>
         <li><strong>Стрелки:</strong> <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>harr</kbd> ↔ · <kbd>larr</kbd> ← · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓</li>
         <li><strong>Множества и логика:</strong> <kbd>RR</kbd> ℝ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>ems</kbd> ∅ · <kbd>in</kbd>+<kbd>Enter</kbd> ∈ · <kbd>!in</kbd> ∉ сразу · <kbd>!EE</kbd> ∄ сразу · <kbd>sub</kbd> ⊂ · <kbd>!sub</kbd> ⊄ · <kbd>sube</kbd> ⊆ · <kbd>!sube</kbd> ⊈ · <kbd>sup</kbd> ⊃ · <kbd>!sup</kbd> ⊅ · <kbd>supe</kbd> ⊇ · <kbd>!supe</kbd> ⊉ · <kbd>uu</kbd>/<kbd>union</kbd> ∪ · <kbd>nn</kbd> ∩ · <kbd>xx</kbd> × (умножение / декартово произведение) · <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA/forall</kbd> ∀ · <kbd>EE/exists</kbd> ∃</li>
@@ -3485,7 +3485,7 @@
       if (!ignoreEditorEvents) scheduleSave();
     }
 
-    /** Сокращения греческих: psi + Enter → ψ, PSI + Enter → Ψ. */
+    /** Сокращения греческих: psi + Enter → ψ, Psi + Enter → Ψ. */
     const GREEK_ABBREV = {
       alp: ['\\alpha', '\\Alpha'],
       beta: ['\\beta', '\\Beta'],
@@ -3514,13 +3514,25 @@
     const GREEK_LETTER_LATEX =
       /^\\(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)$/;
 
-    /** phi / PHI / длинные имена вроде varphi, alpha, theta. */
+    /** Заглавная греческая: только первая буква большая (Del), не всё слово (DEL). */
+    function isTitledGreekToken(token) {
+      if (!token || token.length < 2) return false;
+      const first = token.charAt(0);
+      const rest = token.slice(1);
+      return (
+        first !== first.toLowerCase() &&
+        first === first.toUpperCase() &&
+        rest === rest.toLowerCase()
+      );
+    }
+
+    /** phi / Phi / длинные имена вроде varphi, alpha, theta. */
     function greekLatexForToken(token) {
       if (!token || /[^A-Za-z]/.test(token)) return '';
       const pair = GREEK_ABBREV[token.toLowerCase()];
-      if (pair) return token === token.toUpperCase() ? pair[1] : pair[0];
+      if (pair) return isTitledGreekToken(token) ? pair[1] : pair[0];
       if (token.toLowerCase() === 'theta') {
-        return token === token.toUpperCase() ? '\\Theta' : '\\theta';
+        return isTitledGreekToken(token) ? '\\Theta' : '\\theta';
       }
       const via = lookupEnterInline(token);
       return GREEK_LETTER_LATEX.test(via) ? via : '';
@@ -4295,7 +4307,7 @@
       if (token) {
         const pair = GREEK_ABBREV[token.toLowerCase()];
         if (pair) {
-          latex = token === token.toUpperCase() ? pair[1] : pair[0];
+          latex = isTitledGreekToken(token) ? pair[1] : pair[0];
         } else {
           latex = lookupEnterInline(token);
         }
@@ -10280,7 +10292,7 @@
       if (!token) return '';
       if (token === 'th') return '\\operatorname{th}';
       const pair = GREEK_ABBREV[token.toLowerCase()];
-      if (pair) return token === token.toUpperCase() ? pair[1] : pair[0];
+      if (pair) return isTitledGreekToken(token) ? pair[1] : pair[0];
       return lookupEnterInline(token) || '';
     }
 
