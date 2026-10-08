@@ -89,7 +89,7 @@
 
     header {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.75rem;
       align-items: center;
       justify-content: space-between;
@@ -105,9 +105,20 @@
 
     .toolbar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
+      flex: 1 1 auto;
+      flex-wrap: nowrap;
+      gap: 0.3rem;
       align-items: center;
+      justify-content: flex-end;
+      min-width: 0;
+    }
+    .toolbar > button,
+    .toolbar > a#btn-guide,
+    .toolbar > .file-btn,
+    .toolbar .auth-controls button {
+      padding: 0.34rem 0.42rem;
+      font-size: clamp(0.68rem, 1.05vw, 0.85rem);
+      white-space: nowrap;
     }
 
     button, .file-btn, a#btn-guide {
@@ -1128,7 +1139,7 @@
         <li><strong>Производная:</strong> <kbd>der</kbd>(функция)+<kbd>Enter</kbd> — только определение: lim<sub>Δx→0</sub> (f(x+Δx) − f(x)) / Δx. Для cos, ln и других функций та же дробь с ними. Без аргумента берётся f(x).</li>
         <li><strong>Функции — сразу:</strong> <kbd>sin</kbd> <kbd>cos</kbd> <kbd>tan</kbd> <kbd>cot</kbd> · <kbd>ln</kbd> <kbd>log</kbd> <kbd>exp</kbd> · <kbd>arcsin</kbd> <kbd>arccos</kbd> <kbd>arctan</kbd></li>
         <li><strong>Матанал:</strong> <kbd>oo</kbd> / <kbd>infty</kbd> → ∞ · <kbd>dx</kbd>/<kbd>dy</kbd>/<kbd>dt</kbd> — дифференциал · <kbd>deg</kbd> ° · <kbd>nabla</kbd>/<kbd>grad</kbd> ∇ · <kbd>\partial</kbd>+<kbd>Tab</kbd> ∂</li>
-        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω. Заглавная — только первая буква большая: <kbd>Del</kbd> Δ, <kbd>Phi</kbd> Φ. Курсор сразу после комбинации в строке: <kbd>dphi</kbd>+<kbd>Enter</kbd> → dφ, <kbd>dPhi</kbd>+<kbd>Enter</kbd> → dΦ.</li>
+        <li><strong>Греческие:</strong> <kbd>alp</kbd> α · <kbd>beta</kbd> β · <kbd>gam</kbd> γ · <kbd>del</kbd> δ · <kbd>eps</kbd> ε · <kbd>lam</kbd> λ · <kbd>mu</kbd> μ · <kbd>pi</kbd> π · <kbd>rho</kbd> ρ · <kbd>sig</kbd> σ · <kbd>the</kbd> θ · <kbd>phi</kbd> φ · <kbd>ome</kbd> ω. Регистр решает первая буква: <kbd>Del</kbd>, <kbd>DEL</kbd>, <kbd>DEl</kbd> → Δ, <kbd>del</kbd>, <kbd>dEL</kbd> → δ. В строке: <kbd>dphi</kbd>+<kbd>Enter</kbd> → dφ, <kbd>dPhi</kbd>+<kbd>Enter</kbd> → dΦ.</li>
         <li><strong>Сравнения:</strong> <kbd>lt</kbd> &lt; · <kbd>gt</kbd> &gt; · <kbd>le</kbd>/<kbd>&lt;=</kbd> ≤ · <kbd>ge</kbd>/<kbd>&gt;=</kbd> ≥ · <kbd>!=</kbd> ≠ · <kbd>~~</kbd> ≈ · <kbd>&lt;&lt;</kbd> ≪ · <kbd>&gt;&gt;</kbd> ≫ · <kbd>Alt</kbd>+<kbd>=</kbd> / <kbd>iff</kbd> ⇔ сразу</li>
         <li><strong>Стрелки:</strong> <kbd>-&gt;</kbd> → · <kbd>=&gt;</kbd> ⇒ · <kbd>harr</kbd> ↔ · <kbd>larr</kbd> ← · <kbd>uarr</kbd> ↑ · <kbd>darr</kbd> ↓</li>
         <li><strong>Множества и логика:</strong> <kbd>RR</kbd> ℝ · <kbd>NN</kbd> ℕ · <kbd>ZZ</kbd> ℤ · <kbd>ems</kbd> ∅ · <kbd>in</kbd>+<kbd>Enter</kbd> ∈ · <kbd>!in</kbd> ∉ сразу · <kbd>!EE</kbd> ∄ сразу · <kbd>sub</kbd> ⊂ · <kbd>!sub</kbd> ⊄ · <kbd>sube</kbd> ⊆ · <kbd>!sube</kbd> ⊈ · <kbd>sup</kbd> ⊃ · <kbd>!sup</kbd> ⊅ · <kbd>supe</kbd> ⊇ · <kbd>!supe</kbd> ⊉ · <kbd>uu</kbd>/<kbd>union</kbd> ∪ · <kbd>nn</kbd> ∩ · <kbd>xx</kbd> × (умножение / декартово произведение) · <kbd>and</kbd> ∧ · <kbd>or</kbd> ∨ · <kbd>not</kbd> ¬ · <kbd>AA/forall</kbd> ∀ · <kbd>EE/exists</kbd> ∃</li>
@@ -1853,11 +1864,20 @@
       '\\rangle': '\\langle',
     };
 
-    /** Плюс, минус, равно и запятая на верхнем уровне режут числитель. Внутри скобок — нет. */
+    /** Плюс, минус, равно, запятая и точка с запятой на верхнем уровне режут числитель. Внутри скобок — нет. */
     function isFractionTermSeparator(atom) {
       if (!atom || atom.type === 'first' || isMathSpaceAtom(atom)) return false;
       const name = atomCommandName(atom);
-      if (name === '+' || name === '-' || name === 'pm' || name === 'mp' || name === 'plus' || name === 'minus') {
+      if (
+        name === '+' ||
+        name === '-' ||
+        name === 'pm' ||
+        name === 'mp' ||
+        name === 'plus' ||
+        name === 'minus' ||
+        name === ';' ||
+        name === 'semicolon'
+      ) {
         return true;
       }
       if (atom.type === 'mbin' || atom.type === 'mrel') return true;
@@ -1880,13 +1900,15 @@
     }
 
     /**
-     * Левая граница числителя. Скобки — одна конструкция: (f+g) целиком,
-     * а f+g — только g. Пробел, + и - снаружи скобок режут. lim остаётся слева.
+     * Левая граница числителя и конец без хвостовых пробелов.
+     * Скобки — одна конструкция: (f+g) целиком, а f+g — только g.
+     * Пробел, ;, + и - снаружи скобок режут. lim остаётся слева.
      */
-    function fractionNumeratorAnchor(model) {
+    function fractionNumeratorSpan(model) {
       let atom = model.at(model.position);
       const stack = [];
       let startAtom = null;
+      let end = model.position;
       while (atom && atom.type !== 'first') {
         if (isMathSpaceAtom(atom)) {
           if (stack.length) {
@@ -1895,11 +1917,8 @@
             atom = atom.leftSibling;
             continue;
           }
-          // Пробел снаружи скобок отделяет числитель. Хвост пробелов после значения пропускаем.
-          if (!startAtom) {
-            atom = atom.isFirstSibling ? null : atom.leftSibling;
-            continue;
-          }
+          // Пробел снаружи скобок отделяет числитель. Хвост пробелов перед курсором
+          // в дробь не берём и через него не переходим к ; и другим знакам.
           break;
         }
         if (atom.type === 'mclose') {
@@ -1922,7 +1941,7 @@
         if (atom.isFirstSibling) break;
         atom = atom.leftSibling;
       }
-      return startAtom;
+      return { atom: startAtom, end };
     }
 
     /**
@@ -1974,14 +1993,17 @@
         return;
       }
 
-      const end = model.position;
-      const atom = fractionNumeratorAnchor(model);
+      const span = fractionNumeratorSpan(model);
+      const atom = span.atom;
+      const end = span.end;
       const start =
         atom && atom.type !== 'first'
           ? atom.leftSibling
             ? model.offsetOf(atom.leftSibling)
             : 0
-          : model.offsetOf(atom);
+          : atom
+            ? model.offsetOf(atom)
+            : end;
 
       if (!atom || atom.type === 'first' || typeof start !== 'number' || start >= end) {
         mf.insert('\\frac{#?}{#?}', {
@@ -3514,25 +3536,28 @@
     const GREEK_LETTER_LATEX =
       /^\\(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)$/;
 
-    /** Заглавная греческая: только первая буква большая (Del), не всё слово (DEL). */
-    function isTitledGreekToken(token) {
-      if (!token || token.length < 2) return false;
+    /** Заглавная греческая, если первая буква большая: Del, DEL и DEl. Остальные буквы не важны. */
+    function isCapitalGreekToken(token) {
+      if (!token) return false;
       const first = token.charAt(0);
-      const rest = token.slice(1);
-      return (
-        first !== first.toLowerCase() &&
-        first === first.toUpperCase() &&
-        rest === rest.toLowerCase()
-      );
+      return first !== first.toLowerCase() && first === first.toUpperCase();
     }
 
-    /** phi / Phi / длинные имена вроде varphi, alpha, theta. */
+    /** phi / Phi / длинные имена вроде varphi, alpha, theta. Регистр — по первой букве. */
     function greekLatexForToken(token) {
       if (!token || /[^A-Za-z]/.test(token)) return '';
       const pair = GREEK_ABBREV[token.toLowerCase()];
-      if (pair) return isTitledGreekToken(token) ? pair[1] : pair[0];
+      if (pair) return isCapitalGreekToken(token) ? pair[1] : pair[0];
       if (token.toLowerCase() === 'theta') {
-        return isTitledGreekToken(token) ? '\\Theta' : '\\theta';
+        return isCapitalGreekToken(token) ? '\\Theta' : '\\theta';
+      }
+      const lowerName = token.toLowerCase();
+      const titled = token.charAt(0).toUpperCase() + lowerName.slice(1);
+      const lowerLatex = ENTER_INLINE_ABBREV[lowerName] || '';
+      const upperLatex = ENTER_INLINE_ABBREV[titled] || '';
+      if (GREEK_LETTER_LATEX.test(lowerLatex) || GREEK_LETTER_LATEX.test(upperLatex)) {
+        if (isCapitalGreekToken(token)) return upperLatex || lowerLatex;
+        return lowerLatex || upperLatex;
       }
       const via = lookupEnterInline(token);
       return GREEK_LETTER_LATEX.test(via) ? via : '';
@@ -4305,12 +4330,7 @@
       }
       let latex = '';
       if (token) {
-        const pair = GREEK_ABBREV[token.toLowerCase()];
-        if (pair) {
-          latex = isTitledGreekToken(token) ? pair[1] : pair[0];
-        } else {
-          latex = lookupEnterInline(token);
-        }
+        latex = greekLatexForToken(token) || lookupEnterInline(token);
         if (!latex && token === 'th' && mf.defaultMode === 'text') {
           latex = '\\operatorname{th}';
         }
@@ -10291,9 +10311,7 @@
     function enterLatexForTextRun(token) {
       if (!token) return '';
       if (token === 'th') return '\\operatorname{th}';
-      const pair = GREEK_ABBREV[token.toLowerCase()];
-      if (pair) return isTitledGreekToken(token) ? pair[1] : pair[0];
-      return lookupEnterInline(token) || '';
+      return greekLatexForToken(token) || lookupEnterInline(token) || '';
     }
 
     function commitTextRunLatex(mf, block, deleteCount, latex) {
